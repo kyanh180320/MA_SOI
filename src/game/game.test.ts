@@ -13,30 +13,40 @@ describe('roles', () => {
     });
 
     it('should correctly distribute roles for 6 players', () => {
-      expect(getRoleDistribution(6)).toEqual({ wolf: 2, seer: 1, witch: 0, guard: 0, villager: 3 });
+      expect(getRoleDistribution(6)).toEqual({ wolf: 2, wolf_demon: 0, seer: 1, witch: 0, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 7 players', () => {
-      expect(getRoleDistribution(7)).toEqual({ wolf: 2, seer: 1, witch: 1, guard: 0, villager: 3 });
+      expect(getRoleDistribution(7)).toEqual({ wolf: 2, wolf_demon: 0, seer: 1, witch: 1, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 9 players', () => {
-      expect(getRoleDistribution(9)).toEqual({ wolf: 3, seer: 1, witch: 1, guard: 1, villager: 3 });
+      expect(getRoleDistribution(9)).toEqual({ wolf: 3, wolf_demon: 0, seer: 1, witch: 1, guard: 1, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 12 players', () => {
-      expect(getRoleDistribution(12)).toEqual({ wolf: 4, seer: 1, witch: 1, guard: 1, villager: 5 });
+      expect(getRoleDistribution(12)).toEqual({ wolf: 4, wolf_demon: 0, seer: 1, witch: 1, guard: 1, hunter: 0, villager: 5 });
     });
 
     it('should correctly distribute roles for 15 players', () => {
-      expect(getRoleDistribution(15)).toEqual({ wolf: 5, seer: 1, witch: 1, guard: 1, villager: 7 });
+      expect(getRoleDistribution(15)).toEqual({ wolf: 5, wolf_demon: 0, seer: 1, witch: 1, guard: 1, hunter: 0, villager: 7 });
+    });
+
+    it('should provide dynamic balanced distribution that totals to n and may omit some roles', () => {
+      for (let n = 6; n <= 15; n++) {
+        const dist = getRoleDistribution(n, { randomize: true });
+        const total = Object.values(dist).reduce((a, b) => a + b, 0);
+        expect(total).toBe(n);
+        expect(dist.wolf + dist.wolf_demon).toBeGreaterThan(0);
+        expect(dist.villager).toBeGreaterThanOrEqual(1);
+      }
     });
   });
 
   describe('assignRoles', () => {
     it('should assign roles according to distribution', () => {
       const players = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Player ${i}` }));
-      const distribution = { wolf: 2, seer: 1, witch: 1, guard: 0, villager: 3 };
+      const distribution = { wolf: 2, wolf_demon: 0, seer: 1, witch: 1, guard: 0, hunter: 0, villager: 3 };
       
       const assigned = assignRoles(players, distribution);
       
@@ -50,7 +60,7 @@ describe('roles', () => {
 
     it('should throw error if distribution total does not match player count', () => {
       const players = [{ id: '1', name: 'A' }];
-      const distribution = { wolf: 2, seer: 0, witch: 0, guard: 0, villager: 0 };
+      const distribution = { wolf: 2, wolf_demon: 0, seer: 0, witch: 0, guard: 0, hunter: 0, villager: 0 };
       expect(() => assignRoles(players, distribution)).toThrowError();
     });
   });
@@ -81,6 +91,23 @@ describe('night', () => {
       const deaths = resolveNight({ wolfTarget: 'p1', witchSaved: true, witchPoisonTarget: 'p2' });
       expect(deaths).toEqual(['p2']);
     });
+
+    it('should support multiple wolf targets when demon wolf kills 2 players', () => {
+      const deaths = resolveNight({ wolfTargets: ['p1', 'p2'] });
+      expect(deaths).toContain('p1');
+      expect(deaths).toContain('p2');
+      expect(deaths).toHaveLength(2);
+    });
+
+    it('should spare only guarded target when wolves bite 2 players', () => {
+      const deaths = resolveNight({ wolfTargets: ['p1', 'p2'], guardProtectTarget: 'p1' });
+      expect(deaths).toEqual(['p2']);
+    });
+
+    it('should spare specific saved target when witch saves 1 of 2 bitten players', () => {
+      const deaths = resolveNight({ wolfTargets: ['p1', 'p2'], witchSavedTarget: 'p2' });
+      expect(deaths).toEqual(['p1']);
+    });
   });
 });
 
@@ -102,9 +129,10 @@ describe('vote', () => {
 
 describe('win', () => {
   describe('checkWinner', () => {
-    const createPlayers = (wolves: number, villagers: number): Player[] => {
+    const createPlayers = (wolves: number, villagers: number, wolfDemons: number = 0): Player[] => {
       const p: Player[] = [];
       for (let i = 0; i < wolves; i++) p.push({ id: `w${i}`, name: 'W', role: 'wolf', alive: true });
+      for (let i = 0; i < wolfDemons; i++) p.push({ id: `wd${i}`, name: 'WD', role: 'wolf_demon', alive: true });
       for (let i = 0; i < villagers; i++) p.push({ id: `v${i}`, name: 'V', role: 'villager', alive: true });
       return p;
     };
@@ -116,6 +144,11 @@ describe('win', () => {
     it('should return wolf if wolves >= others', () => {
       expect(checkWinner(createPlayers(2, 2))).toBe('wolf');
       expect(checkWinner(createPlayers(3, 2))).toBe('wolf');
+    });
+
+    it('should consider wolf_demon as wolf team', () => {
+      expect(checkWinner(createPlayers(1, 2, 1))).toBe('wolf');
+      expect(checkWinner(createPlayers(0, 3, 1))).toBeUndefined();
     });
 
     it('should return undefined if game is still going', () => {

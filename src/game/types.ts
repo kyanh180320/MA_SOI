@@ -1,4 +1,4 @@
-export type Role = "wolf" | "villager" | "seer" | "witch" | "guard";
+export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "witch" | "guard" | "hunter";
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
 
 export interface Player {
@@ -6,19 +6,23 @@ export interface Player {
   name: string;
   role: Role;
   alive: boolean;
+  avatar?: string;
 }
 
 export interface Round {
   number: number;
   guardProtectTarget?: string;
-  wolfTarget?: string;
+  wolfTarget?: string;                 // Tương thích ngược (1 mục tiêu)
+  wolfTargets?: string[];              // Danh sách mục tiêu sói cắn (hỗ trợ sói quỷ cắn 2 người)
   seerCheck?: { target: string; isWolf: boolean };
-  witchSaved?: boolean;
-  witchPoisonTarget?: string;
-  nightDeaths: string[];                 // id người chết trong đêm
+  witchSaved?: boolean;                // Cứu nạn nhân (boolean)
+  witchSavedTarget?: string;           // Id người cụ thể được cứu nếu có nhiều người bị cắn
+  witchPoisonTarget?: string;          // Id người bị đầu độc
+  hunterShotTarget?: string;           // Id người bị thợ săn bắn chết
+  nightDeaths: string[];               // Id những người chết trong đêm
   vote?: {
-    tally: Record<string, number>;       // id -> số phiếu
-    eliminated?: string;                 // id bị loại, undefined nếu hòa
+    tally: Record<string, number>;     // Id -> số phiếu
+    eliminated?: string;               // Id bị loại, undefined nếu hòa
   };
 }
 
