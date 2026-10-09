@@ -131,16 +131,17 @@ export default function SetupPage() {
   const totalWolves = (distribution.wolf || 0) + (distribution.wolf_demon || 0);
   const isValid = totalRoles === playerCount && totalWolves > 0 && totalWolves < playerCount;
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!isValid) return;
 
-    const players = names.map((name, i) => ({
-      id: (fromRoom && fromRoom.members && fromRoom.members[i]?.uid) 
-        ? fromRoom.members[i].uid 
-        : `p_${Date.now()}_${i}`,
-      name: name.trim() || `Người chơi ${i + 1}`,
-      avatar: avatars[i] || undefined,
-    }));
+    const players = names.map((name, i) => {
+      const matchedMember = fromRoom?.members?.find(m => m.displayName.trim() === name.trim()) || fromRoom?.members?.[i];
+      return {
+        id: matchedMember?.uid || `p_${Date.now()}_${i}`,
+        name: name.trim() || `Người chơi ${i + 1}`,
+        avatar: avatars[i] || matchedMember?.avatar || "",
+      };
+    });
 
     const assignedPlayers = assignRoles(players, distribution);
 
@@ -157,9 +158,12 @@ export default function SetupPage() {
     setGame(newGame);
 
     if (fromRoom?.id) {
-      syncRoomGame(fromRoom.id, newGame).catch(err => {
+      try {
+        await syncRoomGame(fromRoom.id, newGame);
+      } catch (err: unknown) {
         console.error("Không thể đồng bộ game lên phòng:", err);
-      });
+        alert("Lỗi đồng bộ phòng online: " + ((err as Error).message || String(err)));
+      }
     }
 
     navigate('/play');

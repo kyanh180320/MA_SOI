@@ -100,10 +100,33 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const roundNumber = currentRound ? currentRound.number : 1;
   const currentPhase = game.phase;
 
-  // Tìm người chơi ứng với tài khoản user hiện tại
-  const myPlayer: Player | undefined = user 
-    ? game.players.find(p => p.id === user.uid)
-    : undefined;
+  // Tìm người chơi ứng với tài khoản user hiện tại:
+  // 1. Khớp chính xác theo UID
+  // 2. Khớp theo DisplayName
+  // 3. Khớp theo vị trí index trong danh sách thành viên phòng room.members
+  const myPlayer: Player | undefined = (() => {
+    if (!user) return undefined;
+
+    // 1. Khớp theo UID
+    const byId = game.players.find(p => p.id === user.uid);
+    if (byId) return byId;
+
+    // 2. Khớp theo tên hiển thị
+    if (user.displayName) {
+      const byName = game.players.find(p => 
+        p.name.trim().toLowerCase() === user.displayName.trim().toLowerCase()
+      );
+      if (byName) return byName;
+    }
+
+    // 3. Khớp theo thứ tự thành viên trong phòng
+    const memberIndex = room.members?.findIndex(m => m.uid === user.uid);
+    if (memberIndex !== undefined && memberIndex >= 0 && memberIndex < game.players.length) {
+      return game.players[memberIndex];
+    }
+
+    return undefined;
+  })();
 
   const roleInfo = myPlayer ? ROLE_DETAILS[myPlayer.role] : null;
   const alivePlayers = game.players.filter(p => p.alive);

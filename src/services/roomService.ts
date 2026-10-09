@@ -2,7 +2,6 @@ import {
   collection, 
   doc, 
   setDoc, 
-  updateDoc,
   deleteDoc, 
   onSnapshot, 
   runTransaction 
@@ -259,8 +258,10 @@ export async function removeBotFromRoom(roomId: string, botUid?: string): Promis
 
 export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
-  await updateDoc(roomRef, {
+  // Loại bỏ hoàn toàn các trường undefined vì Firestore SDK sẽ văng lỗi Unsupported field value: undefined
+  const cleanGameData = JSON.parse(JSON.stringify(game));
+  await setDoc(roomRef, {
     status: game.phase === 'ended' ? 'ended' : 'playing',
-    gameData: game
-  });
+    gameData: cleanGameData
+  }, { merge: true });
 }

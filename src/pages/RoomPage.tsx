@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useGame } from '../context/GameContext';
 import { 
   subscribeRoom, 
   leaveRoom, 
   closeRoom, 
   addBotToRoom, 
   addBotsUntil, 
-  removeBotFromRoom 
+  removeBotFromRoom,
+  syncRoomGame
 } from '../services/roomService';
-import type { GameRoom } from '../game/types';
+import type { GameRoom, Game } from '../game/types';
+import { getRoleDistribution, assignRoles } from '../game/roles';
+import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
 
@@ -17,11 +21,13 @@ export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setGame } = useGame();
 
   const [room, setRoom] = useState<GameRoom | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
   const isLeavingRef = useRef(false);
 
@@ -137,7 +143,57 @@ export default function RoomPage() {
     }
   };
 
-  // NẾU VÁN CHƠI ĐANG DIỄN RA:
+  // Khởi động ván chơi nhanh trực tiếp từ phòng (tự động phân bổ vai trò cân bằng)
+  const handleQuickStart = async () => {
+    if (!roomId || isStartingGame) return;
+    if (members.length < 6) {
+      alert("Cần ít nhất 6 người để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.");
+      return;
+    }
+
+    setIsStartingGame(true);
+    try {
+      const distribution = getRoleDistribution(members.length, { randomize: true });
+      const players = members.map(m => ({
+        id: m.uid,
+        name: m.displayName,
+        avatar: m.avatar || ""
+      }));
+
+      const assignedPlayers = assignRoles(players, distribution);
+      const newGame: Game = {
+        id: `game_${Date.now()}`,
+        createdAt: Date.now(),
+        players: assignedPlayers,
+        rounds: [{ number: 1, nightDeaths: [] }],
+        phase: "night",
+        witchItems: { saveLeft: RULES.witch.saveCount, poisonLeft: RULES.witch.poisonCount },
+        roomId: room.id
+      };
+
+      await syncRoomGame(room.id, newGame);
+      setGame(newGame);
+      navigate('/play');
+    } catch (err: unknown) {
+      console.error("Lỗi bắt đầu ván nhanh:", err);
+      alert("Lỗi khi bắt đầu ván: " + ((err as Error).message || String(err)));
+    } finally {
+      setIsStartingGame(false);
+    }
+  };
+
+  // NẾU VÁN CHƠI ĐANG BẮT ĐẦU:
+  // - Nếu gameData đang tải, hiện màn hình chờ nhận vai trò
+  if ((!isHost || previewAsPlayer) && room.status === 'playing' && !room.gameData) {
+    return (
+      <div className="screen-container" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--gold-300)', fontSize: '16px', fontWeight: 600 }}>
+          ⏳ Ván chơi đang bắt đầu! Đang chia lá bài bí mật cho bạn...
+        </p>
+      </div>
+    );
+  }
+
   // - Người chơi thông thường (không phải host) sẽ được chuyển ngay vào màn hình chơi trực tiếp PlayerLiveView
   // - Quản trò (host) nếu bấm xem thử cũng có thể quan sát
   if ((!isHost || previewAsPlayer) && isGamePlaying) {
@@ -368,22 +424,35 @@ export default function RoomPage() {
               </>
             ) : (
               <>
-                {/* DUY NHẤT 1 PRIMARY BUTTON TRÊN MÀN HÌNH */}
+                {/* NÚT BẮT ĐẦU VÁN NGAY TRỰC TIẾP */}
                 <Button
                   variant="primary"
                   pulse
                   fullWidth
-                  onClick={handleStartSetup}
+                  disabled={isStartingGame || members.length < 6}
+                  onClick={handleQuickStart}
                 >
-                  🎮 THIẾT LẬP VÁN & CHIA VAI ({members.length} NGƯỜI)
+                  {isStartingGame 
+                    ? '⏳ ĐANG CHIA VAI & BẮT ĐẦU...' 
+                    : `⚡ BẮT ĐẦU VÁN NGAY (${members.length} NGƯỜI)`}
                 </Button>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={handleClose}
-                >
-                  ❌ Giải Tán Phòng
-                </Button>
+                <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    onClick={handleStartSetup}
+                    style={{ minHeight: '44px', fontSize: '13px' }}
+                  >
+                    ⚙️ Tuỳ Chỉnh Vai Trò
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={handleClose}
+                    style={{ minHeight: '44px', fontSize: '13px', padding: '0 var(--s-3)' }}
+                  >
+                    ❌ Giải Tán
+                  </Button>
+                </div>
               </>
             )}
           </>
