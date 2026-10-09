@@ -4,13 +4,21 @@ import { useGame } from '../context/GameContext';
 import { resolveNight } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import type { Role, Player } from '../game/types';
+import {
+  Button,
+  Panel,
+  PhaseBanner,
+  PlayerTile,
+  Modal,
+  Toast
+} from '../components/ui';
 
 export default function PlayPage() {
   const navigate = useNavigate();
   const { game, updateGame, undo, canUndo, setGame } = useGame();
   const [showRoles, setShowRoles] = useState(true);
 
-  // States hỗ trợ chọn trước khi xác nhận (tránh bấm nhầm)
+  // States hỗ trợ chọn trước khi xác nhận
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
   const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
   const [selectedSeerTarget, setSelectedSeerTarget] = useState<string | null>(null);
@@ -23,9 +31,18 @@ export default function PlayPage() {
 
   if (!game) {
     return (
-      <div className="container">
-        <h2>Không tìm thấy ván chơi</h2>
-        <button className="btn-primary" onClick={() => navigate('/setup')}>Tạo ván mới</button>
+      <div className="screen-container" style={{ alignItems: 'center', justifyContent: 'center', gap: 'var(--s-4)' }}>
+        <Panel>
+          <h2 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-100)', margin: '0 0 var(--s-2) 0' }}>
+            Không tìm thấy ván chơi
+          </h2>
+          <p style={{ margin: 0, color: 'var(--text-dim)', fontSize: '14px' }}>
+            Ván chơi có thể đã kết thúc hoặc dữ liệu chưa được nạp.
+          </p>
+        </Panel>
+        <Button variant="primary" pulse onClick={() => navigate('/setup')}>
+          Tạo Ván Mới
+        </Button>
       </div>
     );
   }
@@ -64,12 +81,6 @@ export default function PlayPage() {
       default: return '👨 Dân';
     }
   };
-
-  const renderAvatar = (p: Player, fallbackEmoji: string) => (
-    <div className="player-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {p.avatar ? <img src={p.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : fallbackEmoji}
-    </div>
-  );
 
   const getNightStep = () => {
     if (!currentRound) return 'wait';
@@ -193,7 +204,6 @@ export default function PlayPage() {
       deaths.includes(p.id) ? { ...p, alive: false } : p
     );
 
-    // Kiểm tra xem có thợ săn chết đêm không
     const deadHunterId = deaths.find(id => game.players.find(p => p.id === id)?.role === 'hunter');
     const deadHunter = deadHunterId ? game.players.find(p => p.id === deadHunterId) : null;
 
@@ -257,7 +267,6 @@ export default function PlayPage() {
       p.id === eliminatedId ? { ...p, alive: false } : p
     );
 
-    // Nếu thợ săn bị treo cổ, kích hoạt kéo theo 1 người
     if (eliminatedPlayer?.role === 'hunter') {
       updateGame(g => {
         const rounds = [...g.rounds];
@@ -300,6 +309,9 @@ export default function PlayPage() {
     setSelectedVoteTarget(null);
   };
 
+  // =========================================================================
+  // GIAO DIỆN BAN ĐÊM (CÁC BƯỚC HÀNH ĐỘNG CỦA CÁC VAI TRÒ)
+  // =========================================================================
   const renderNightPhase = () => {
     // 1. LƯỢT BẢO VỆ
     if (nightStep === 'guard') {
@@ -311,69 +323,71 @@ export default function PlayPage() {
       };
 
       return (
-        <div className="card">
-          <h3 style={{color: '#4CAF50'}}>🛡 BẢO VỆ muốn bảo vệ ai?</h3>
-          {!hasRole('guard') && <p className="error">Bảo vệ đã chết hoặc không có, bấm Không bảo vệ ai để giữ nhịp.</p>}
-          <div className="player-grid">
+        <Panel>
+          <h3 style={{
+            color: 'var(--green-400)',
+            fontFamily: 'var(--font-title)',
+            margin: '0 0 var(--s-2) 0',
+            fontSize: '18px'
+          }}>
+            🛡 BẢO VỆ muốn bảo vệ ai?
+          </h3>
+          {!hasRole('guard') && (
+            <Toast variant="info" message="Bảo vệ đã chết hoặc không có trong ván, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
             {alivePlayers.map(p => {
-              const globalIndex = game.players.findIndex(x => x.id === p.id);
               const isLocked = p.id === previousTarget && p.id !== 'none';
               const isSelected = selectedGuardTarget === p.id;
 
               return (
-                <button 
-                  key={p.id} 
-                  className={`player-square ${isLocked ? 'dead' : ''}`}
-                  style={{
-                    borderColor: isSelected ? '#4CAF50' : (isLocked ? 'transparent' : 'rgba(76, 175, 80, 0.4)'),
-                    boxShadow: isSelected ? '0 0 10px #4CAF50' : undefined
-                  }} 
-                  disabled={isLocked}
-                  onClick={() => toggleGuardSelect(p.id)}
-                >
-                  <span className="player-id">P{globalIndex + 1}</span>
-                  {renderAvatar(p, '👤')}
-                  <div className="player-name">{p.name}</div>
-                  {isSelected && (
-                    <div style={{fontSize: '11px', color: '#4CAF50', fontWeight: 'bold', marginTop: '2px'}}>
-                      🛡 Sẽ bảo vệ
-                    </div>
-                  )}
-                  {showRoles && <div style={{fontSize: '11px', marginTop: '4px', color: '#aaa'}}>{getRoleLabel(p.role)}</div>}
-                  {isLocked && <small style={{fontSize:'9px', color: 'var(--text-muted)'}}>(Vòng trước)</small>}
-                </button>
+                <PlayerTile
+                  key={p.id}
+                  name={p.name}
+                  avatarUrl={p.avatar}
+                  role={showRoles ? getRoleLabel(p.role) : undefined}
+                  badgeLabel={isSelected ? '🛡 Sẽ bảo vệ' : (isLocked ? 'Vòng trước' : undefined)}
+                  badgeVariant={isSelected ? 'green' : 'ash'}
+                  isSelected={isSelected}
+                  isAlive={!isLocked}
+                  onClick={() => !isLocked && toggleGuardSelect(p.id)}
+                />
               );
             })}
           </div>
 
-          {selectedGuardTarget ? (
-            <button 
-              className="btn-primary" 
-              style={{marginTop: '16px', background: '#4CAF50', width: '100%', fontWeight: 'bold'}} 
-              onClick={() => handleGuardProtect(selectedGuardTarget)}
-            >
-              ✓ Xác nhận bảo vệ: {selectedPlayer?.name}
-            </button>
-          ) : (
-            <button 
-              className="btn-primary" 
-              style={{background: '#555', marginTop: '16px', width: '100%'}} 
-              onClick={() => handleGuardProtect(null)}
-            >
-              Không bảo vệ ai (Bỏ qua)
-            </button>
-          )}
+          <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            {selectedGuardTarget ? (
+              <Button
+                variant="primary"
+                pulse
+                fullWidth
+                onClick={() => handleGuardProtect(selectedGuardTarget)}
+              >
+                ✓ Xác Nhận Bảo Vệ: {selectedPlayer?.name}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => handleGuardProtect(null)}
+              >
+                Không bảo vệ ai (Bỏ qua)
+              </Button>
+            )}
 
-          {selectedGuardTarget && (
-            <button 
-              className="btn-secondary" 
-              style={{marginTop: '8px', width: '100%'}} 
-              onClick={() => setSelectedGuardTarget(null)}
-            >
-              Bỏ chọn người này
-            </button>
-          )}
-        </div>
+            {selectedGuardTarget && (
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => setSelectedGuardTarget(null)}
+              >
+                Bỏ chọn người này
+              </Button>
+            )}
+          </div>
+        </Panel>
       );
     }
 
@@ -402,70 +416,78 @@ export default function PlayPage() {
       const selectedNames = selectedWolfTargets.map(id => game.players.find(p => p.id === id)?.name).filter(Boolean);
 
       return (
-        <div className="card">
-          <h3 style={{color: 'var(--error)'}}>🐺 SÓI muốn cắn ai?</h3>
+        <Panel variant="danger">
+          <h3 style={{
+            color: 'var(--red-300)',
+            fontFamily: 'var(--font-title)',
+            margin: '0 0 var(--s-2) 0',
+            fontSize: '18px'
+          }}>
+            🐺 BẦY SÓI muốn cắn ai?
+          </h3>
           {hasDemonWolf && (
-            <p style={{color: '#FF5252', fontWeight: 'bold', margin: '4px 0 12px 0'}}>
-              😈 SÓI QUỶ còn sống! Bầy sói được cắn 2 người (Đã chọn {selectedWolfTargets.length}/{maxTargets})
-            </p>
+            <Toast
+              variant="danger"
+              message={`😈 SÓI QUỶ còn sống! Bầy sói được cắn 2 người (Đã chọn ${selectedWolfTargets.length}/${maxTargets})`}
+              style={{ marginBottom: 'var(--s-3)' }}
+            />
           )}
-          {!isWolfAlive && <p className="error">Không còn sói sống, có thể bỏ qua.</p>}
-          <div className="player-grid">
+          {!isWolfAlive && (
+            <Toast variant="info" message="Không còn sói sống trong bầy, có thể bỏ qua." style={{ marginBottom: 'var(--s-3)' }} />
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
             {alivePlayers.map(p => {
-              const globalIndex = game.players.findIndex(x => x.id === p.id);
               const targetIndex = selectedWolfTargets.indexOf(p.id);
               const isTarget = targetIndex !== -1;
               const isWolf = isWolfTeam(p.role);
 
               return (
-                <button 
-                  key={p.id} 
-                  className={`player-square ${isWolf ? 'dead' : ''}`}
-                  style={{
-                    borderColor: isTarget ? '#FF1744' : (isWolf ? 'transparent' : 'var(--wolf)'),
-                    boxShadow: isTarget ? '0 0 10px #FF1744' : undefined
-                  }}
+                <PlayerTile
+                  key={p.id}
+                  name={p.name}
+                  avatarUrl={p.avatar}
+                  role={showRoles ? getRoleLabel(p.role) : undefined}
+                  badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? 'Phe Sói' : undefined)}
+                  badgeVariant={isTarget ? 'red' : 'ash'}
+                  isSelected={isTarget}
                   onClick={() => toggleWolfTarget(p.id)}
-                >
-                  <span className="player-id">P{globalIndex + 1}</span>
-                  {renderAvatar(p, isWolf ? (p.role === 'wolf_demon' ? '😈' : '🐺') : '👤')}
-                  <div className="player-name">{p.name}</div>
-                  {isTarget && (
-                    <div style={{fontSize: '11px', color: '#FF1744', fontWeight: 'bold', marginTop: '2px'}}>
-                      🎯 Cắn {maxTargets > 1 ? `#${targetIndex + 1}` : ''}
-                    </div>
-                  )}
-                  {showRoles && <div style={{fontSize: '11px', marginTop: '4px', color: '#aaa'}}>{getRoleLabel(p.role)}</div>}
-                </button>
+                />
               );
             })}
           </div>
 
-          <button 
-            className="btn-primary" 
-            style={{
-              marginTop: '16px', 
-              width: '100%',
-              background: selectedWolfTargets.length > 0 ? 'var(--error)' : '#555',
-              fontWeight: 'bold'
-            }} 
-            onClick={() => handleWolfTargets(selectedWolfTargets)}
-          >
-            {selectedWolfTargets.length > 0 
-              ? `✓ Xác nhận cắn: ${selectedNames.join(', ')}` 
-              : 'Sói không cắn ai (Bỏ qua)'}
-          </button>
+          <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            {selectedWolfTargets.length > 0 ? (
+              <Button
+                variant="danger"
+                pulse
+                fullWidth
+                onClick={() => handleWolfTargets(selectedWolfTargets)}
+              >
+                ✓ Xác Nhận Cắn: {selectedNames.join(', ')}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => handleWolfTargets([])}
+              >
+                Sói không cắn ai (Bỏ qua)
+              </Button>
+            )}
 
-          {selectedWolfTargets.length > 0 && (
-            <button 
-              className="btn-secondary" 
-              style={{marginTop: '8px', width: '100%'}} 
-              onClick={() => handleWolfTargets([])}
-            >
-              Bỏ qua (Không cắn ai)
-            </button>
-          )}
-        </div>
+            {selectedWolfTargets.length > 0 && (
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => setSelectedWolfTargets([])}
+              >
+                Bỏ qua (Không cắn ai)
+              </Button>
+            )}
+          </div>
+        </Panel>
       );
     }
     
@@ -479,108 +501,77 @@ export default function PlayPage() {
       };
 
       return (
-        <div className="card">
-          <h3 style={{color: '#2196F3'}}>👁 TIÊN TRI muốn soi ai?</h3>
-          {!hasRole('seer') && <p className="error">Tiên tri đã chết hoặc không có, bấm Bỏ qua để giữ nhịp.</p>}
-          <div className="player-grid">
+        <Panel>
+          <h3 style={{
+            color: 'var(--gold-100)',
+            fontFamily: 'var(--font-title)',
+            margin: '0 0 var(--s-2) 0',
+            fontSize: '18px'
+          }}>
+            👁 TIÊN TRI muốn soi ai?
+          </h3>
+          {!hasRole('seer') && (
+            <Toast variant="info" message="Tiên tri đã chết hoặc không có, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
             {alivePlayers.map(p => {
-              const globalIndex = game.players.findIndex(x => x.id === p.id);
               const isSelected = selectedSeerTarget === p.id;
 
               return (
-                <button 
-                  key={p.id} 
-                  className="player-square" 
-                  style={{
-                    borderColor: isSelected ? '#2196F3' : 'rgba(33, 150, 243, 0.4)',
-                    boxShadow: isSelected ? '0 0 10px #2196F3' : undefined
-                  }}
+                <PlayerTile
+                  key={p.id}
+                  name={p.name}
+                  avatarUrl={p.avatar}
+                  role={showRoles ? getRoleLabel(p.role) : undefined}
+                  badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
+                  badgeVariant="gold"
+                  isSelected={isSelected}
                   onClick={() => toggleSeerSelect(p.id)}
-                >
-                  <span className="player-id">P{globalIndex + 1}</span>
-                  {renderAvatar(p, '👤')}
-                  <div className="player-name">{p.name}</div>
-                  {isSelected && (
-                    <div style={{fontSize: '11px', color: '#2196F3', fontWeight: 'bold', marginTop: '2px'}}>
-                      👁 Sẽ soi
-                    </div>
-                  )}
-                  {showRoles && <div style={{fontSize: '11px', marginTop: '4px', color: '#aaa'}}>{getRoleLabel(p.role)}</div>}
-                </button>
+                />
               );
             })}
           </div>
 
-          {/* Hộp xem kết quả soi rõ ràng trước khi bấm tiếp tục */}
-          {seerResultModal ? (
-            <div style={{
-              marginTop: '16px',
-              padding: '16px',
-              background: 'rgba(33, 150, 243, 0.15)',
-              border: '2px solid #2196F3',
-              borderRadius: '12px',
-              textAlign: 'center'
-            }}>
-              <h4 style={{ margin: '0 0 6px 0', color: 'var(--primary)', fontSize: '16px' }}>👁 KẾT QUẢ SOI CHO TIÊN TRI</h4>
-              <p style={{ fontSize: '15px', margin: '4px 0' }}>
-                Người chơi <strong>{seerResultModal.name}</strong>:
-              </p>
-              <div style={{
-                fontSize: '22px',
-                fontWeight: 'bold',
-                color: seerResultModal.isWolf ? 'var(--error)' : '#4CAF50',
-                margin: '8px 0'
-              }}>
-                {seerResultModal.isWolf ? '🐺 LÀ SÓI!' : '👨 KHÔNG PHẢI SÓI'}
-              </div>
-              <button
-                className="btn-primary"
-                style={{ marginTop: '10px', width: '100%', background: '#2196F3', fontWeight: 'bold' }}
-                onClick={() => handleSeerCheck(seerResultModal.targetId)}
+          <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            {selectedSeerTarget ? (
+              <Button
+                variant="primary"
+                pulse
+                fullWidth
+                onClick={() => {
+                  if (selectedPlayer) {
+                    setSeerResultModal({
+                      targetId: selectedPlayer.id,
+                      name: selectedPlayer.name,
+                      isWolf: isWolfTeam(selectedPlayer.role)
+                    });
+                  }
+                }}
               >
-                Xác nhận & Chuyển sang Phù Thủy ➔
-              </button>
-            </div>
-          ) : (
-            <>
-              {selectedSeerTarget ? (
-                <button 
-                  className="btn-primary" 
-                  style={{background: '#2196F3', marginTop: '16px', width: '100%', fontWeight: 'bold'}} 
-                  onClick={() => {
-                    if (selectedPlayer) {
-                      setSeerResultModal({
-                        targetId: selectedPlayer.id,
-                        name: selectedPlayer.name,
-                        isWolf: isWolfTeam(selectedPlayer.role)
-                      });
-                    }
-                  }}
-                >
-                  ✓ Xác nhận soi: {selectedPlayer?.name}
-                </button>
-              ) : (
-                <button 
-                  className="btn-primary" 
-                  style={{background: '#555', marginTop: '16px', width: '100%'}} 
-                  onClick={() => handleSeerCheck(null)}
-                >
-                  Bỏ qua (Không soi ai)
-                </button>
-              )}
+                ✓ Xem Kết Quả Soi: {selectedPlayer?.name}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => handleSeerCheck(null)}
+              >
+                Bỏ qua (Không soi ai)
+              </Button>
+            )}
 
-              {selectedSeerTarget && (
-                <button 
-                  className="btn-secondary" 
-                  style={{marginTop: '8px', width: '100%'}} 
-                  onClick={() => setSelectedSeerTarget(null)}
-                >
-                  Bỏ chọn
-                </button>
-              )}
-            </>
-          )}
-        </div>
+            {selectedSeerTarget && (
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => setSelectedSeerTarget(null)}
+              >
+                Bỏ chọn
+              </Button>
+            )}
+          </div>
+        </Panel>
       );
     }
 
@@ -601,310 +592,367 @@ export default function PlayPage() {
       const savePlayer = witchSaveSelection ? game.players.find(p => p.id === witchSaveSelection) : null;
 
       return (
-        <div className="card">
-          <h3 style={{color: 'purple'}}>🧪 PHÙ THỦY muốn làm gì?</h3>
-          {!hasRole('witch') && <p className="error">Phù thủy đã chết hoặc không có, bấm Bỏ qua để giữ nhịp.</p>}
+        <Panel>
+          <h3 style={{
+            color: 'var(--gold-100)',
+            fontFamily: 'var(--font-title)',
+            margin: '0 0 var(--s-2) 0',
+            fontSize: '18px'
+          }}>
+            🧪 PHÙ THỦY muốn làm gì?
+          </h3>
+          {!hasRole('witch') && (
+            <Toast variant="info" message="Phù thủy đã chết hoặc không có, bấm Bỏ qua để giữ nhịp." style={{ marginBottom: 'var(--s-3)' }} />
+          )}
           
-          <div style={{display: 'flex', justifyContent: 'space-around', margin: '12px 0', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '13px'}}>
-            <span>💉 Bình cứu: <strong>{game.witchItems.saveLeft}</strong></span>
-            <span>☠️ Bình độc: <strong>{game.witchItems.poisonLeft}</strong></span>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            margin: 'var(--s-3) 0',
+            padding: 'var(--s-2)',
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: 'var(--radius-md)'
+          }}>
+            <span style={{ fontSize: '13px' }}>💉 Bình cứu: <strong style={{ color: 'var(--green-400)' }}>{game.witchItems.saveLeft}</strong></span>
+            <span style={{ fontSize: '13px' }}>☠️ Bình độc: <strong style={{ color: 'var(--red-300)' }}>{game.witchItems.poisonLeft}</strong></span>
           </div>
 
-          {/* Phần bình cứu */}
-          <div style={{marginTop: '12px', padding: '12px', border: '1px solid #443355', borderRadius: '8px'}}>
-            <h4 style={{margin: '0 0 8px 0', color: 'var(--success)', textAlign: 'left', fontSize: '14px'}}>
-              💉 BÌNH CỨU (Cứu nạn nhân bị cắn)
+          {/* Bình cứu */}
+          <Panel compact style={{ marginBottom: 'var(--s-3)' }}>
+            <h4 style={{ margin: '0 0 var(--s-2) 0', color: 'var(--green-400)', fontSize: '14px' }}>
+              💉 BÌNH CỨU (Cứu nạn nhân bị cắn đêm nay)
             </h4>
             {dyingVictims.length === 0 ? (
-              <p style={{fontSize: '13px', color: 'var(--text-muted)', margin: 0}}>Đêm nay bình yên, không ai sắp chết.</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0 }}>Đêm nay bình yên, không ai sắp chết.</p>
             ) : (
               <div>
-                <p style={{fontSize: '13px', margin: '0 0 8px 0'}}>
-                  Sắp chết: <strong style={{color: 'var(--error)'}}>{dyingVictims.map(v => v.name).join(', ')}</strong>
+                <p style={{ fontSize: '13px', margin: '0 0 var(--s-2) 0' }}>
+                  Nạn nhân sắp chết: <strong style={{ color: 'var(--red-300)' }}>{dyingVictims.map(v => v.name).join(', ')}</strong>
                 </p>
                 {canSave ? (
-                  <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                  <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
                     {dyingVictims.map(v => (
-                      <button
+                      <Button
                         key={v.id}
-                        type="button"
-                        className="btn-primary"
-                        style={{
-                          width: 'auto',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          background: witchSaveSelection === v.id ? 'var(--success)' : '#444'
-                        }}
+                        variant={witchSaveSelection === v.id ? 'primary' : 'secondary'}
                         onClick={() => setWitchSaveSelection(witchSaveSelection === v.id ? null : v.id)}
+                        style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '12px' }}
                       >
                         {witchSaveSelection === v.id ? `✓ Cứu: ${v.name}` : `Cứu ${v.name}`}
-                      </button>
+                      </Button>
                     ))}
-                    {witchSaveSelection && (
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{width: 'auto', padding: '6px 10px', fontSize: '12px'}}
-                        onClick={() => setWitchSaveSelection(null)}
-                      >
-                        Không cứu ai
-                      </button>
-                    )}
                   </div>
                 ) : (
-                  <p style={{fontSize: '12px', color: 'var(--text-muted)', margin: 0}}>Đã hết bình cứu!</p>
+                  <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Đã hết bình cứu!</span>
                 )}
               </div>
             )}
-          </div>
+          </Panel>
 
-          {/* Phần bình độc */}
-          <div style={{marginTop: '16px', padding: '12px', border: '1px solid #552244', borderRadius: '8px'}}>
-            <h4 style={{margin: '0 0 8px 0', color: '#BA68C8', textAlign: 'left', fontSize: '14px'}}>
-              ☠️ BÌNH ĐỘC (Có thể giết bất kỳ ai)
+          {/* Bình độc */}
+          <Panel compact>
+            <h4 style={{ margin: '0 0 var(--s-2) 0', color: 'var(--gold-300)', fontSize: '14px' }}>
+              ☠️ BÌNH ĐỘC (Có thể đầu độc 1 người bất kỳ)
             </h4>
             {canPoison ? (
-              <div>
-                <p style={{fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 8px 0'}}>
-                  Chọn 1 người để đầu độc (bấm lại để hủy chọn):
-                </p>
-                <div className="player-grid">
-                  {alivePlayers.map(p => {
-                    const globalIndex = game.players.findIndex(x => x.id === p.id);
-                    const isPoisonTarget = witchPoisonSelection === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        className="player-square"
-                        style={{
-                          borderColor: isPoisonTarget ? '#BA68C8' : 'var(--secondary)',
-                          boxShadow: isPoisonTarget ? '0 0 10px #BA68C8' : undefined
-                        }}
-                        onClick={() => setWitchPoisonSelection(isPoisonTarget ? null : p.id)}
-                      >
-                        <span className="player-id">P{globalIndex + 1}</span>
-                        {renderAvatar(p, '☠️')}
-                        <div className="player-name">{p.name}</div>
-                        {isPoisonTarget && (
-                          <div style={{fontSize: '11px', color: '#BA68C8', fontWeight: 'bold', marginTop: '2px'}}>
-                            ☠️ Độc
-                          </div>
-                        )}
-                        {showRoles && <div style={{fontSize: '10px', marginTop: '4px', color: '#aaa'}}>{getRoleLabel(p.role)}</div>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {witchPoisonSelection && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{marginTop: '8px', width: '100%', fontSize: '12px', padding: '8px'}}
-                    onClick={() => setWitchPoisonSelection(null)}
-                  >
-                    Bỏ chọn đầu độc
-                  </button>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+                {alivePlayers.map(p => {
+                  const isPoisonTarget = witchPoisonSelection === p.id;
+                  return (
+                    <PlayerTile
+                      key={p.id}
+                      name={p.name}
+                      avatarUrl={p.avatar}
+                      role={showRoles ? getRoleLabel(p.role) : undefined}
+                      badgeLabel={isPoisonTarget ? '☠️ Đầu độc' : undefined}
+                      badgeVariant="red"
+                      isSelected={isPoisonTarget}
+                      onClick={() => setWitchPoisonSelection(isPoisonTarget ? null : p.id)}
+                    />
+                  );
+                })}
               </div>
             ) : (
-              <p style={{fontSize: '12px', color: 'var(--text-muted)', margin: 0}}>Đã hết bình độc!</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-dim)', margin: 0 }}>Đã hết bình độc!</p>
             )}
-          </div>
+          </Panel>
 
           {/* Nút xác nhận Phù thủy */}
-          <button 
-            className="btn-primary" 
-            style={{background: 'linear-gradient(135deg, #8E24AA 0%, #6A1B9A 100%)', marginTop: '20px', width: '100%', fontWeight: 'bold'}} 
-            onClick={() => handleWitchAction(witchSaveSelection, witchPoisonSelection)}
-          >
-            ✓ Xác nhận Phù Thủy {savePlayer ? `(Cứu: ${savePlayer.name})` : ''} {poisonPlayer ? `(Độc: ${poisonPlayer.name})` : ''}
-          </button>
-          <button 
-            className="btn-secondary" 
-            style={{marginTop: '8px', width: '100%'}} 
-            onClick={() => handleWitchAction(null, null)}
-          >
-            Không dùng bình nào (Bỏ qua)
-          </button>
-        </div>
+          <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            <Button 
+              variant="primary" 
+              pulse
+              fullWidth
+              onClick={() => handleWitchAction(witchSaveSelection, witchPoisonSelection)}
+            >
+              ✓ Xác Nhận Phù Thủy {savePlayer ? `(Cứu: ${savePlayer.name})` : ''} {poisonPlayer ? `(Độc: ${poisonPlayer.name})` : ''}
+            </Button>
+            <Button 
+              variant="secondary" 
+              fullWidth
+              onClick={() => handleWitchAction(null, null)}
+            >
+              Không dùng bình nào (Bỏ qua)
+            </Button>
+          </div>
+        </Panel>
       );
     }
 
     // 5. KẾT THÚC ĐÊM
     if (nightStep === 'done') {
       return (
-        <div className="card">
-          <h3>Trời sáng rồi</h3>
-          <button className="btn-primary" onClick={finishNight}>Đánh thức mọi người</button>
-        </div>
+        <Panel style={{ textAlign: 'center' }}>
+          <h3 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-100)', margin: '0 0 var(--s-2) 0' }}>
+            ☀️ Trời Sắp Sáng Rồi
+          </h3>
+          <p style={{ color: 'var(--text-dim)', fontSize: '14px', marginBottom: 'var(--s-4)' }}>
+            Mọi sinh vật bóng đêm đã hoàn tất hành động. Bấm để công bố kết quả đêm qua.
+          </p>
+          <Button variant="primary" pulse fullWidth onClick={finishNight}>
+            ĐÁNH THỨC MỌI NGƯỜI ➔
+          </Button>
+        </Panel>
       );
     }
   };
 
   return (
-    <div className="container">
+    <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
+      {/* THANH ĐIỀU KHIỂN TRÊN CÙNG */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Vòng {currentRound?.number || 1} - {game.phase === 'night' ? 'Ban Đêm' : game.phase === 'day' ? 'Ban Ngày' : 'Kết Thúc'}</h2>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn-primary" style={{padding: '8px', fontSize: '14px', background: '#555'}} onClick={() => setShowRoles(!showRoles)}>{showRoles ? 'Ẩn Role' : 'Hiện Role'}</button>
-          {canUndo && <button className="btn-primary" style={{padding: '8px', fontSize: '14px', background: '#f39c12'}} onClick={undo}>↩ Hoàn tác</button>}
-          <button className="btn-primary" style={{padding: '8px', fontSize: '14px', background: 'var(--error)'}} onClick={handleExit}>Thoát</button>
+        <Button
+          variant="ghost"
+          onClick={handleExit}
+          style={{ minHeight: '40px', padding: '0 var(--s-2)', fontSize: '13px', color: 'var(--red-300)' }}
+        >
+          ✕ Thoát
+        </Button>
+        <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+          {canUndo && (
+            <Button
+              variant="secondary"
+              onClick={undo}
+              style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px' }}
+            >
+              ↩ Hoàn tác
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            onClick={() => setShowRoles(!showRoles)}
+            style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px' }}
+          >
+            {showRoles ? 'Ẩn Role' : 'Hiện Role'}
+          </Button>
         </div>
       </div>
 
-      {/* Hiển thị lượt bắn súng của Thợ Săn nếu có (có nút xác nhận) */}
-      {hunterPendingDeath && (
-        <div className="card" style={{ border: '2px solid var(--hunter)', background: 'rgba(230, 81, 0, 0.15)', marginBottom: '20px' }}>
-          <h3 style={{ color: 'var(--hunter)' }}>🏹 THỢ SĂN BỊ LOẠI!</h3>
-          <p style={{ textAlign: 'center', fontSize: '15px' }}>
-            <strong>{hunterPendingDeath.hunter.name}</strong> đã chết! Thợ săn được nổ súng kéo theo 1 người chơi:
-          </p>
-          <div className="player-grid">
-            {alivePlayers.filter(p => p.id !== hunterPendingDeath.hunter.id).map(p => {
-              const globalIndex = game.players.findIndex(x => x.id === p.id);
-              const isSelected = selectedHunterTarget === p.id;
+      {/* PHASE BANNER THEO THỜI GIAN THỰC */}
+      <PhaseBanner
+        phase={game.phase === 'night' ? 'night' : (game.phase === 'day' ? 'day' : 'vote')}
+        title={game.phase === 'ended' ? 'KẾT THÚC VÁN ĐẤU' : (game.phase === 'night' ? `BAN ĐÊM - VÒNG ${currentRound?.number || 1}` : `BAN NGÀY - VÒNG ${currentRound?.number || 1}`)}
+        subtitle={game.phase === 'night' ? 'Dân làng ngủ say, các thế lực thức giấc...' : 'Dân làng thảo luận và tìm kiếm kẻ giả mạo'}
+      />
 
+      {/* THỢ SĂN BẮN KHI BỊ CHẾT */}
+      {hunterPendingDeath && (
+        <Panel variant="danger">
+          <h3 style={{ color: 'var(--gold-100)', fontFamily: 'var(--font-title)', margin: '0 0 var(--s-2) 0' }}>
+            🏹 THỢ SĂN BỊ LOẠI!
+          </h3>
+          <p style={{ fontSize: '14px', margin: '0 0 var(--s-3) 0', color: 'var(--text)' }}>
+            <strong>{hunterPendingDeath.hunter.name}</strong> đã bị loại! Thợ săn được phép nổ phát súng cuối cùng kéo theo 1 người:
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+            {alivePlayers.filter(p => p.id !== hunterPendingDeath.hunter.id).map(p => {
+              const isSelected = selectedHunterTarget === p.id;
               return (
-                <button
+                <PlayerTile
                   key={p.id}
-                  className="player-square"
-                  style={{
-                    borderColor: isSelected ? 'var(--hunter)' : 'rgba(230, 81, 0, 0.4)',
-                    boxShadow: isSelected ? '0 0 10px var(--hunter)' : undefined
-                  }}
+                  name={p.name}
+                  avatarUrl={p.avatar}
+                  role={showRoles ? getRoleLabel(p.role) : undefined}
+                  badgeLabel={isSelected ? '🎯 Mục tiêu bắn' : undefined}
+                  badgeVariant="red"
+                  isSelected={isSelected}
                   onClick={() => setSelectedHunterTarget(prev => prev === p.id ? null : p.id)}
-                >
-                  <span className="player-id">P{globalIndex + 1}</span>
-                  {renderAvatar(p, '🎯')}
-                  <div className="player-name">{p.name}</div>
-                  {isSelected && (
-                    <div style={{ fontSize: '11px', color: 'var(--hunter)', fontWeight: 'bold', marginTop: '2px' }}>
-                      🎯 Mục tiêu bắn
-                    </div>
-                  )}
-                  {showRoles && <div style={{ fontSize: '10px', marginTop: '2px', color: '#aaa' }}>{getRoleLabel(p.role)}</div>}
-                </button>
+                />
               );
             })}
           </div>
 
-          {selectedHunterTarget ? (
-            <button
-              className="btn-primary"
-              style={{ marginTop: '16px', background: 'var(--hunter)', width: '100%', fontWeight: 'bold' }}
-              onClick={() => handleHunterShoot(selectedHunterTarget)}
-            >
-              ✓ Xác nhận Thợ Săn bắn: {game.players.find(p => p.id === selectedHunterTarget)?.name}
-            </button>
-          ) : (
-            <button
-              className="btn-secondary"
-              style={{ marginTop: '16px', width: '100%' }}
-              onClick={() => handleHunterShoot(null)}
-            >
-              Thợ săn không bắn ai / Bỏ qua
-            </button>
-          )}
-
-          {selectedHunterTarget && (
-            <button
-              className="btn-secondary"
-              style={{ marginTop: '8px', width: '100%' }}
-              onClick={() => setSelectedHunterTarget(null)}
-            >
-              Bỏ chọn mục tiêu
-            </button>
-          )}
-        </div>
+          <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            {selectedHunterTarget ? (
+              <Button
+                variant="danger"
+                pulse
+                fullWidth
+                onClick={() => handleHunterShoot(selectedHunterTarget)}
+              >
+                ✓ Xác Nhận Bắn: {game.players.find(p => p.id === selectedHunterTarget)?.name}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => handleHunterShoot(null)}
+              >
+                Thợ săn không bắn ai / Bỏ qua
+              </Button>
+            )}
+          </div>
+        </Panel>
       )}
 
+      {/* KHI TRÒ CHƠI KẾT THÚC */}
       {game.phase === 'ended' ? (
-        <div className="card" style={{ textAlign: 'center', borderColor: 'var(--primary)', borderWidth: 2, borderStyle: 'solid' }}>
-          <h1>Kết Thúc</h1>
-          <h2 style={{color: game.winner === 'wolf' ? 'var(--error)' : 'var(--success)'}}>
-            Phe {game.winner === 'wolf' ? 'SÓI' : 'DÂN LÀNG'} chiến thắng!
-          </h2>
-          <button className="btn-primary" onClick={handleEndGame}>Về Trang Chủ</button>
-        </div>
+        <Panel style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <h1 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-100)', margin: 0, fontSize: '26px' }}>
+            CHIẾN THẮNG!
+          </h1>
+          <div style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: game.winner === 'wolf' ? 'var(--red-300)' : 'var(--gold-300)'
+          }}>
+            PHE {game.winner === 'wolf' ? 'MA SÓI 🐺' : 'DÂN LÀNG 👨'} THẮNG
+          </div>
+          <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: 0 }}>
+            Ván đấu đã khép lại. Nhấn bên dưới để lưu dữ liệu vào lịch sử và về trang chủ.
+          </p>
+          <Button variant="primary" pulse fullWidth onClick={handleEndGame} style={{ marginTop: 'var(--s-2)' }}>
+            LƯU VÁN & VỀ TRANG CHỦ
+          </Button>
+        </Panel>
       ) : (
         <>
+          {/* BAN ĐÊM */}
           {game.phase === 'night' && !hunterPendingDeath && renderNightPhase()}
 
+          {/* BAN NGÀY */}
           {game.phase === 'day' && !hunterPendingDeath && (
-            <div className="card">
-              <h3>Sáng nay:</h3>
+            <Panel>
+              <h3 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-100)', margin: '0 0 var(--s-2) 0' }}>
+                ☀️ KẾT QUẢ ĐÊM QUA
+              </h3>
               {currentRound.nightDeaths.length === 0 ? (
-                <p className="success">Đêm qua bình yên, không ai chết.</p>
+                <Toast variant="success" message="Đêm qua bình yên, không ai chết!" style={{ marginBottom: 'var(--s-3)' }} />
               ) : (
-                <p className="error">Người chết đêm qua: {currentRound.nightDeaths.map(id => game.players.find(p => p.id === id)?.name).join(', ')}</p>
+                <Toast
+                  variant="danger"
+                  message={`Nạn nhân bị sát hại: ${currentRound.nightDeaths.map(id => game.players.find(p => p.id === id)?.name).join(', ')}`}
+                  style={{ marginBottom: 'var(--s-3)' }}
+                />
               )}
               {currentRound.hunterShotTarget && (
-                <p className="error" style={{ fontStyle: 'italic', marginTop: '4px' }}>
-                  🏹 Thợ săn đã bắn chết: {game.players.find(p => p.id === currentRound.hunterShotTarget)?.name}
-                </p>
+                <Toast
+                  variant="info"
+                  message={`🏹 Thợ săn đã bắn chết: ${game.players.find(p => p.id === currentRound.hunterShotTarget)?.name}`}
+                  style={{ marginBottom: 'var(--s-3)' }}
+                />
               )}
               
-              <h3 style={{marginTop: '24px'}}>⚖️ Bỏ phiếu loại (Treo cổ)</h3>
-              <div className="player-grid">
+              <h3 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-300)', marginTop: 'var(--s-4)', marginBottom: 'var(--s-2)' }}>
+                ⚖️ BỎ PHIẾU LOẠI (TREO CỔ)
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: '0 0 var(--s-3) 0' }}>
+                Chọn 1 người bị cả làng nghi ngờ để đưa lên giàn treo:
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
                 {alivePlayers.map(p => {
-                  const globalIndex = game.players.findIndex(x => x.id === p.id);
                   const isSelected = selectedVoteTarget === p.id;
 
                   return (
-                    <button 
-                      key={p.id} 
-                      className="player-square" 
-                      style={{
-                        borderColor: isSelected ? 'var(--error)' : 'transparent',
-                        boxShadow: isSelected ? '0 0 10px var(--error)' : undefined
-                      }} 
+                    <PlayerTile
+                      key={p.id}
+                      name={p.name}
+                      avatarUrl={p.avatar}
+                      role={showRoles ? getRoleLabel(p.role) : undefined}
+                      badgeLabel={isSelected ? '⚖️ Sẽ treo cổ' : undefined}
+                      badgeVariant="red"
+                      isSelected={isSelected}
                       onClick={() => setSelectedVoteTarget(prev => prev === p.id ? null : p.id)}
-                    >
-                      <span className="player-id">P{globalIndex + 1}</span>
-                      {renderAvatar(p, '⚖️')}
-                      <div className="player-name">{p.name}</div>
-                      {isSelected && (
-                        <div style={{fontSize: '11px', color: 'var(--error)', fontWeight: 'bold', marginTop: '2px'}}>
-                          ⚖️ Sẽ treo cổ
-                        </div>
-                      )}
-                      {showRoles && <div style={{fontSize: '11px', marginTop: '4px', color: '#aaa'}}>{getRoleLabel(p.role)}</div>}
-                    </button>
+                    />
                   );
                 })}
               </div>
 
-              {selectedVoteTarget ? (
-                <button 
-                  className="btn-primary" 
-                  style={{background: 'var(--error)', marginTop: '16px', width: '100%', fontWeight: 'bold'}} 
-                  onClick={() => handleVote(selectedVoteTarget)}
-                >
-                  ✓ Xác nhận treo cổ: {game.players.find(p => p.id === selectedVoteTarget)?.name}
-                </button>
-              ) : (
-                <button 
-                  className="btn-primary" 
-                  style={{background: '#555', marginTop: '16px', width: '100%'}} 
-                  onClick={() => handleVote(null)}
-                >
-                  Hòa / Không ai bị loại
-                </button>
-              )}
+              <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                {selectedVoteTarget ? (
+                  <Button 
+                    variant="danger" 
+                    pulse
+                    fullWidth
+                    onClick={() => handleVote(selectedVoteTarget)}
+                  >
+                    ✓ Xác Nhận Treo Cổ: {game.players.find(p => p.id === selectedVoteTarget)?.name}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="secondary" 
+                    fullWidth
+                    onClick={() => handleVote(null)}
+                  >
+                    Hòa / Không Ai Bị Loại
+                  </Button>
+                )}
 
-              {selectedVoteTarget && (
-                <button 
-                  className="btn-secondary" 
-                  style={{marginTop: '8px', width: '100%'}} 
-                  onClick={() => setSelectedVoteTarget(null)}
-                >
-                  Bỏ chọn treo cổ
-                </button>
-              )}
-            </div>
+                {selectedVoteTarget && (
+                  <Button 
+                    variant="ghost" 
+                    fullWidth
+                    onClick={() => setSelectedVoteTarget(null)}
+                  >
+                    Bỏ chọn người này
+                  </Button>
+                )}
+              </div>
+            </Panel>
           )}
         </>
       )}
+
+      {/* MODAL KẾT QUẢ SOI CỦA TIÊN TRI */}
+      <Modal
+        isOpen={!!seerResultModal}
+        onClose={() => setSeerResultModal(null)}
+        title="KẾT QUẢ SOI CHO TIÊN TRI"
+        footer={
+          seerResultModal ? (
+            <Button
+              variant="primary"
+              pulse
+              fullWidth
+              onClick={() => handleSeerCheck(seerResultModal.targetId)}
+            >
+              Xác Nhận & Tiếp Tục ➔
+            </Button>
+          ) : undefined
+        }
+      >
+        {seerResultModal && (
+          <div style={{ textAlign: 'center', padding: 'var(--s-2) 0' }}>
+            <p style={{ fontSize: '15px', color: 'var(--text)', margin: '0 0 var(--s-2) 0' }}>
+              Người chơi <strong>{seerResultModal.name}</strong>:
+            </p>
+            <div style={{
+              fontSize: '24px',
+              fontFamily: 'var(--font-title)',
+              fontWeight: 'bold',
+              color: seerResultModal.isWolf ? 'var(--red-300)' : 'var(--green-400)',
+              letterSpacing: '0.05em',
+              margin: 'var(--s-3) 0'
+            }}>
+              {seerResultModal.isWolf ? '🐺 LÀ SÓI!' : '👨 KHÔNG PHẢI SÓI'}
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0 }}>
+              Chỉ Quản trò và Tiên Tri biết được bí mật này.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

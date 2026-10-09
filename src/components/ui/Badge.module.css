@@ -1,0 +1,43 @@
+.badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  color: #ffffff;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+}
+
+/* Biến thể đỏ (mặc định - số vote, nguy hiểm) */
+.red {
+  background: linear-gradient(180deg, var(--red-300), var(--red-500));
+  box-shadow: 0 2px 0 var(--red-800), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Biến thể vàng hoàng gia */
+.gold {
+  color: #2A1A00;
+  background: linear-gradient(180deg, var(--gold-100), var(--gold-500));
+  box-shadow: 0 2px 0 var(--gold-900), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Biến thể xanh lá / còn sống */
+.green {
+  background: linear-gradient(180deg, #43A047, #2E7D32);
+  box-shadow: 0 2px 0 #1B5E20, inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Biến thể tối / xám / đã chết */
+.ash {
+  color: var(--text-dim);
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-1));
+  box-shadow: 0 2px 0 var(--bg-0), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}

@@ -1,0 +1,38 @@
+.panel {
+  position: relative;
+  padding: var(--s-5);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(26, 31, 75, 0.97), rgba(11, 16, 38, 0.97));
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 2px var(--gold-700),
+    inset 0 0 0 5px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 6px rgba(232, 199, 102, 0.25);
+  color: var(--text);
+}
+
+.compact {
+  padding: var(--s-3);
+  border-radius: var(--radius-md);
+}
+
+.danger {
+  background: linear-gradient(180deg, rgba(78, 13, 25, 0.95), rgba(11, 16, 38, 0.98));
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 2px var(--red-500),
+    inset 0 0 0 5px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 6px rgba(192, 57, 79, 0.3);
+}
+
+.interactive {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.interactive:active {
+  transform: translateY(2px);
+}

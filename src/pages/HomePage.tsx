@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { subscribeRooms, createRoom, joinRoom } from '../services/roomService';
 import type { GameRoom } from '../game/types';
+import { Button, Panel, Badge, Modal } from '../components/ui';
 
 const PRESET_AVATARS = [
   { label: 'Sói', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=WolfLeader' },
@@ -160,143 +161,139 @@ export default function HomePage() {
   };
 
   return (
-    <div className="container" style={{ textAlign: 'center', paddingTop: '20px' }}>
+    <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
       {/* Thanh trạng thái người dùng trên cùng */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        background: 'var(--card-bg)',
-        padding: '10px 16px',
-        borderRadius: '12px',
-        marginBottom: '26px',
-        border: '1px solid rgba(255,255,255,0.05)'
-      }}>
-        {user ? (
-          <div 
-            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
-            onClick={openProfile}
-            title="Nhấp để đổi tên & ảnh đại diện"
-          >
-            {user.avatar || user.photoURL ? (
-              <img
-                src={user.avatar || user.photoURL}
-                alt={user.displayName}
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid var(--primary)',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
-                }}
-              />
-            ) : (
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: 'var(--primary)',
-                color: '#1a1614',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                fontSize: '14px'
-              }}>
-                {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
-              </div>
-            )}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span>{user.displayName}</span>
-                <span style={{ fontSize: '11px', opacity: 0.7 }}>✏️</span>
-              </div>
-              <span style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: 'rgba(212, 175, 55, 0.2)',
-                color: 'var(--primary)',
-                fontWeight: '600'
-              }}>
-                🎙️ Quản trò
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Chế độ: <strong>Khách (Offline)</strong>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {user && (
-            <button
-              className="btn-secondary"
-              style={{
-                width: 'auto',
-                padding: '6px 12px',
-                fontSize: '12px',
-                border: '1px solid rgba(212, 175, 55, 0.3)',
-                color: 'var(--primary)'
-              }}
-              onClick={openProfile}
-            >
-              ✏️ Sửa hồ sơ
-            </button>
-          )}
-
+      <Panel compact>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
           {user ? (
-            <button
-              className="btn-secondary"
-              style={{ width: 'auto', padding: '6px 12px', fontSize: '12px' }}
-              onClick={logoutUser}
+            <div 
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+              onClick={openProfile}
+              title="Nhấp để đổi tên & ảnh đại diện"
             >
-              Đăng xuất
-            </button>
+              {user.avatar || user.photoURL ? (
+                <img
+                  src={user.avatar || user.photoURL}
+                  alt={user.displayName}
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid var(--gold-500)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: 'var(--gold-500)',
+                  color: '#2A1A00',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '14px'
+                }}>
+                  {user.displayName ? user.displayName[0].toUpperCase() : 'U'}
+                </div>
+              )}
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{user.displayName}</span>
+                  <span style={{ fontSize: '11px', opacity: 0.7 }}>✏️</span>
+                </div>
+                <Badge variant="gold" style={{ fontSize: '10px', height: '18px', padding: '0 6px', marginTop: '2px' }}>
+                  🎙️ Quản trò
+                </Badge>
+              </div>
+            </div>
           ) : (
-            <button
-              className="btn-primary"
-              style={{ width: 'auto', padding: '6px 14px', fontSize: '12px' }}
-              onClick={() => navigate('/login')}
-            >
-              Đăng nhập
-            </button>
+            <div style={{ fontSize: '13px', color: 'var(--text-dim)' }}>
+              Chế độ: <strong>Khách (Offline)</strong>
+            </div>
           )}
-        </div>
-      </div>
 
-      <h1>🐺 Ma Sói Quản Trò</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '6px', marginBottom: '24px' }}>
-        Công cụ quản trò Boardgame thông minh & tiện lợi
-      </p>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {user ? (
+              <Button
+                variant="ghost"
+                onClick={logoutUser}
+                style={{ minHeight: '36px', padding: '0 var(--s-3)', fontSize: '12px' }}
+              >
+                Đăng xuất
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={() => navigate('/login')}
+                style={{ minHeight: '38px', padding: '0 var(--s-4)', fontSize: '13px' }}
+              >
+                Đăng nhập
+              </Button>
+            )}
+          </div>
+        </div>
+      </Panel>
+
+      {/* HEADER HERO TIÊU ĐỀ GAME */}
+      <div style={{ textAlign: 'center', margin: 'var(--s-2) 0' }}>
+        <h1 style={{
+          fontFamily: 'var(--font-title)',
+          fontSize: '26px',
+          color: 'var(--gold-100)',
+          letterSpacing: '0.08em',
+          margin: '0 0 var(--s-1) 0',
+          textShadow: '0 2px 8px rgba(0,0,0,0.8)'
+        }}>
+          🐺 MA SÓI QUẢN TRÒ
+        </h1>
+        <p style={{
+          color: 'var(--text-dim)',
+          fontSize: '14px',
+          margin: 0
+        }}>
+          Giao diện Boardgame chuyên nghiệp & trực quan
+        </p>
+      </div>
 
       {/* ======================================================== */}
       {/* GIAO DIỆN KHI CHƯA ĐĂNG NHẬP (CHẾ ĐỘ OFFLINE) */}
       {/* ======================================================== */}
       {!user && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <button className="btn-primary" style={{ padding: '16px', fontSize: '17px' }} onClick={() => navigate('/setup')}>
-            🎮 Tạo Ván Mới (Chơi Offline)
-          </button>
-          <button 
-            className="btn-secondary" 
-            style={{ padding: '16px', fontSize: '16px' }} 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <Button
+            variant="primary"
+            pulse
+            fullWidth
+            onClick={() => navigate('/setup')}
+          >
+            🎮 TẠO VÁN MỚI (CHƠI OFFLINE)
+          </Button>
+
+          <Button 
+            variant="secondary" 
+            fullWidth
             onClick={() => navigate('/history')}
           >
             📜 Xem Lịch Sử Ván Đấu
-          </button>
+          </Button>
 
-          <div className="card" style={{ marginTop: '16px', padding: '16px', textAlign: 'left' }}>
+          <Panel style={{ textAlign: 'left', marginTop: 'var(--s-2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <span style={{ fontSize: '20px' }}>🌐</span>
-              <strong style={{ color: 'var(--primary)', fontSize: '14px' }}>Chơi Trực Tuyến Cùng Bạn Bè</strong>
+              <strong style={{ color: 'var(--gold-300)', fontSize: '14px' }}>Chơi Trực Tuyến Cùng Bạn Bè</strong>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.5 }}>
               Đăng nhập để vào sảnh phòng game online, tạo phòng lên tới 20 người và mời bạn bè tham gia ván đấu qua mạng!
             </p>
-          </div>
+          </Panel>
         </div>
       )}
 
@@ -304,147 +301,127 @@ export default function HomePage() {
       {/* GIAO DIỆN KHI ĐÃ ĐĂNG NHẬP (DANH SÁCH PHÒNG & TẠO PHÒNG) */}
       {/* ======================================================== */}
       {user && (
-        <div>
-          {/* Nút Tạo Phòng Mới Nổi Bật */}
-          <button
-            type="button"
-            className="btn-primary"
-            style={{
-              padding: '16px',
-              fontSize: '17px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              marginBottom: '24px',
-              boxShadow: '0 6px 18px rgba(255, 112, 67, 0.4)'
-            }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+          {/* NÚT TẠO PHÒNG MỚI (DUY NHẤT 1 PRIMARY PER SCREEN) */}
+          <Button
+            variant="primary"
+            pulse
+            fullWidth
             onClick={handleOpenCreateRoom}
           >
-            <span style={{ fontSize: '20px' }}>➕</span>
-            <strong>Tạo Phòng Game Mới (Max 20 Người)</strong>
-          </button>
+            ➕ TẠO PHÒNG GAME MỚI (MAX 20 NGƯỜI)
+          </Button>
 
           {/* Tiêu đề danh sách phòng */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '14px',
-            textAlign: 'left'
+            alignItems: 'center'
           }}>
-            <h3 style={{ margin: 0, fontSize: '17px', color: 'var(--text)' }}>
-              🏰 Các Phòng Đang Chờ ({rooms.length})
+            <h3 style={{
+              margin: 0,
+              fontSize: '16px',
+              fontFamily: 'var(--font-title)',
+              color: 'var(--gold-100)',
+              letterSpacing: '0.04em'
+            }}>
+              🏰 CÁC PHÒNG ĐANG CHỜ ({rooms.length})
             </h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Cập nhật trực tiếp 🟢
+            <span style={{ fontSize: '12px', color: 'var(--green-400)' }}>
+              Trực tiếp 🟢
             </span>
           </div>
 
           {/* Danh sách phòng */}
           {rooms.length === 0 ? (
-            <div className="card" style={{ padding: '36px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '42px', marginBottom: '12px' }}>🏰</div>
-              <h4 style={{ margin: '0 0 6px 0', color: 'var(--primary)' }}>Chưa Có Phòng Nào</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Hiện tại chưa có ai tạo phòng. Bạn hãy bấm <strong>"Tạo Phòng Game Mới"</strong> ở trên để làm Quản trò và mời bạn bè vào nhé!
+            <Panel style={{ textAlign: 'center', padding: 'var(--s-6) var(--s-4)' }}>
+              <div style={{ fontSize: '38px', marginBottom: '8px' }}>🏰</div>
+              <h4 style={{ margin: '0 0 6px 0', color: 'var(--gold-300)', fontSize: '16px' }}>Chưa Có Phòng Nào</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                Hiện tại chưa có phòng nào. Hãy bấm <strong>"Tạo Phòng Game Mới"</strong> ở trên để làm Quản trò và mời bạn bè vào nhé!
               </p>
-            </div>
+            </Panel>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
               {rooms.map(room => {
                 const memberCount = room.members?.length || 0;
                 const isFull = memberCount >= room.maxPlayers;
                 const isMyRoom = room.hostUid === user.uid;
 
                 return (
-                  <div
-                    key={room.id}
-                    className="card"
-                    style={{
-                      margin: 0,
-                      padding: '16px 18px',
+                  <Panel key={room.id} compact>
+                    <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      border: isMyRoom ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.08)',
-                      transition: 'transform 0.1s ease',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text)' }}>
-                          {room.name}
-                        </span>
-                        {isMyRoom && (
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--text)' }}>
+                            {room.name}
+                          </span>
+                          {isMyRoom && (
+                            <Badge variant="gold">
+                              Phòng bạn
+                            </Badge>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px' }}>
+                          👑 {room.hostName} • Mã: <strong style={{ color: 'var(--gold-300)' }}>#{room.id}</strong>
+                        </div>
+                        <div style={{ fontSize: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{
-                            fontSize: '10px',
-                            background: 'rgba(212, 175, 55, 0.25)',
-                            color: 'var(--primary)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
+                            color: isFull ? 'var(--red-300)' : 'var(--green-400)',
                             fontWeight: 'bold'
                           }}>
-                            Phòng của bạn
+                            👥 {memberCount}/{room.maxPlayers} người
                           </span>
-                        )}
+                          <span style={{ color: 'var(--text-dim)' }}>•</span>
+                          <span style={{ color: room.status === 'playing' ? '#FFB300' : 'var(--green-400)', fontSize: '11px' }}>
+                            {room.status === 'playing' ? '🎮 Đang chơi' : '⏳ Đang chờ'}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                        👑 Quản trò: <strong>{room.hostName}</strong> • Mã: <strong>#{room.id}</strong>
-                      </div>
-                      <div style={{ fontSize: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                          color: isFull ? 'var(--error)' : '#4CAF50',
-                          fontWeight: 'bold'
-                        }}>
-                          👥 {memberCount}/{room.maxPlayers} người
-                        </span>
-                        <span style={{ color: 'var(--text-muted)' }}>•</span>
-                        <span style={{ color: room.status === 'playing' ? '#FF9800' : '#81C784', fontSize: '11px' }}>
-                          {room.status === 'playing' ? '🎮 Đang diễn ra' : '⏳ Đang chờ người'}
-                        </span>
-                      </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      style={{
-                        width: 'auto',
-                        padding: '10px 18px',
-                        fontSize: '13px',
-                        fontWeight: 'bold',
-                        background: isFull && !isMyRoom ? '#555' : undefined,
-                        cursor: isFull && !isMyRoom ? 'not-allowed' : 'pointer'
-                      }}
-                      disabled={joiningRoomId === room.id || (isFull && !isMyRoom)}
-                      onClick={() => handleJoinRoom(room.id)}
-                    >
-                      {joiningRoomId === room.id ? '...' : (isMyRoom ? 'Vào phòng' : (isFull ? 'Đã đầy' : 'Tham gia ➔'))}
-                    </button>
-                  </div>
+                      <Button
+                        variant={isMyRoom ? "primary" : "secondary"}
+                        disabled={joiningRoomId === room.id || (isFull && !isMyRoom)}
+                        onClick={() => handleJoinRoom(room.id)}
+                        style={{ minHeight: '44px', padding: '0 var(--s-3)', fontSize: '13px' }}
+                      >
+                        {joiningRoomId === room.id ? '...' : (isMyRoom ? 'Vào phòng' : (isFull ? 'Đã đầy' : 'Tham gia ➔'))}
+                      </Button>
+                    </div>
+                  </Panel>
                 );
               })}
             </div>
           )}
 
           {/* Tùy chọn chơi offline và xem lịch sử */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-            <button 
-              className="btn-secondary" 
-              style={{ flex: 1, padding: '12px', fontSize: '13px' }} 
+          <div style={{ display: 'flex', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
+            <Button 
+              variant="secondary" 
+              style={{ flex: 1, minHeight: '46px', fontSize: '13px' }} 
               onClick={() => navigate('/setup')}
             >
-              🎮 Tạo Ván Chơi Offline
-            </button>
-            <button 
-              className="btn-secondary" 
-              style={{ flex: 1, padding: '12px', fontSize: '13px' }} 
+              🎮 Chơi Offline
+            </Button>
+            <Button 
+              variant="secondary" 
+              style={{ flex: 1, minHeight: '46px', fontSize: '13px' }} 
               onClick={() => navigate('/history')}
             >
-              📜 Lịch Sử Ván Đấu
-            </button>
+              📜 Lịch Sử
+            </Button>
+            <Button 
+              variant="secondary" 
+              style={{ flex: 1, minHeight: '46px', fontSize: '13px' }} 
+              onClick={() => navigate('/dev')}
+              title="Xem thư viện linh kiện UI Game"
+            >
+              🎨 Dev UI
+            </Button>
           </div>
         </div>
       )}
@@ -452,176 +429,105 @@ export default function HomePage() {
       {/* ======================================================== */}
       {/* MODAL TẠO PHÒNG MỚI */}
       {/* ======================================================== */}
-      {isCreateRoomOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px'
-        }}>
+      <Modal
+        isOpen={isCreateRoomOpen}
+        onClose={() => setIsCreateRoomOpen(false)}
+        title="➕ TẠO PHÒNG GAME MỚI"
+      >
+        {roomError && (
           <div style={{
-            background: 'var(--card-bg)',
-            border: '1px solid rgba(212, 175, 55, 0.3)',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '420px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            textAlign: 'left'
+            background: 'rgba(229, 57, 53, 0.15)',
+            border: '1px solid var(--red-300)',
+            color: 'var(--red-300)',
+            padding: '10px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '13px',
+            marginBottom: 'var(--s-3)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '18px' }}>
-                ➕ Tạo Phòng Game Mới
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsCreateRoomOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '20px',
-                  cursor: 'pointer'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {roomError && (
-              <div style={{
-                background: 'rgba(229, 57, 53, 0.15)',
-                border: '1px solid var(--error)',
-                color: 'var(--error)',
-                padding: '10px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                marginBottom: '16px'
-              }}>
-                {roomError}
-              </div>
-            )}
-
-            <form onSubmit={handleConfirmCreateRoom}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  Tên phòng:
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nhập tên phòng..."
-                  value={newRoomName}
-                  onChange={e => setNewRoomName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'var(--secondary)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
-                    color: 'var(--text)',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                    Số lượng người tối đa:
-                  </label>
-                  <strong style={{ color: 'var(--primary)', fontSize: '14px' }}>
-                    {maxPlayers} người
-                  </strong>
-                </div>
-                <input
-                  type="range"
-                  min="6"
-                  max="20"
-                  value={maxPlayers}
-                  onChange={e => setMaxPlayers(parseInt(e.target.value) || 20)}
-                  style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  <span>Tối thiểu 6 người</span>
-                  <span>Tối đa 20 người</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ flex: 1, padding: '12px' }}
-                  onClick={() => setIsCreateRoomOpen(false)}
-                  disabled={isCreatingRoom}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  style={{ flex: 2, padding: '12px', fontWeight: 'bold' }}
-                  disabled={isCreatingRoom || !newRoomName.trim()}
-                >
-                  {isCreatingRoom ? 'Đang tạo phòng...' : '🚀 Tạo & Vào Phòng'}
-                </button>
-              </div>
-            </form>
+            {roomError}
           </div>
-        </div>
-      )}
+        )}
+
+        <form onSubmit={handleConfirmCreateRoom}>
+          <div style={{ marginBottom: 'var(--s-3)' }}>
+            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-dim)', marginBottom: '6px' }}>
+              Tên phòng:
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Nhập tên phòng..."
+              value={newRoomName}
+              onChange={e => setNewRoomName(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--bg-1)',
+                border: '1px solid var(--gold-700)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text)',
+                fontSize: '14px',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 'var(--s-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ fontSize: '13px', color: 'var(--text-dim)' }}>
+                Số lượng người tối đa:
+              </label>
+              <strong style={{ color: 'var(--gold-300)', fontSize: '14px' }}>
+                {maxPlayers} người
+              </strong>
+            </div>
+            <input
+              type="range"
+              min="6"
+              max="20"
+              value={maxPlayers}
+              onChange={e => setMaxPlayers(parseInt(e.target.value) || 20)}
+              style={{ width: '100%', accentColor: 'var(--gold-500)', cursor: 'pointer' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-dim)', marginTop: '4px' }}>
+              <span>Tối thiểu 6 người</span>
+              <span>Tối đa 20 người</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              style={{ flex: 1 }}
+              onClick={() => setIsCreateRoomOpen(false)}
+              disabled={isCreatingRoom}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              pulse
+              style={{ flex: 1.5 }}
+              disabled={isCreatingRoom || !newRoomName.trim()}
+            >
+              {isCreatingRoom ? 'Đang tạo...' : '🚀 Tạo Phòng'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ======================================================== */}
       {/* MODAL CHỈNH SỬA HỒ SƠ */}
       {/* ======================================================== */}
-      {isProfileOpen && user && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '16px'
-        }}>
-          <div style={{
-            background: 'var(--card-bg)',
-            border: '1px solid rgba(212, 175, 55, 0.3)',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '440px',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-            textAlign: 'left'
-          }}>
-            {/* Header Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '18px' }}>
-                ✏️ Chỉnh Sửa Hồ Sơ
-              </h3>
-              <button
-                onClick={() => setIsProfileOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-              >
-                ✕
-              </button>
-            </div>
+      {user && (
+        <Modal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          title="✏️ CHỈNH SỬA HỒ SƠ"
+        >
 
             {/* Thông báo phản hồi */}
             {feedback && (
@@ -772,28 +678,28 @@ export default function HomePage() {
               </div>
 
               {/* Nút hành động */}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
+              <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                <Button
                   type="button"
-                  className="btn-secondary"
-                  style={{ flex: 1, padding: '12px' }}
+                  variant="secondary"
+                  style={{ flex: 1 }}
                   onClick={() => setIsProfileOpen(false)}
                   disabled={isSaving}
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="btn-primary"
-                  style={{ flex: 2, padding: '12px' }}
+                  variant="primary"
+                  pulse
+                  style={{ flex: 1.5 }}
                   disabled={isSaving}
                 >
                   {isSaving ? 'Đang lưu...' : '💾 Lưu Thay Đổi'}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

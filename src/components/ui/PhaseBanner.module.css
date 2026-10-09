@@ -1,0 +1,61 @@
+.banner {
+  position: relative;
+  width: 100%;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 2px var(--gold-700),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 5px rgba(232, 199, 102, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--s-1);
+}
+
+/* BAN ĐÊM */
+.night {
+  background: var(--art-banner-night, radial-gradient(circle at 50% 30%, var(--bg-3), var(--bg-0))) center / cover no-repeat;
+}
+
+/* BAN NGÀY */
+.day {
+  background: var(--art-banner-day, radial-gradient(circle at 50% 20%, #4A3B18, var(--bg-1))) center / cover no-repeat;
+}
+
+/* BỎ PHIẾU / NGUY HIỂM */
+.vote {
+  background: radial-gradient(circle at 50% 20%, var(--red-500), var(--bg-0)) center / cover no-repeat;
+  box-shadow:
+    var(--shadow-panel),
+    inset 0 0 0 2px var(--red-300),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.phaseIcon {
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+  margin-bottom: 2px;
+}
+
+.title {
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold-100);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}

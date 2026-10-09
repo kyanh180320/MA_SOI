@@ -1,3 +1,5 @@
+@import "./styles/tokens.css";
+
 :root {
   --bg-color: #1a1614; /* Dark brown almost black */
   --card-bg: #2a221e; /* Vintage brown */

@@ -10,6 +10,7 @@ import {
   removeBotFromRoom 
 } from '../services/roomService';
 import type { GameRoom } from '../game/types';
+import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -26,7 +27,6 @@ export default function RoomPage() {
 
     const unsubscribe = subscribeRoom(roomId, (roomData) => {
       if (!roomData) {
-        // Phòng đã bị giải tán hoặc không tồn tại
         alert('Phòng chơi này đã kết thúc hoặc bị giải tán.');
         navigate('/');
       } else {
@@ -40,17 +40,23 @@ export default function RoomPage() {
 
   if (loading) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '60px' }}>
-        <p>Đang tải thông tin phòng...</p>
+      <div className="screen-container" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--gold-300)', fontSize: '16px', fontWeight: 600 }}>
+          ⏳ Đang kết nối vào phòng chơi...
+        </p>
       </div>
     );
   }
 
   if (!room) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '60px' }}>
-        <p>Không tìm thấy phòng chơi.</p>
-        <button className="btn-primary" onClick={() => navigate('/')}>Về trang chủ</button>
+      <div className="screen-container" style={{ alignItems: 'center', justifyContent: 'center', gap: 'var(--s-4)' }}>
+        <Panel>
+          <p style={{ margin: 0, textAlign: 'center' }}>Không tìm thấy phòng chơi.</p>
+        </Panel>
+        <Button variant="primary" onClick={() => navigate('/')}>
+          Về Trang Chủ
+        </Button>
       </div>
     );
   }
@@ -79,7 +85,6 @@ export default function RoomPage() {
   };
 
   const handleStartSetup = () => {
-    // Chuyển sang SetupPage và truyền danh sách thành viên trong phòng
     navigate('/setup', { state: { fromRoom: room } });
   };
 
@@ -89,7 +94,6 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Thêm 1 bot
   const handleAddOneBot = async () => {
     if (!roomId || isAddingBot) return;
     setIsAddingBot(true);
@@ -102,7 +106,6 @@ export default function RoomPage() {
     }
   };
 
-  // Thêm nhanh cho đủ 6 người
   const handleFillBots = async () => {
     if (!roomId || isAddingBot) return;
     setIsAddingBot(true);
@@ -116,7 +119,6 @@ export default function RoomPage() {
     }
   };
 
-  // Xóa bot
   const handleRemoveBot = async (botUid?: string) => {
     if (!roomId) return;
     try {
@@ -127,28 +129,35 @@ export default function RoomPage() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: '20px' }}>
-      {/* Header phòng */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <button
-          type="button"
-          className="btn-secondary"
-          style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }}
+    <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
+      {/* HEADER PHÒNG CHỜ */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Button
+          variant="secondary"
           onClick={handleLeave}
+          style={{ minHeight: '44px', padding: '0 var(--s-3)', fontSize: '13px' }}
         >
           ← Rời phòng
-        </button>
+        </Button>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--primary)' }}>{room.name}</h2>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Mã phòng: <strong style={{ color: 'var(--text)' }}>#{room.id}</strong>{' '}
+          <h2 style={{
+            margin: 0,
+            fontSize: '18px',
+            color: 'var(--gold-100)',
+            fontFamily: 'var(--font-title)',
+            letterSpacing: '0.04em'
+          }}>
+            {room.name}
+          </h2>
+          <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '2px' }}>
+            Mã: <strong style={{ color: 'var(--gold-300)' }}>#{room.id}</strong>{' '}
             <button
               type="button"
               onClick={copyRoomCode}
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--primary)',
+                color: 'var(--gold-100)',
                 cursor: 'pointer',
                 fontSize: '12px',
                 padding: '2px 4px'
@@ -158,194 +167,155 @@ export default function RoomPage() {
             </button>
           </div>
         </div>
-        <div style={{ width: '80px' }} />
+        <div style={{ width: '60px' }} />
       </div>
 
-      {/* Thông tin phòng & Quản trò */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: '16px' }}>
+      {/* THÔNG TIN PHÒNG & QUẢN TRÒ */}
+      <Panel compact>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Quản trò chủ phòng:</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--primary)', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Quản trò chủ phòng:</div>
+            <div style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--gold-300)', marginTop: '2px' }}>
               👑 {room.hostName}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Số người tham gia:</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#4CAF50', marginTop: '2px' }}>
-              👥 {members.length}/{room.maxPlayers} người
-            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Số người tham gia:</div>
+            <Badge variant="gold" style={{ marginTop: '2px' }}>
+              👥 {members.length}/{room.maxPlayers}
+            </Badge>
           </div>
         </div>
-      </div>
+      </Panel>
 
-      {/* Thanh công cụ thêm Bot (Dành cho Quản trò để test nhanh) */}
+      {/* CÔNG CỤ THÊM BOT (DÀNH CHO QUẢN TRÒ TEST NHANH) */}
       {isHost && (
-        <div className="card" style={{
-          padding: '12px 16px',
-          marginBottom: '16px',
-          background: 'rgba(212, 175, 55, 0.08)',
-          border: '1px solid rgba(212, 175, 55, 0.25)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ textAlign: 'left' }}>
-              <strong style={{ fontSize: '13px', color: 'var(--primary)' }}>🤖 Thêm Bot Chơi Thử Nghiệm:</strong>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Thêm bot ảo để test ván chơi ngay mà không cần đợi đủ người thật</div>
-            </div>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ width: 'auto', padding: '6px 12px', fontSize: '12px' }}
-                disabled={isAddingBot || members.length >= room.maxPlayers}
-                onClick={handleAddOneBot}
-              >
-                +1 Bot 🤖
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                style={{
-                  width: 'auto',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  background: 'linear-gradient(135deg, #D4AF37 0%, #AA8010 100%)',
-                  color: '#1a1614',
-                  fontWeight: 'bold'
-                }}
-                disabled={isAddingBot || members.length >= room.maxPlayers}
-                onClick={handleFillBots}
-              >
-                ⚡ Thêm Đủ 6 Người
-              </button>
+        <Panel compact>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--gold-300)' }}>
+                🤖 Thêm Bot Chơi Thử Nghiệm:
+              </span>
               {members.some(m => m.isBot) && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ width: 'auto', padding: '6px 10px', fontSize: '12px', color: 'var(--error)' }}
+                <Button
+                  variant="ghost"
                   onClick={() => handleRemoveBot()}
+                  style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px', color: 'var(--red-300)' }}
                   title="Bớt 1 bot"
                 >
                   -1 Bot 🗑️
-                </button>
+                </Button>
               )}
             </div>
+            <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+              <Button
+                variant="secondary"
+                disabled={isAddingBot || members.length >= room.maxPlayers}
+                onClick={handleAddOneBot}
+                style={{ flex: 1, minHeight: '44px', fontSize: '13px' }}
+              >
+                +1 Bot 🤖
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={isAddingBot || members.length >= room.maxPlayers}
+                onClick={handleFillBots}
+                style={{ flex: 1, minHeight: '44px', fontSize: '13px', color: 'var(--gold-100)' }}
+              >
+                ⚡ Thêm Đủ 6
+              </Button>
+            </div>
           </div>
-        </div>
+        </Panel>
       )}
 
-      {/* Danh sách người chơi & Bot trong phòng */}
-      <div className="card">
-        <h3 style={{ margin: '0 0 16px 0', textAlign: 'left', fontSize: '16px' }}>
-          Danh sách người trong phòng ({members.length}/{room.maxPlayers})
+      {/* DANH SÁCH NGƯỜI CHƠI TRONG PHÒNG */}
+      <Panel>
+        <h3 style={{
+          margin: '0 0 var(--s-3) 0',
+          fontSize: '15px',
+          fontFamily: 'var(--font-title)',
+          color: 'var(--gold-100)',
+          letterSpacing: '0.04em'
+        }}>
+          DANH SÁCH NGƯỜI TRONG PHÒNG ({members.length})
         </h3>
 
-        <div className="player-grid">
-          {members.map((m, idx) => (
-            <div
-              key={m.uid}
-              className="player-square"
-              style={{
-                borderColor: m.isHost ? 'var(--primary)' : (m.isBot ? 'rgba(33, 150, 243, 0.4)' : 'rgba(255,255,255,0.1)'),
-                boxShadow: m.isHost ? '0 0 10px rgba(212, 175, 55, 0.3)' : undefined,
-                position: 'relative'
-              }}
-            >
-              <span className="player-id">#{idx + 1}</span>
-
-              {/* Nút xóa Bot cho Quản trò */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+          {members.map((m) => (
+            <div key={m.uid} style={{ position: 'relative' }}>
+              <PlayerTile
+                name={m.displayName}
+                avatarUrl={m.avatar}
+                role={m.isHost ? '👑 Quản trò' : (m.isBot ? '🤖 Bot' : 'Người chơi')}
+                badgeLabel={m.isHost ? 'Host' : (m.isBot ? 'Bot' : 'Sẵn sàng')}
+                badgeVariant={m.isHost ? 'gold' : (m.isBot ? 'ash' : 'green')}
+                isAlive={true}
+                layout="grid"
+              />
               {isHost && m.isBot && (
                 <button
                   type="button"
                   onClick={() => handleRemoveBot(m.uid)}
                   style={{
                     position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    background: 'rgba(229, 57, 53, 0.85)',
+                    top: '2px',
+                    right: '2px',
+                    background: 'var(--red-500)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '50%',
-                    width: '18px',
-                    height: '18px',
+                    width: '20px',
+                    height: '20px',
                     fontSize: '10px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 2
+                    zIndex: 3,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
                   }}
                   title="Xóa bot này"
                 >
                   ✕
                 </button>
               )}
-
-              <div
-                className="player-avatar"
-                style={{
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: m.isHost ? '2px solid var(--primary)' : (m.isBot ? '2px solid #2196F3' : undefined)
-                }}
-              >
-                {m.avatar ? (
-                  <img src={m.avatar} alt={m.displayName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontSize: '18px' }}>👤</span>
-                )}
-              </div>
-              <div className="player-name" title={m.displayName}>
-                {m.displayName}
-              </div>
-              {m.isHost && (
-                <span style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: 'bold' }}>
-                  👑 Quản trò
-                </span>
-              )}
-              {m.isBot && !m.isHost && (
-                <span style={{ fontSize: '10px', color: '#2196F3', fontWeight: 'bold' }}>
-                  🤖 Bot
-                </span>
-              )}
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
-      {/* Bảng điều khiển hành động */}
-      <div style={{ marginTop: '24px' }}>
+      {/* BẢNG ĐIỀU KHIỂN HÀNH ĐỘNG */}
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         {isHost ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              style={{ padding: '16px', fontSize: '16px' }}
+          <>
+            {/* DUY NHẤT 1 PRIMARY BUTTON TRÊN MÀN HÌNH */}
+            <Button
+              variant="primary"
+              pulse
+              fullWidth
               onClick={handleStartSetup}
             >
-              🎮 Bắt Đầu Thiết Lập Ván & Chia Vai ({members.length} người)
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ padding: '12px', fontSize: '14px', color: 'var(--error)' }}
+              🎮 THIẾT LẬP VÁN & CHIA VAI ({members.length} NGƯỜI)
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
               onClick={handleClose}
             >
-              ❌ Giải tán phòng
-            </button>
-          </div>
+              ❌ Giải Tán Phòng
+            </Button>
+          </>
         ) : (
-          <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
-            <p style={{ margin: 0, color: 'var(--text)', fontSize: '15px' }}>
+          <Panel style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '4px' }}>⏳</div>
+            <p style={{ margin: 0, color: 'var(--gold-100)', fontSize: '15px', fontWeight: 600 }}>
               Đang đợi Quản trò (<strong>{room.hostName}</strong>) bắt đầu ván...
             </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-dim)', margin: '6px 0 0 0' }}>
               Khi Quản trò bắt đầu, ván chơi sẽ được thiết lập với danh sách người chơi trong phòng.
             </p>
-          </div>
+          </Panel>
         )}
       </div>
     </div>

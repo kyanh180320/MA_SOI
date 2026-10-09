@@ -1,0 +1,108 @@
+:root {
+  /* Nền */
+  --bg-0: #0B1026;
+  --bg-1: #141A3C;
+  --bg-2: #1A1F4B;
+  --bg-3: #2B3270;
+
+  /* Vàng (nút chính, viền, điểm nhấn mặt trăng) */
+  --gold-100: #F6E3A1;
+  --gold-300: #E8C766;
+  --gold-500: #C9A24A;
+  --gold-700: #A8802F;
+  --gold-900: #6B4F17;
+
+  /* Đỏ (nguy hiểm, sói, hành động loại trừ) */
+  --red-300: #C0394F;
+  --red-500: #8E1B2E;
+  --red-800: #4E0D19;
+
+  /* Màu chức năng & vai trò */
+  --teal-500: #1F5A5A;
+  --green-400: #43A047;
+  --green-600: #2E7D32;
+  --blue-400: #3949AB;
+  --purple-400: #8E24AA;
+  --orange-400: #E65100;
+
+  --ash: #8A8FA6;
+  --text: #F2E6C9;
+  --text-dim: #A9ABC0;
+
+  /* Tương thích ngược với hệ thống trước */
+  --bg-color: var(--bg-0);
+  --card-bg: var(--bg-1);
+  --primary: var(--gold-300);
+  --secondary: var(--bg-2);
+  --secondary-hover: var(--bg-3);
+  --error: var(--red-300);
+  --success: var(--green-400);
+
+  /* Hình khối */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* Khoảng cách (bội số của 4) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+
+  /* Bóng mềm dùng chung (Ánh sáng luôn chiếu từ TRÊN XUỐNG) */
+  --shadow-soft: 0 10px 16px rgba(0, 0, 0, .45);
+  --shadow-panel: 0 16px 32px rgba(0, 0, 0, .5);
+
+  /* Font chữ hỗ trợ tiếng Việt tuyệt đối */
+  --font-title: "Cinzel", "Playfair Display", Georgia, serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
+
+  /* Art slots: để trống (none), sau này chỉ cần gán url ảnh vào biến */
+  --art-bg-night: none;
+  --art-bg-day: none;
+  --art-card: none;
+  --art-card-back: none;
+  --art-avatar: none;
+  --art-banner-night: none;
+  --art-banner-day: none;
+
+  /* Safe Area cho thiết bị di động / iOS */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-0);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+}
+
+/* Container chuẩn mobile game: 1 cột, giới hạn chiều rộng, hỗ trợ safe area */
+.screen-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  padding: calc(var(--s-4) + var(--safe-top)) var(--s-4) calc(var(--s-5) + var(--safe-bottom)) var(--s-4);
+  display: flex;
+  flex-direction: column;
+}
