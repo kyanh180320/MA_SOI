@@ -9,6 +9,7 @@ import { saveGame } from '../services/gameRepository';
 import {
   Button,
   Panel,
+  Badge,
   PhaseBanner,
   PlayerTile,
   Modal,
@@ -755,6 +756,115 @@ export default function PlayPage() {
           >
             {showRoles ? 'Ẩn Role' : 'Hiện Role'}
           </Button>
+        </div>
+      </div>
+
+      {/* THANH TIẾN TRÌNH ROUND & GIAI ĐOẠN TRỰC QUAN */}
+      <div style={{
+        background: 'linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--gold-700)',
+        padding: 'var(--s-3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--s-3)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{
+            fontFamily: 'var(--font-title)',
+            fontSize: '15px',
+            fontWeight: 700,
+            color: 'var(--gold-100)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span>⏳</span>
+            <span>VÒNG {currentRound?.number || 1}</span>
+          </div>
+          <Badge variant={game.phase === 'ended' ? 'green' : (game.phase === 'vote' ? 'red' : 'gold')}>
+            {game.phase === 'night' && '🌙 Giai Đoạn Đêm'}
+            {game.phase === 'day' && '☀️ Ban Ngày'}
+            {game.phase === 'vote' && '⚖️ Bỏ Phiếu Treo Cổ'}
+            {game.phase === 'ended' && '🏁 Trận Đấu Kết Thúc'}
+          </Badge>
+        </div>
+
+        {/* Stepper bar */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'relative',
+          margin: '4px 0'
+        }}>
+          <div style={{
+            position: 'absolute',
+            top: '14px',
+            left: '20px',
+            right: '20px',
+            height: '3px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            zIndex: 1
+          }}>
+            <div style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, var(--gold-500), var(--gold-300))',
+              width: `${(Math.max(0, ['night', 'day', 'vote', 'ended'].indexOf(game.phase)) / 3) * 100}%`,
+              transition: 'width 0.4s ease',
+              boxShadow: '0 0 8px rgba(232, 199, 102, 0.5)'
+            }} />
+          </div>
+
+          {[
+            { id: 'night', label: 'Ban Đêm', icon: '🌙' },
+            { id: 'day', label: 'Ban Ngày', icon: '☀️' },
+            { id: 'vote', label: 'Bỏ Phiếu', icon: '⚖️' },
+            { id: 'ended', label: 'Kết Quả', icon: '☠️' }
+          ].map((step, idx) => {
+            const currentIdx = ['night', 'day', 'vote', 'ended'].indexOf(game.phase);
+            const isPassed = idx < currentIdx;
+            const isActive = idx === currentIdx;
+
+            return (
+              <div key={step.id} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                zIndex: 2,
+                flex: 1
+              }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '13px',
+                  background: isActive ? 'var(--gold-500)' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
+                  border: `2px solid ${isActive ? 'var(--gold-100)' : (isPassed ? 'var(--gold-500)' : 'var(--ash)')}`,
+                  color: isActive ? 'var(--bg-0)' : (isPassed ? 'var(--gold-300)' : 'var(--ash)'),
+                  boxShadow: isActive ? '0 0 12px var(--gold-300)' : 'none',
+                  transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'all 0.3s ease',
+                  fontWeight: 'bold'
+                }}>
+                  {isPassed ? '✓' : step.icon}
+                </div>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? 'var(--gold-100)' : 'var(--text-dim)',
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
