@@ -422,10 +422,13 @@ export default function PlayPage() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
+                  position: 'relative',
                   zIndex: 2,
                   flex: 1
                 }}>
                   <div style={{
+                    position: 'relative',
+                    zIndex: 3,
                     width: '30px',
                     height: '30px',
                     borderRadius: '50%',
@@ -433,7 +436,7 @@ export default function PlayPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '14px',
-                    background: isActive ? 'linear-gradient(135deg, var(--gold-400), var(--gold-600))' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
+                    background: isActive ? 'linear-gradient(135deg, var(--gold-300), var(--gold-500))' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
                     border: `2px solid ${isActive ? '#fff' : (isPassed ? 'var(--gold-500)' : 'var(--ash)')}`,
                     color: isActive ? 'var(--bg-0)' : (isPassed ? 'var(--gold-300)' : 'var(--ash)'),
                     boxShadow: isActive ? '0 0 16px var(--gold-300), 0 0 24px rgba(232, 199, 102, 0.6)' : 'none',
@@ -500,10 +503,13 @@ export default function PlayPage() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
+                  position: 'relative',
                   zIndex: 2,
                   flex: 1
                 }}>
                   <div style={{
+                    position: 'relative',
+                    zIndex: 3,
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',

@@ -156,6 +156,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  position: relative;
   z-index: 2;
   flex: 1;
 }
@@ -171,6 +172,8 @@
   background: var(--bg-1);
   border: 2px solid var(--ash);
   color: var(--ash);
+  position: relative;
+  z-index: 3;
   transition: all 0.3s ease;
 }
 
@@ -382,7 +385,7 @@
 
 /* HIỆU ỨNG PHÁT SÁNG CHO ROLE STEP TRONG ĐÊM */
 .stepItemRoleActive .stepCircle {
-  background: linear-gradient(135deg, var(--gold-400), var(--gold-600)) !important;
+  background: linear-gradient(135deg, var(--gold-300), var(--gold-500)) !important;
   border-color: #fff !important;
   color: var(--bg-0) !important;
   box-shadow: 0 0 16px var(--gold-300), 0 0 28px rgba(232, 199, 102, 0.6) !important;
