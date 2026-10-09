@@ -10,8 +10,95 @@ import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
 import styles from './SetupPage.module.css';
 
+// SVG Ruy băng "VÁN MỚI" chuẩn Gothic với đuôi én hai bên
+function SvgRibbon() {
+  return (
+    <svg viewBox="0 0 400 70" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.ribbonSvg}>
+      <defs>
+        <linearGradient id="ribbonBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#8d6837" />
+          <stop offset="45%" stopColor="#674b24" />
+          <stop offset="100%" stopColor="#3d2a13" />
+        </linearGradient>
+        <linearGradient id="ribbonTailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#614421" />
+          <stop offset="100%" stopColor="#2c1d0e" />
+        </linearGradient>
+      </defs>
+      {/* Đuôi én bên trái */}
+      <path d="M48 48 L10 56 L26 35 L10 14 L48 22 Z" fill="url(#ribbonTailGrad)" stroke="#c49e5d" strokeWidth="1.5" strokeLinejoin="round" />
+      {/* Đuôi én bên phải */}
+      <path d="M352 48 L390 56 L374 35 L390 14 L352 22 Z" fill="url(#ribbonTailGrad)" stroke="#c49e5d" strokeWidth="1.5" strokeLinejoin="round" />
+      {/* Nếp gấp 3D */}
+      <polygon points="48,22 48,48 60,35" fill="#1b1208" />
+      <polygon points="352,22 352,48 340,35" fill="#1b1208" />
+      {/* Thân ruy băng chính cuộn cong */}
+      <path d="M44 14 Q200 4 356 14 L350 54 Q200 64 50 54 Z" fill="url(#ribbonBodyGrad)" stroke="#eed79b" strokeWidth="2" strokeLinejoin="round" />
+      {/* Viền chỉ vàng hoàng gia */}
+      <path d="M50 18 Q200 9 350 18 M346 50 Q200 59 54 50" stroke="#f6e3a1" strokeWidth="1.2" strokeDasharray="6 3" opacity="0.75" />
+    </svg>
+  );
+}
+
+// Viên ngọc Ruby SVG hình thoi đính trên nút
+function SvgRubyGem({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id="rubyShineGrad" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#ff7b91" />
+          <stop offset="45%" stopColor="#cc1835" />
+          <stop offset="100%" stopColor="#590513" />
+        </radialGradient>
+      </defs>
+      <polygon points="10,1 19,10 10,19 1,10" fill="#2d1c07" stroke="#c9a24a" strokeWidth="1.5" strokeLinejoin="round" />
+      <polygon points="10,3 17,10 10,17 3,10" fill="url(#rubyShineGrad)" />
+      <polygon points="10,3 10,10 3,10" fill="#ffa8b8" opacity="0.45" />
+    </svg>
+  );
+}
+
+// Hoa văn góc tấm giấy da
+function SvgCornerFlourish({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M2 2 L12 2 Q5 5 5 12 L2 12 Z" fill="#6d5332" />
+      <path d="M2 2 Q14 2 14 14 Q2 14 2 2 Z" stroke="#8e734c" strokeWidth="1" fill="none" opacity="0.7" />
+      <circle cx="5" cy="5" r="1.5" fill="#c9a24a" />
+    </svg>
+  );
+}
+
+// Cài ngọc Ruby trên đỉnh nút "CHIA BÀI & BẮT ĐẦU"
+function SvgRubyBroochTop({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 26" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <radialGradient id="broochRubyGrad" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#ff7388" />
+          <stop offset="50%" stopColor="#c4142f" />
+          <stop offset="100%" stopColor="#4f030e" />
+        </radialGradient>
+      </defs>
+      <path d="M2 20 Q8 12 16 14 Q24 12 30 20 Q22 15 16 17 Q10 15 2 20 Z" fill="#b38734" stroke="#e5c378" strokeWidth="0.8" />
+      <polygon points="16,2 24,7 24,18 16,23 8,18 8,7" fill="#2d1c07" stroke="#e5c378" strokeWidth="1.2" />
+      <polygon points="16,4 22,8 22,17 16,21 10,17 10,8" fill="url(#broochRubyGrad)" />
+      <polygon points="16,4 16,12 10,8" fill="#ffaec0" opacity="0.5" />
+    </svg>
+  );
+}
+
+// Icon bóng người Silhouette đại diện avatar
+function SvgAvatarSilhouette() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={styles.avatarSilhouette}>
+      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
-  { id: 'wolf', name: 'SÓI THƯỜNG', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
+  { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
   { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
   { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm' },
   { id: 'witch', name: 'PHÙ THỦY', icon: '/assets/icons/icon_potion_heal.webp', desc: 'Có 1 bình cứu & 1 bình độc' },
@@ -72,13 +159,14 @@ export default function SetupPage() {
   const [newPresetName, setNewPresetName] = useState('');
   const [isAddingPreset, setIsAddingPreset] = useState(false);
 
-  // Tự động căn chỉnh khi mới mở trang
+  // Căn chỉnh phân vai ban đầu
   useEffect(() => {
     if (playerCount >= RULES.minPlayers && playerCount <= RULES.maxPlayers) {
       setDistribution(getRoleDistribution(playerCount, { randomize: true }));
     }
   }, []);
 
+  // Cập nhật mảng tên & avatar theo số lượng người
   useEffect(() => {
     if (playerCount >= RULES.minPlayers && playerCount <= RULES.maxPlayers) {
       setNames(prev => {
@@ -205,132 +293,135 @@ export default function SetupPage() {
   };
 
   return (
-    <div className={styles.setupScreenWrapper}>
-      <div className={styles.setupPhoneFrame}>
-        {/* NỘI DUNG CUỘN CHÍNH */}
-        <div className={styles.setupContentScroll}>
-          {/* 1. RUY BĂNG TIÊU ĐỀ NEW GAME */}
-          <div className={styles.ribbonHeader}>
-            <img
-              src="/assets/setup_ribbon.webp"
-              alt="NEW GAME"
-              className={styles.ribbonImg}
-            />
+    <div className={styles.setupWrapper}>
+      <div className={styles.setupFrame}>
+        {/* VÙNG CUỘN NỘI DUNG CHÍNH */}
+        <div className={styles.contentArea}>
+          {/* 1. RUY BĂNG TIÊU ĐỀ: "VÁN MỚI" BẰNG SVG & CODE */}
+          <div className={styles.ribbonWrapper}>
+            <SvgRibbon />
+            <span className={styles.ribbonText}>VÁN MỚI</span>
           </div>
 
-          {/* 2. SECTION SỐ LƯỢNG NGƯỜI CHƠI (PLAYERS) */}
-          <div className={styles.sectionTabHeader}>
-            <div className={styles.tabPlate}>PLAYERS</div>
+          {/* 2. SỐ LƯỢNG NGƯỜI CHƠI (STEPPER VÁT GÓC + SVG GEMS) */}
+          <div className={styles.tabPlateWrapper}>
+            <div className={styles.tabPlate}>
+              <span className={styles.tabPlateTitle}>SỐ NGƯỜI CHƠI</span>
+            </div>
           </div>
 
-          <div className={styles.stepperContainer}>
+          <div className={styles.stepperRow}>
+            {/* Nút - vuông vát góc kèm ngọc Ruby bên trái */}
             <button
-              className={styles.stepperBtn}
+              type="button"
+              className={styles.stepperBevelBtn}
               onClick={() => changePlayerCount(-1)}
               disabled={playerCount <= RULES.minPlayers}
               aria-label="Giảm số người"
               title="Giảm số người chơi"
             >
-              <img
-                src="/assets/setup_btn_minus.webp"
-                alt="-"
-                className={styles.stepperBtnImg}
-              />
+              <SvgRubyGem className={styles.sideRubyLeft} />
+              <span className={styles.stepperSign}>−</span>
             </button>
 
-            <div className={styles.numberFrameWrapper}>
-              <img
-                src="/assets/setup_number_frame_blank.webp"
-                alt="Frame"
-                className={styles.numberFrameBg}
-              />
-              <span className={styles.numberDisplayText}>{playerCount}</span>
+            {/* Khung số giấy da cổ với 4 góc hoa văn SVG */}
+            <div className={styles.numberParchmentBox}>
+              <SvgCornerFlourish className={`${styles.numberCornerFlourish} ${styles.numFlourishTL}`} />
+              <SvgCornerFlourish className={`${styles.numberCornerFlourish} ${styles.numFlourishTR}`} />
+              <SvgCornerFlourish className={`${styles.numberCornerFlourish} ${styles.numFlourishBL}`} />
+              <SvgCornerFlourish className={`${styles.numberCornerFlourish} ${styles.numFlourishBR}`} />
+              <span className={styles.numberDisplay}>{playerCount}</span>
             </div>
 
+            {/* Nút + vuông vát góc kèm ngọc Ruby bên phải */}
             <button
-              className={styles.stepperBtn}
+              type="button"
+              className={`${styles.stepperBevelBtn} ${styles.stepperBtnPlus}`}
               onClick={() => changePlayerCount(1)}
               disabled={playerCount >= RULES.maxPlayers}
               aria-label="Tăng số người"
               title="Tăng số người chơi"
             >
-              <img
-                src="/assets/setup_btn_plus.webp"
-                alt="+"
-                className={styles.stepperBtnImg}
-              />
+              <SvgRubyGem className={styles.sideRubyRight} />
+              <span className={styles.stepperSign}>+</span>
             </button>
           </div>
 
-          <div className={styles.sliderWrapper}>
+          {/* Thanh trượt số người rãnh đá & nút trượt hình ngọc */}
+          <div className={styles.sliderBox}>
             <input
               type="range"
               min={RULES.minPlayers}
               max={RULES.maxPlayers}
               value={playerCount}
               onChange={e => setPlayerCountInput(e.target.value)}
-              className={styles.stepperSlider}
+              className={styles.gothicSlider}
             />
-            <div className={styles.sliderLabels}>
+            <div className={styles.sliderMetaLabels}>
               <span>{RULES.minPlayers} người</span>
-              <span>Quản trò: {user?.displayName || 'Khách'}</span>
+              <span>Quản trò: {user?.displayName || 'Khách (Offline)'}</span>
               <span>{RULES.maxPlayers} người</span>
             </div>
           </div>
 
-          {/* 3. SECTION DANH SÁCH NGƯỜI CHƠI (PRESETS) */}
-          <div className={styles.sectionTabHeader}>
-            <div className={styles.tabPlate}>PRESETS & PLAYERS</div>
+          {/* 3. DANH SÁCH TÊN NGƯỜI CHƠI (PARCHMENT PANEL 2 LỚP VIỀN) */}
+          <div className={styles.tabPlateWrapper}>
+            <div className={styles.tabPlate}>
+              <span className={styles.tabPlateTitle}>DANH SÁCH TÊN</span>
+            </div>
           </div>
 
-          <div className={styles.parchmentCard}>
+          <div className={styles.parchmentPanel}>
+            <SvgCornerFlourish className={`${styles.panelFlourishTL}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishTR}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishBL}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishBR}`} />
+
             <div className={styles.presetBar}>
-              <span style={{ fontSize: '11px', color: '#44311a', fontWeight: 'bold' }}>
-                DANH SÁCH TÊN ({playerCount})
+              <span className={styles.presetInfoTitle}>
+                NGƯỜI CHƠI ({playerCount})
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
-                  className={styles.presetBtn}
+                  className={styles.presetActionBtn}
                   onClick={async () => {
                     const presets = await getCloudPresets();
                     handleApplyPresets(presets);
                   }}
-                  title="Điền nhanh các tên mẫu vào danh sách"
+                  title="Tự động điền danh sách tên mẫu"
                 >
                   ⚡ Điền mẫu
                 </button>
                 <button
                   type="button"
-                  className={styles.presetBtn}
+                  className={styles.presetActionBtn}
                   onClick={handleOpenPresetModal}
-                  title="Thêm hoặc xoá tên mẫu lưu trữ"
+                  title="Mở bảng quản lý danh sách tên"
                 >
                   ⚙️ Quản lý
                 </button>
               </div>
             </div>
 
-            <div className={styles.playerRowsContainer}>
+            <div className={styles.playerScrollList}>
               {names.map((name, i) => (
-                <div key={i} className={styles.playerRow}>
-                  {avatars[i] ? (
-                    <img
-                      src={avatars[i]}
-                      alt={name || `P${i + 1}`}
-                      className={styles.avatarCircle}
-                      title="Ảnh đại diện"
-                    />
-                  ) : (
-                    <div className={styles.avatarFallback} title="Người chơi">
-                      {name ? name[0].toUpperCase() : (i + 1)}
-                    </div>
-                  )}
+                <div key={i} className={styles.playerRowItem}>
+                  {/* Vòng tròn avatar placeholder tròn viền đồng (Không chứa số) */}
+                  <div className={styles.avatarRing} title="Ảnh đại diện">
+                    {avatars[i] ? (
+                      <img src={avatars[i]} alt={name || `P${i + 1}`} className={styles.avatarImage} />
+                    ) : (
+                      <SvgAvatarSilhouette />
+                    )}
+                  </div>
 
-                  <span className={styles.playerIndexBadge}>
+                  {/* Số thứ tự duy nhất (01, 02... không lặp lại) */}
+                  <span className={styles.playerIndexTag}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
 
+                  {/* Ô nhập tên nền giấy da, viền đồng, chữ mực nâu đậm */}
                   <input
                     type="text"
                     value={name}
@@ -341,59 +432,68 @@ export default function SetupPage() {
                     }}
                     placeholder={`Người chơi ${i + 1}`}
                     maxLength={20}
-                    className={styles.nameInputParchment}
+                    className={styles.parchmentInput}
                   />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 4. SECTION PHÂN BỔ VAI TRÒ (ROLES) */}
-          <div className={styles.sectionTabHeader}>
-            <div className={styles.tabPlate}>ROLES DISTRIBUTION</div>
+          {/* 4. PHÂN BỔ VAI TRÒ (LƯỚI 2 CỘT CHUẨN MOBILE 360PX/390PX) */}
+          <div className={styles.tabPlateWrapper}>
+            <div className={styles.tabPlate}>
+              <span className={styles.tabPlateTitle}>PHÂN BỔ VAI TRÒ</span>
+            </div>
           </div>
 
-          <div className={styles.parchmentCard}>
-            <div className={styles.rolesControlBar}>
-              <span style={{ fontSize: '11px', color: '#44311a', fontWeight: 'bold' }}>
-                PHÂN VAI ({totalRoles}/{playerCount})
+          <div className={styles.parchmentPanel}>
+            <SvgCornerFlourish className={`${styles.panelFlourishTL}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishTR}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishBL}`} />
+            <SvgCornerFlourish className={`${styles.panelFlourishBR}`} />
+
+            <div className={styles.rolesTopBar}>
+              <span className={styles.presetInfoTitle}>
+                TỔNG SỐ VAI: {totalRoles}/{playerCount}
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
-                  className={styles.presetBtn}
+                  className={styles.presetActionBtn}
                   onClick={handleAutoBalance}
-                  title="Tự động chia tỉ lệ vai trò cân bằng theo luật"
+                  title="Tự động cân bằng tỉ lệ vai trò"
                 >
                   🎲 Cân bằng
                 </button>
                 <button
                   type="button"
-                  className={styles.presetBtn}
+                  className={styles.presetActionBtn}
                   onClick={handleResetRoles}
-                  title="Đặt lại toàn bộ về 0"
+                  title="Đặt lại toàn bộ vai về 0"
                 >
                   ↺ Về 0
                 </button>
               </div>
             </div>
 
-            <div className={`${styles.balanceStatus} ${isValid ? styles.balanceValid : styles.balanceInvalid}`}>
+            {/* Hộp trạng thái dùng tokens */}
+            <div className={`${styles.rolesStatusBanner} ${isValid ? styles.statusValid : styles.statusInvalid}`}>
               {isValid
                 ? `✓ ĐÃ CHIA ĐỦ ${totalRoles}/${playerCount} VAI • HỢP LỆ`
                 : totalWolves === 0
-                ? '⚠️ CẦN ÍT NHẤT 1 MA SÓI'
-                : `⚠️ CHƯA KHỚP SỐ LƯỢNG (${totalRoles}/${playerCount})`}
+                ? '⚠️ CẦN ÍT NHẤT 1 MA SÓI TRONG VÁN'
+                : `⚠️ CHƯA KHỚP SỐ LƯỢNG (${totalRoles}/${playerCount} VAI)`}
             </div>
 
+            {/* Lưới 2 cột: Mỗi ô gồm icon, tên dòng riêng, dưới là stepper */}
             <div className={styles.rolesGrid}>
               {ROLE_ITEMS.map((role) => (
-                <div key={role.id} className={styles.roleItem} title={role.desc}>
-                  <div className={styles.roleInfo}>
+                <div key={role.id} className={styles.roleCardCell} title={role.desc}>
+                  <div className={styles.roleHeaderRow}>
                     <img
                       src={role.icon}
                       alt={role.name}
-                      className={styles.roleIconImg}
+                      className={styles.roleMedallionIcon}
                     />
                     <span className={styles.roleNameText}>{role.name}</span>
                   </div>
@@ -401,19 +501,21 @@ export default function SetupPage() {
                   <div className={styles.roleMiniStepper}>
                     <button
                       type="button"
-                      className={styles.roleStepBtn}
+                      className={styles.roleMiniBtn}
                       onClick={() => handleRoleChange(role.id, -1)}
                       disabled={!distribution[role.id]}
+                      aria-label={`Giảm ${role.name}`}
                     >
-                      -
+                      −
                     </button>
-                    <span className={styles.roleCountDisplay}>
+                    <span className={styles.roleCountNum}>
                       {distribution[role.id] || 0}
                     </span>
                     <button
                       type="button"
-                      className={styles.roleStepBtn}
+                      className={styles.roleMiniBtn}
                       onClick={() => handleRoleChange(role.id, 1)}
+                      aria-label={`Tăng ${role.name}`}
                     >
                       +
                     </button>
@@ -424,33 +526,26 @@ export default function SetupPage() {
           </div>
         </div>
 
-        {/* 5. BOTTOM ACTION BAR (CỐ ĐỊNH Ở ĐÁY) */}
-        <div className={styles.bottomActionBar}>
+        {/* 5. HAI NÚT ĐÁY CỐ ĐỊNH (QUAY LẠI / CHIA BÀI) - CSS THUẦN THEO RULE-UI & TOKENS */}
+        <div className={styles.bottomStickyBar}>
           <button
-            className={styles.backBtn}
+            type="button"
+            className={styles.gothicStoneBtn}
             onClick={() => navigate('/')}
-            aria-label="Back to Home"
             title="Quay lại màn Home"
           >
-            <img
-              src="/assets/setup_btn_back.webp"
-              alt="BACK"
-              className={styles.backBtnImg}
-            />
+            ← QUAY LẠI
           </button>
 
           <button
-            className={styles.dealBtn}
+            type="button"
+            className={styles.gothicRubyBtn}
             onClick={handleStart}
             disabled={!isValid}
-            aria-label="Deal Roles and Start Game"
-            title={isValid ? "Bắt đầu chia bài và vào ván chơi!" : "Vui lòng chia đủ số vai trước khi bắt đầu"}
+            title={isValid ? "Chia bài bí mật và bắt đầu ván đấu" : "Vui lòng phân đủ số vai trước khi bắt đầu"}
           >
-            <img
-              src="/assets/setup_btn_deal.webp"
-              alt="DEAL ROLES"
-              className={styles.dealBtnImg}
-            />
+            <SvgRubyBroochTop className={styles.rubyBroochTop} />
+            CHIA BÀI & BẮT ĐẦU
           </button>
         </div>
       </div>
