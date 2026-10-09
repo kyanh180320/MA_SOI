@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -23,13 +23,17 @@ export default function RoomPage() {
   const [copied, setCopied] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
+  const isLeavingRef = useRef(false);
 
   useEffect(() => {
     if (!roomId) return;
 
     const unsubscribe = subscribeRoom(roomId, (roomData) => {
       if (!roomData) {
-        alert('Phòng chơi này đã kết thúc hoặc bị giải tán.');
+        if (!isLeavingRef.current) {
+          isLeavingRef.current = true;
+          alert('Chủ phòng (Quản trò) đã rời đi. Phòng chơi đã bị giải tán và tất cả người chơi được đưa về Trang Chủ.');
+        }
         navigate('/');
       } else {
         setRoom(roomData);
@@ -70,10 +74,11 @@ export default function RoomPage() {
   const handleLeave = async () => {
     if (!roomId) return;
     const confirmMsg = isHost 
-      ? 'Bạn là Quản trò. Rời phòng sẽ chuyển quyền Quản trò hoặc giải tán phòng nếu không còn ai. Bạn có chắc không?'
+      ? 'Bạn là Chủ phòng (Quản trò). Khi bạn rời đi, phòng chơi này sẽ bị XOÁ HOÀN TOÀN và tất cả người chơi khác sẽ bị đẩy ra ngoài. Bạn có chắc chắn muốn rời?'
       : 'Bạn có chắc chắn muốn rời phòng không?';
 
     if (window.confirm(confirmMsg)) {
+      isLeavingRef.current = true;
       await leaveRoom(roomId);
       navigate('/');
     }
@@ -81,7 +86,8 @@ export default function RoomPage() {
 
   const handleClose = async () => {
     if (!roomId) return;
-    if (window.confirm('Bạn có chắc muốn giải tán phòng chơi này không?')) {
+    if (window.confirm('Bạn có chắc muốn giải tán phòng chơi này không? Toàn bộ người chơi sẽ bị kích ra ngoài.')) {
+      isLeavingRef.current = true;
       await closeRoom(roomId);
       navigate('/');
     }

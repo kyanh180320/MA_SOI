@@ -4,6 +4,8 @@ import { useGame } from '../context/GameContext';
 import { resolveNight } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import type { Role, Player } from '../game/types';
+import { closeRoom } from '../services/roomService';
+import { saveGame } from '../services/gameRepository';
 import {
   Button,
   Panel,
@@ -50,8 +52,15 @@ export default function PlayPage() {
   const alivePlayers = game.players.filter(p => p.alive);
   const currentRound = game.rounds[game.rounds.length - 1];
 
-  const handleExit = () => {
+  const handleExit = async () => {
     if (window.confirm("Bạn muốn thoát ván này? Dữ liệu sẽ KHÔNG được lưu vào lịch sử.")) {
+      if (game.roomId) {
+        try {
+          await closeRoom(game.roomId);
+        } catch (e) {
+          console.error("Lỗi khi đóng phòng online:", e);
+        }
+      }
       setGame(null);
       navigate('/setup');
     }
@@ -59,11 +68,12 @@ export default function PlayPage() {
 
   const handleEndGame = () => {
     if (window.confirm("Bạn có chắc chắn muốn kết thúc và lưu ván này không?")) {
-      import('../services/gameRepository').then(({ saveGame }) => {
-        saveGame(game).finally(() => {
-          setGame(null);
-          navigate('/history');
-        });
+      if (game.roomId) {
+        closeRoom(game.roomId).catch(console.error);
+      }
+      saveGame(game).finally(() => {
+        setGame(null);
+        navigate('/history');
       });
     }
   };

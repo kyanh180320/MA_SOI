@@ -129,20 +129,10 @@ export async function leaveRoom(roomId: string): Promise<void> {
     const currentMembers = room.members || [];
 
     if (room.hostUid === currentUser.uid) {
-      // Host rời phòng: nếu còn người thì chuyển Host, nếu hết người thì xóa phòng
-      const remainingMembers = currentMembers.filter(m => m.uid !== currentUser.uid);
-      if (remainingMembers.length > 0) {
-        remainingMembers[0].isHost = true;
-        transaction.update(roomRef, {
-          hostUid: remainingMembers[0].uid,
-          hostName: remainingMembers[0].displayName,
-          hostAvatar: remainingMembers[0].avatar || "",
-          members: remainingMembers
-        });
-      } else {
-        transaction.delete(roomRef);
-      }
+      // Chủ phòng rời đi: XOÁ PHÒNG HOÀN TOÀN, toàn bộ người chơi khác sẽ tự động bị kích ra ngoài
+      transaction.delete(roomRef);
     } else {
+      // Người chơi thông thường rời đi: loại bỏ người đó khỏi danh sách phòng
       const remainingMembers = currentMembers.filter(m => m.uid !== currentUser.uid);
       transaction.update(roomRef, {
         members: remainingMembers
