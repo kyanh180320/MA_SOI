@@ -3,6 +3,7 @@ import type { GameRoom, AppUser, Role, Player, Round } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
 import { updateRoomGame } from '../services/roomService';
 import { isWolfTeam } from '../game/win';
+import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 
 interface PlayerLiveViewProps {
@@ -1008,6 +1009,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             <RoleCard
               roleName={roleInfo.name}
               teamName={roleInfo.team}
+              artUrl={myPlayer?.role ? ROLE_CARD_IMAGES[myPlayer.role] : undefined}
+              cardBackUrl={CARD_BACK_IMAGE}
               icon={roleInfo.icon}
               faceDown={true}
               flipped={isFlipped}

@@ -91,7 +91,7 @@
 
 /* MẶT TRƯỚC (HIỆN VAI TRÒ) */
 .cardFront {
-  background: linear-gradient(180deg, var(--bg-2), var(--bg-0));
+  background: var(--art, linear-gradient(180deg, var(--bg-2), var(--bg-0))) center / cover no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -146,7 +146,7 @@
 /* MẶT SAU (LƯNG BÀI TAROT) */
 .cardBack {
   transform: rotateY(180deg);
-  background: var(--art-card-back, radial-gradient(circle at 50% 50%, var(--bg-3) 0%, var(--bg-0) 100%));
+  background: var(--art-card-back, radial-gradient(circle at 50% 50%, var(--bg-3) 0%, var(--bg-0) 100%)) center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;

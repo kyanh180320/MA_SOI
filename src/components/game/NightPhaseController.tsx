@@ -8,6 +8,7 @@ import {
   Modal,
   Toast
 } from '../ui';
+import { ROLE_CARD_IMAGES } from '../../constants/assets';
 
 export interface NightPhaseControllerProps {
   game: Game;
@@ -57,14 +58,31 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     return (
       <Panel>
-        <h3 style={{
-          color: 'var(--green-400)',
-          fontFamily: 'var(--font-title)',
-          margin: '0 0 var(--s-2) 0',
-          fontSize: '18px'
-        }}>
-          🛡 BẢO VỆ muốn bảo vệ ai?
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img 
+            src={ROLE_CARD_IMAGES.guard} 
+            alt="Bảo Vệ" 
+            style={{ 
+              width: '46px', 
+              height: '69px', 
+              borderRadius: '6px', 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)', 
+              border: '1.5px solid var(--green-400)',
+              objectFit: 'cover'
+            }} 
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--green-400)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px'
+            }}>
+              🛡️ BẢO VỆ muốn bảo vệ ai?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Chọn 1 người chơi để khiên chở che đêm nay</span>
+          </div>
+        </div>
         {!hasRole('guard') && (
           <Toast variant="info" message="Bảo vệ đã chết hoặc không có trong ván, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
         )}
@@ -165,14 +183,33 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     return (
       <Panel variant="danger">
-        <h3 style={{
-          color: 'var(--red-300)',
-          fontFamily: 'var(--font-title)',
-          margin: '0 0 var(--s-2) 0',
-          fontSize: '18px'
-        }}>
-          🐺 BẦY SÓI muốn cắn ai?
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img 
+            src={hasDemonWolf ? ROLE_CARD_IMAGES.wolf_demon : ROLE_CARD_IMAGES.wolf} 
+            alt="Ma Sói" 
+            style={{ 
+              width: '46px', 
+              height: '69px', 
+              borderRadius: '6px', 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)', 
+              border: '1.5px solid var(--red-300)',
+              objectFit: 'cover'
+            }} 
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--red-300)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px'
+            }}>
+              🐺 BẦY SÓI muốn cắn ai?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              {hasDemonWolf ? '😈 Sói Quỷ: Cắn tối đa 2 người' : 'Thống nhất chọn con mồi đêm nay'}
+            </span>
+          </div>
+        </div>
         {hasDemonWolf && (
           <Toast
             variant="danger"
@@ -311,14 +348,31 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     return (
       <Panel>
-        <h3 style={{
-          color: 'var(--gold-100)',
-          fontFamily: 'var(--font-title)',
-          margin: '0 0 var(--s-2) 0',
-          fontSize: '18px'
-        }}>
-          👁 TIÊN TRI muốn soi ai?
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img 
+            src={ROLE_CARD_IMAGES.seer} 
+            alt="Tiên Tri" 
+            style={{ 
+              width: '46px', 
+              height: '69px', 
+              borderRadius: '6px', 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)', 
+              border: '1.5px solid var(--gold-500)',
+              objectFit: 'cover'
+            }} 
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--gold-100)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px'
+            }}>
+              👁️ TIÊN TRI muốn soi ai?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Nhìn thấu thân phận thật sự của 1 người</span>
+          </div>
+        </div>
         {!hasRole('seer') && (
           <Toast variant="info" message="Tiên tri đã chết hoặc không có, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
         )}
@@ -449,28 +503,49 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     return (
       <Panel>
-        <h3 style={{
-          color: 'var(--gold-100)',
-          fontFamily: 'var(--font-title)',
-          margin: '0 0 var(--s-2) 0',
-          fontSize: '18px'
-        }}>
-          🧪 PHÙ THỦY muốn làm gì?
-        </h3>
-        {!hasRole('witch') && (
-          <Toast variant="info" message="Phù thủy đã chết hoặc không có, bấm Bỏ qua để giữ nhịp." style={{ marginBottom: 'var(--s-3)' }} />
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img 
+            src={ROLE_CARD_IMAGES.witch} 
+            alt="Phù Thủy" 
+            style={{ 
+              width: '46px', 
+              height: '69px', 
+              borderRadius: '6px', 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)', 
+              border: '1.5px solid var(--purple-400)',
+              objectFit: 'cover'
+            }} 
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--gold-100)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px'
+            }}>
+              🧪 PHÙ THỦY muốn làm gì?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Dùng độc dược hoặc thuốc hồi sinh</span>
+          </div>
+        </div>
         
         <div style={{
           display: 'flex',
           justifyContent: 'space-around',
+          alignItems: 'center',
           margin: 'var(--s-3) 0',
           padding: 'var(--s-2)',
           background: 'rgba(0,0,0,0.3)',
           borderRadius: 'var(--radius-md)'
         }}>
-          <span style={{ fontSize: '13px' }}>💉 Bình cứu: <strong style={{ color: 'var(--green-400)' }}>{game.witchItems.saveLeft}</strong></span>
-          <span style={{ fontSize: '13px' }}>☠️ Bình độc: <strong style={{ color: 'var(--red-300)' }}>{game.witchItems.poisonLeft}</strong></span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+            <img src="/assets/icons/icon_potion_heal.webp" alt="Cứu" style={{ width: '22px', height: '22px' }} />
+            Bình cứu: <strong style={{ color: 'var(--green-400)' }}>{game.witchItems.saveLeft}</strong>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+            <img src="/assets/icons/icon_potion_poison.webp" alt="Độc" style={{ width: '22px', height: '22px' }} />
+            Bình độc: <strong style={{ color: 'var(--red-300)' }}>{game.witchItems.poisonLeft}</strong>
+          </span>
         </div>
 
         {/* Bình cứu */}

@@ -12,10 +12,12 @@ import {
 } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
 import type { Phase, Role } from '../game/types';
+import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 
 export const DevShowcasePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
+  const [selectedShowcaseRole, setSelectedShowcaseRole] = useState<Role>('wolf');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('p2');
   const [timerProgress, setTimerProgress] = useState(65);
   const [demoPhase, setDemoPhase] = useState<Phase>('night');
@@ -139,13 +141,36 @@ export const DevShowcasePage: React.FC = () => {
           gap: 'var(--s-3)'
         }}>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-dim)', textAlign: 'center' }}>
-            Chạm vào thẻ bài để lật mặt trước / mặt sau (3D Flip Effect).
+            Chạm vào thẻ bài để lật mặt trước / mặt sau (3D Flip Effect). Thử đổi vai để xem toàn bộ 8 bộ bài Gothic Art.
           </p>
 
+          {/* Chọn vai trò để xem lá bài tương ứng */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center', margin: '4px 0' }}>
+            {[
+              { id: 'wolf', label: '🐺 Sói' },
+              { id: 'wolf_demon', label: '😈 Sói Quỷ' },
+              { id: 'seer', label: '🔮 Tiên Tri' },
+              { id: 'witch', label: '🧪 Phù Thủy' },
+              { id: 'guard', label: '🛡️ Bảo Vệ' },
+              { id: 'hunter', label: '🏹 Thợ Săn' },
+              { id: 'villager', label: '👨 Dân Làng' },
+            ].map(r => (
+              <Button
+                key={r.id}
+                variant={selectedShowcaseRole === r.id ? 'primary' : 'secondary'}
+                onClick={() => setSelectedShowcaseRole(r.id as Role)}
+                style={{ padding: '4px 10px', fontSize: '12px', minHeight: '32px' }}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+
           <RoleCard
-            roleName="MA SÓI ĐẦU ĐÀN"
-            teamName="Phe Ma Sói"
-            icon="🐺"
+            roleName={selectedShowcaseRole.toUpperCase()}
+            teamName={selectedShowcaseRole.includes('wolf') ? 'Phe Ma Sói' : 'Phe Dân Làng'}
+            artUrl={ROLE_CARD_IMAGES[selectedShowcaseRole]}
+            cardBackUrl={CARD_BACK_IMAGE}
             flipped={cardFlipped}
             onFlip={(flipped) => setCardFlipped(flipped)}
           />
@@ -157,6 +182,44 @@ export const DevShowcasePage: React.FC = () => {
           >
             {cardFlipped ? 'Xem Mặt Sau' : 'Lật Mặt Thẻ'}
           </Button>
+
+          {/* GALLERY 15 MEDALLION ICONS */}
+          <div style={{
+            width: '100%',
+            marginTop: 'var(--s-3)',
+            padding: 'var(--s-3)',
+            background: 'rgba(0,0,0,0.25)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(201, 162, 74, 0.15)'
+          }}>
+            <div style={{ fontSize: '12px', color: 'var(--gold-300)', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>
+              ✦ BỘ 15 HUY HIỆU MEDALLION TÁCH TỪ ART KIT:
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', justifyItems: 'center' }}>
+              {[
+                { name: 'Trăng Đêm', src: '/assets/icons/icon_moon.webp' },
+                { name: 'Mặt Trời', src: '/assets/icons/icon_sun.webp' },
+                { name: 'Đầu Lâu', src: '/assets/icons/icon_skull.webp' },
+                { name: 'Hòm Phiếu', src: '/assets/icons/icon_ballot.webp' },
+                { name: 'Mắt Soi', src: '/assets/icons/icon_eye.webp' },
+                { name: 'Bình Cứu', src: '/assets/icons/icon_potion_heal.webp' },
+                { name: 'Bình Độc', src: '/assets/icons/icon_potion_poison.webp' },
+                { name: 'Khiên Sư Tử', src: '/assets/icons/icon_shield.webp' },
+                { name: 'Móng Sói', src: '/assets/icons/icon_wolf_paw.webp' },
+                { name: 'Móng Lửa', src: '/assets/icons/icon_wolf_paw_fire.webp' },
+                { name: 'Kiếm Đôi', src: '/assets/icons/icon_swords.webp' },
+                { name: 'Kiếm Đá', src: '/assets/icons/icon_swords_alt.webp' },
+                { name: 'Đồng Hồ Cát', src: '/assets/icons/icon_hourglass.webp' },
+                { name: 'Bánh Răng', src: '/assets/icons/icon_gear.webp' },
+                { name: 'Hòm Gỗ', src: '/assets/icons/icon_ballot_wood.webp' },
+              ].map(icon => (
+                <div key={icon.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                  <img src={icon.src} alt={icon.name} style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', whiteSpace: 'nowrap' }}>{icon.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </Panel>
 

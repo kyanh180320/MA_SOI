@@ -15,6 +15,7 @@ import {
   Toast
 } from '../components/ui';
 import { NightPhaseController } from '../components/game';
+import { ROLE_MEDALLION_ICONS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 
 export default function PlayPage() {
   const navigate = useNavigate();
@@ -407,10 +408,10 @@ export default function PlayPage() {
             </div>
 
             {[
-              { id: 'guard', label: 'Bảo Vệ', icon: '🛡️' },
-              { id: 'wolf', label: 'Ma Sói', icon: '🐺' },
-              { id: 'seer', label: 'Tiên Tri', icon: '🔮' },
-              { id: 'witch', label: 'Phù Thủy', icon: '🧪' }
+              { id: 'guard', label: 'Bảo Vệ', iconUrl: ROLE_MEDALLION_ICONS.guard },
+              { id: 'wolf', label: 'Ma Sói', iconUrl: ROLE_MEDALLION_ICONS.wolf },
+              { id: 'seer', label: 'Tiên Tri', iconUrl: ROLE_MEDALLION_ICONS.seer },
+              { id: 'witch', label: 'Phù Thủy', iconUrl: ROLE_MEDALLION_ICONS.witch }
             ].map((step, idx) => {
               const currentIdx = ['guard', 'wolf', 'seer', 'witch', 'done'].indexOf(nightStep);
               const isPassed = idx < currentIdx;
@@ -429,8 +430,8 @@ export default function PlayPage() {
                   <div style={{
                     position: 'relative',
                     zIndex: 3,
-                    width: '30px',
-                    height: '30px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -442,9 +443,18 @@ export default function PlayPage() {
                     boxShadow: isActive ? '0 0 16px var(--gold-300), 0 0 24px rgba(232, 199, 102, 0.6)' : 'none',
                     transform: isActive ? 'scale(1.22)' : 'scale(1)',
                     transition: 'all 0.3s ease',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    padding: '2px'
                   }}>
-                    {isPassed ? '✓' : step.icon}
+                    {isPassed ? (
+                      '✓'
+                    ) : (
+                      <img 
+                        src={step.iconUrl} 
+                        alt={step.label} 
+                        style={{ width: '22px', height: '22px', objectFit: 'contain' }} 
+                      />
+                    )}
                   </div>
                   <span style={{
                     fontSize: '11px',
@@ -488,10 +498,10 @@ export default function PlayPage() {
             </div>
 
             {[
-              { id: 'night', label: 'Ban Đêm', icon: '🌙' },
-              { id: 'day', label: 'Ban Ngày', icon: '☀️' },
-              { id: 'vote', label: 'Bỏ Phiếu', icon: '⚖️' },
-              { id: 'ended', label: 'Kết Quả', icon: '☠️' }
+              { id: 'night', label: 'Ban Đêm', iconUrl: PHASE_MEDALLION_ICONS.night },
+              { id: 'day', label: 'Ban Ngày', iconUrl: PHASE_MEDALLION_ICONS.day },
+              { id: 'vote', label: 'Bỏ Phiếu', iconUrl: PHASE_MEDALLION_ICONS.vote },
+              { id: 'ended', label: 'Kết Quả', iconUrl: PHASE_MEDALLION_ICONS.ended }
             ].map((step, idx) => {
               const currentIdx = ['night', 'day', 'vote', 'ended'].indexOf(game.phase);
               const isPassed = idx < currentIdx;
@@ -510,8 +520,8 @@ export default function PlayPage() {
                   <div style={{
                     position: 'relative',
                     zIndex: 3,
-                    width: '28px',
-                    height: '28px',
+                    width: '30px',
+                    height: '30px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -523,9 +533,18 @@ export default function PlayPage() {
                     boxShadow: isActive ? '0 0 12px var(--gold-300)' : 'none',
                     transform: isActive ? 'scale(1.15)' : 'scale(1)',
                     transition: 'all 0.3s ease',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    padding: '2px'
                   }}>
-                    {isPassed ? '✓' : step.icon}
+                    {isPassed ? (
+                      '✓'
+                    ) : (
+                      <img 
+                        src={step.iconUrl} 
+                        alt={step.label} 
+                        style={{ width: '20px', height: '20px', objectFit: 'contain' }} 
+                      />
+                    )}
                   </div>
                   <span style={{
                     fontSize: '11px',

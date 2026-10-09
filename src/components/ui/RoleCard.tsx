@@ -59,20 +59,26 @@ export const RoleCard: React.FC<RoleCardProps> = ({
     >
       <div className={styles.flipInner}>
         {/* Mặt trước */}
-        <div className={`${styles.flipFace} ${styles.cardFront}`}>
-          <div className={styles.cardTitle}>{roleName}</div>
-          <div className={styles.cardArt} style={artStyle}>
-            {!artUrl && <div className={styles.placeholderIcon}>{icon}</div>}
-          </div>
-          <div className={styles.cardFooter}>{teamName}</div>
+        <div className={`${styles.flipFace} ${styles.cardFront}`} style={artStyle}>
+          {!artUrl && (
+            <>
+              <div className={styles.cardTitle}>{roleName}</div>
+              <div className={styles.cardArt}>
+                <div className={styles.placeholderIcon}>{icon}</div>
+              </div>
+              <div className={styles.cardFooter}>{teamName}</div>
+            </>
+          )}
         </div>
 
         {/* Mặt sau */}
         <div className={`${styles.flipFace} ${styles.cardBack}`} style={backStyle}>
-          <div className={styles.backEmblem}>
-            <div className={styles.backIcon}>✦</div>
-            <div className={styles.backText}>MA SÓI</div>
-          </div>
+          {!cardBackUrl && (
+            <div className={styles.backEmblem}>
+              <div className={styles.backIcon}>✦</div>
+              <div className={styles.backText}>MA SÓI</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
