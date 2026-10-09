@@ -21,7 +21,8 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const errorObj = err as { code?: string; message?: string };
       if (errorObj.code === 'auth/unauthorized-domain') {
-        setError('Tên miền Vercel này đang đợi Google cập nhật (thường mất 1 - 3 phút sau khi thêm vào Firebase). Bạn có thể đăng nhập bằng Email ở bên dưới để chơi ngay!');
+        const currentDomain = window.location.hostname;
+        setError(`Tên miền "${currentDomain}" chưa có trong Firebase Authorized domains! Hãy vào Firebase Console > Authentication > Settings > Authorized domains và thêm: ${currentDomain}`);
       } else {
         setError(errorObj.message || 'Đăng nhập Google thất bại');
       }
