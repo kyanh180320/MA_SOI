@@ -1,0 +1,522 @@
+/* =========================================================================
+   GOTHIC FANTASY SETUP PAGE STYLING (MATCHING set_up.png)
+   ========================================================================= */
+
+.setupScreenWrapper {
+  min-height: 100dvh;
+  width: 100%;
+  background: radial-gradient(circle at 50% 30%, #0d1226 0%, #05070e 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* KHUNG ĐIỆN THOẠI CHUẨN GOTHIC (THEO TỈ LỆ CỦA set_up.png) */
+.setupPhoneFrame {
+  position: relative;
+  width: min(100vw, calc(100dvh * (1408 / 3040)));
+  height: 100dvh;
+  max-height: 960px;
+  max-width: 444px;
+  background-image: url('/assets/setup_bg.webp');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.95),
+    0 0 30px rgba(201, 162, 74, 0.15);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .setupPhoneFrame {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    max-width: 100vw;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* KHU VỰC CUỘN NỘI DUNG FORM */
+.setupContentScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 22px 100px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-600, #8c6a21) rgba(10, 15, 30, 0.6);
+}
+
+.setupContentScroll::-webkit-scrollbar {
+  width: 5px;
+}
+.setupContentScroll::-webkit-scrollbar-track {
+  background: rgba(10, 15, 30, 0.6);
+}
+.setupContentScroll::-webkit-scrollbar-thumb {
+  background: var(--gold-600, #8c6a21);
+  border-radius: 4px;
+}
+
+/* RUY BĂNG TIÊU ĐỀ NEW GAME */
+.ribbonHeader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.ribbonImg {
+  width: 100%;
+  max-width: 310px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
+}
+
+/* KHỐI HEADER TAB (PLAYERS, PRESETS, ROLES) */
+.sectionTabHeader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: -6px;
+  position: relative;
+  z-index: 2;
+}
+
+.tabPlate {
+  background: linear-gradient(180deg, #32353b 0%, #1e2025 50%, #131417 100%);
+  border: 1.5px solid #6e6148;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 4px 20px;
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: #eed79b;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* =========================================================================
+   1. BỘ STEPPER SỐ LƯỢNG NGƯỜI CHƠI (PLAYERS)
+   ========================================================================= */
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.stepperBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, filter 0.2s ease;
+  outline: none;
+}
+
+.stepperBtn:hover {
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+}
+
+.stepperBtn:active {
+  transform: scale(0.92);
+}
+
+.stepperBtnImg {
+  width: 72px;
+  height: auto;
+  object-fit: contain;
+}
+
+.numberFrameWrapper {
+  position: relative;
+  width: 120px;
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.numberFrameBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.numberDisplayText {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 38px;
+  font-weight: 800;
+  color: #dfaa3e;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.7),
+    0 0 12px rgba(255, 204, 51, 0.4);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* RANGE SLIDER DỰ PHÒNG */
+.sliderWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.stepperSlider {
+  width: 100%;
+  accent-color: var(--gold-500, #c9a24a);
+  cursor: pointer;
+}
+
+.sliderLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--gold-300, #eed79b);
+  font-weight: 600;
+}
+
+/* =========================================================================
+   2. KHỐI DANH SÁCH NGƯỜI CHƠI (PARCHMENT CARD)
+   ========================================================================= */
+.parchmentCard {
+  background: linear-gradient(180deg, #d8c29d 0%, #c4ab82 100%);
+  border: 2px solid #5a4a30;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 
+    inset 0 0 20px rgba(100, 70, 30, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.presetBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.presetBtn {
+  background: #3c3328;
+  border: 1px solid #756244;
+  color: #ecd7a8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presetBtn:hover {
+  background: #504434;
+  color: #fff;
+  border-color: #9d8359;
+}
+
+.playerRowsContainer {
+  max-height: 190px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #6d583b transparent;
+}
+
+.playerRowsContainer::-webkit-scrollbar {
+  width: 4px;
+}
+.playerRowsContainer::-webkit-scrollbar-thumb {
+  background: #6d583b;
+  border-radius: 4px;
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(45, 33, 19, 0.12);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.avatarCircle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #635032;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  object-fit: cover;
+  background: #2b2216;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.avatarFallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #635032;
+  background: #473a26;
+  color: #f5dfb8;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.playerIndexBadge {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: #3f2e18;
+  min-width: 22px;
+  text-align: center;
+}
+
+.nameInputParchment {
+  flex: 1;
+  background: #e9dbc2;
+  border: 1.5px solid #8e7a57;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2b1f10;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nameInputParchment:focus {
+  background: #fff;
+  border-color: #4a3c26;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.15),
+    0 0 6px rgba(100, 70, 30, 0.4);
+}
+
+/* =========================================================================
+   3. KHỐI VAI TRÒ (ROLES CARD)
+   ========================================================================= */
+.rolesControlBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.balanceStatus {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.balanceValid {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+}
+
+.balanceInvalid {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.rolesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.roleItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(45, 33, 19, 0.15);
+  border: 1px solid rgba(120, 95, 60, 0.4);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.roleInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.roleIconImg {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  flex-shrink: 0;
+}
+
+.roleNameText {
+  font-size: 12px;
+  font-weight: 700;
+  color: #352613;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roleMiniStepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.roleStepBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #756040;
+  background: #3d3121;
+  color: #eed79b;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.roleStepBtn:hover {
+  background: #574630;
+  color: #fff;
+}
+
+.roleStepBtn:active {
+  transform: scale(0.9);
+}
+
+.roleCountDisplay {
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: #2b1f10;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* =========================================================================
+   4. BOTTOM ACTION BAR (CỐ ĐỊNH Ở ĐÁY)
+   ========================================================================= */
+.bottomActionBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 92px;
+  background: linear-gradient(180deg, transparent 0%, rgba(5, 7, 14, 0.95) 30%, #05070e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 14px 20px;
+  box-sizing: border-box;
+  z-index: 30;
+}
+
+.backBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: transform 0.12s ease, filter 0.2s ease;
+}
+
+.backBtn:hover {
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.3));
+}
+
+.backBtn:active {
+  transform: scale(0.95);
+}
+
+.backBtnImg {
+  width: 125px;
+  height: auto;
+  object-fit: contain;
+}
+
+.dealBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: transform 0.12s ease, filter 0.2s ease;
+  position: relative;
+}
+
+.dealBtn:hover:not(:disabled) {
+  filter: drop-shadow(0 0 18px rgba(239, 68, 68, 0.7));
+}
+
+.dealBtn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.dealBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+.dealBtnImg {
+  width: 165px;
+  height: auto;
+  object-fit: contain;
+}

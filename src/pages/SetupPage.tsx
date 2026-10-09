@@ -7,13 +7,18 @@ import { RULES } from '../game/config';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
 import { syncRoomGame } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
-import {
-  Button,
-  Panel,
-  Badge,
-  Modal,
-  Toast
-} from '../components/ui';
+import { Button, Modal } from '../components/ui';
+import styles from './SetupPage.module.css';
+
+const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
+  { id: 'wolf', name: 'SÓI THƯỜNG', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
+  { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
+  { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm' },
+  { id: 'witch', name: 'PHÙ THỦY', icon: '/assets/icons/icon_potion_heal.webp', desc: 'Có 1 bình cứu & 1 bình độc' },
+  { id: 'guard', name: 'BẢO VỆ', icon: '/assets/icons/icon_shield.webp', desc: 'Bảo vệ 1 người mỗi đêm' },
+  { id: 'hunter', name: 'THỢ SĂN', icon: '/assets/icons/icon_swords_alt.webp', desc: 'Kéo theo 1 người khi chết' },
+  { id: 'wolf_demon', name: 'SÓI QUỶ', icon: '/assets/icons/icon_wolf_paw_fire.webp', desc: 'Cắn tối đa 2 người' },
+];
 
 export default function SetupPage() {
   const navigate = useNavigate();
@@ -22,15 +27,15 @@ export default function SetupPage() {
 
   const { setGame } = useGame();
   const { user } = useAuth();
-  
+
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
     if (fromRoom && fromRoom.members && fromRoom.members.length > 0) {
       return String(Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, fromRoom.members.length)));
     }
     return String(RULES.minPlayers);
   });
-  const playerCount = parseInt(playerCountInput) || 0;
-  
+  const playerCount = parseInt(playerCountInput) || RULES.minPlayers;
+
   const [names, setNames] = useState<string[]>(() => {
     if (fromRoom && fromRoom.members && fromRoom.members.length > 0) {
       const count = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, fromRoom.members.length));
@@ -51,14 +56,14 @@ export default function SetupPage() {
     return Array(RULES.minPlayers).fill("");
   });
 
-  const [distribution, setDistribution] = useState<Record<Role, number>>({ 
-    wolf: 0, 
-    wolf_demon: 0, 
-    seer: 0, 
-    witch: 0, 
-    guard: 0, 
-    hunter: 0, 
-    villager: 0 
+  const [distribution, setDistribution] = useState<Record<Role, number>>({
+    wolf: 0,
+    wolf_demon: 0,
+    seer: 0,
+    witch: 0,
+    guard: 0,
+    hunter: 0,
+    villager: 0
   });
 
   // State quản lý danh sách tên mẫu (Presets)
@@ -183,413 +188,355 @@ export default function SetupPage() {
   };
 
   const handleResetRoles = () => {
-    setDistribution({ 
-      wolf: 0, 
-      wolf_demon: 0, 
-      seer: 0, 
-      witch: 0, 
-      guard: 0, 
-      hunter: 0, 
-      villager: 0 
+    setDistribution({
+      wolf: 0,
+      wolf_demon: 0,
+      seer: 0,
+      witch: 0,
+      guard: 0,
+      hunter: 0,
+      villager: 0
     });
   };
 
+  const changePlayerCount = (delta: number) => {
+    const nextCount = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, playerCount + delta));
+    setPlayerCountInput(String(nextCount));
+  };
+
   return (
-    <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
-      {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button
-          variant="secondary"
-          onClick={() => navigate('/')}
-          style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px' }}
-        >
-          ← Trang chủ
-        </Button>
-        <h2 style={{
-          margin: 0,
-          fontFamily: 'var(--font-title)',
-          fontSize: '18px',
-          color: 'var(--gold-100)',
-          letterSpacing: '0.04em'
-        }}>
-          THIẾT LẬP VÁN ĐẤU
-        </h2>
-        <div style={{ width: '60px' }} />
-      </div>
-
-      {/* THÔNG TIN QUẢN TRÒ */}
-      <Panel compact>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Quản trò:</div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--gold-300)', marginTop: '2px' }}>
-              🎙️ {user?.displayName || 'Khách (Offline)'}
-            </div>
-          </div>
-          <Badge variant="gold">
-            {fromRoom ? `Phòng #${fromRoom.id}` : 'Ván Offline'}
-          </Badge>
-        </div>
-      </Panel>
-
-      {/* 1. SỐ LƯỢNG NGƯỜI CHƠI */}
-      <Panel style={{ textAlign: 'center' }}>
-        <h3 style={{
-          fontFamily: 'var(--font-title)',
-          color: 'var(--gold-100)',
-          fontSize: '16px',
-          margin: '0 0 var(--s-2) 0'
-        }}>
-          SỐ LƯỢNG NGƯỜI CHƠI
-        </h3>
-        <div style={{
-          fontSize: '44px', 
-          fontWeight: 'bold', 
-          color: 'var(--gold-300)', 
-          margin: 'var(--s-2) 0', 
-          fontFamily: 'var(--font-title)',
-          textShadow: '0 2px 8px rgba(0,0,0,0.8)'
-        }}>
-          {playerCount}
-        </div>
-        <input 
-          type="range" 
-          min={RULES.minPlayers} 
-          max={RULES.maxPlayers} 
-          value={playerCount}
-          onChange={e => setPlayerCountInput(e.target.value)}
-          style={{
-            width: '100%', 
-            accentColor: 'var(--gold-500)',
-            cursor: 'pointer'
-          }}
-        />
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          color: 'var(--gold-300)',
-          fontSize: '13px',
-          marginTop: '8px',
-          fontWeight: 'bold'
-        }}>
-          <span>{RULES.minPlayers} người</span>
-          <span>{RULES.maxPlayers} người</span>
-        </div>
-      </Panel>
-
-      {/* 2. ĐIỀU CHỈNH VAI TRÒ */}
-      <Panel>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s-3)' }}>
-          <h3 style={{
-            fontFamily: 'var(--font-title)',
-            color: 'var(--gold-100)',
-            fontSize: '16px',
-            margin: 0
-          }}>
-            ĐIỀU CHỈNH VAI TRÒ
-          </h3>
-          <div style={{ display: 'flex', gap: 'var(--s-1)' }}>
-            <Button
-              variant="secondary"
-              onClick={handleAutoBalance}
-              style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-            >
-              🎲 Cân Bằng
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleResetRoles}
-              style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-            >
-              Về 0
-            </Button>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 'var(--s-3)' }}>
-          {totalRoles !== playerCount ? (
-            <Toast
-              variant="danger"
-              message={`Đã chia ${totalRoles}/${playerCount} vai (Chưa khớp số lượng)`}
+    <div className={styles.setupScreenWrapper}>
+      <div className={styles.setupPhoneFrame}>
+        {/* NỘI DUNG CUỘN CHÍNH */}
+        <div className={styles.setupContentScroll}>
+          {/* 1. RUY BĂNG TIÊU ĐỀ NEW GAME */}
+          <div className={styles.ribbonHeader}>
+            <img
+              src="/assets/setup_ribbon.webp"
+              alt="NEW GAME"
+              className={styles.ribbonImg}
             />
-          ) : totalWolves === 0 ? (
-            <Toast
-              variant="danger"
-              message="Cần có ít nhất 1 Ma Sói hoặc Sói Quỷ trong ván"
-            />
-          ) : (
-            <Toast
-              variant="success"
-              message={`Đã chia đủ ${totalRoles}/${playerCount} vai! Sẵn sàng`}
-            />
-          )}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          {(["wolf", "wolf_demon", "seer", "witch", "guard", "hunter", "villager"] as Role[]).map(role => (
-            <div
-              key={role}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 'var(--s-2) var(--s-3)',
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
-              }}
-            >
-              <div>
-                <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>
-                  {role === 'wolf' ? '🐺 Sói thường' :
-                   role === 'wolf_demon' ? '😈 Sói quỷ' :
-                   role === 'seer' ? '👁 Tiên tri' :
-                   role === 'witch' ? '🧪 Phù thủy' :
-                   role === 'guard' ? '🛡 Bảo vệ' :
-                   role === 'hunter' ? '🏹 Thợ săn' : '👨 Dân làng'}
-                </span>
-                {role === 'wolf_demon' && (
-                  <div style={{ fontSize: '11px', color: 'var(--gold-300)' }}>Cắn 2 người/đêm</div>
-                )}
-                {role === 'hunter' && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Bắn 1 người khi chết</div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange(role, -1)}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--gold-700)',
-                    background: 'var(--bg-2)',
-                    color: 'var(--gold-300)',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  -
-                </button>
-                <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 'bold', fontSize: '15px', color: 'var(--gold-100)' }}>
-                  {distribution[role] || 0}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange(role, 1)}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--gold-700)',
-                    background: 'var(--bg-2)',
-                    color: 'var(--gold-300)',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Panel>
-
-      {/* 3. TÊN NGƯỜI CHƠI */}
-      <Panel>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s-3)' }}>
-          <h3 style={{
-            fontFamily: 'var(--font-title)',
-            color: 'var(--gold-100)',
-            fontSize: '16px',
-            margin: 0
-          }}>
-            TÊN NGƯỜI CHƠI ({playerCount})
-          </h3>
-          <div style={{ display: 'flex', gap: 'var(--s-1)' }}>
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                const presets = await getCloudPresets();
-                handleApplyPresets(presets);
-              }}
-              style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-            >
-              ⚡ Tên mẫu
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleOpenPresetModal}
-              style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-            >
-              ⚙️ Sửa mẫu
-            </Button>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          {names.map((name, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--s-2)',
-                background: 'rgba(0,0,0,0.25)',
-                padding: 'var(--s-2)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
-              }}
+          {/* 2. SECTION SỐ LƯỢNG NGƯỜI CHƠI (PLAYERS) */}
+          <div className={styles.sectionTabHeader}>
+            <div className={styles.tabPlate}>PLAYERS</div>
+          </div>
+
+          <div className={styles.stepperContainer}>
+            <button
+              className={styles.stepperBtn}
+              onClick={() => changePlayerCount(-1)}
+              disabled={playerCount <= RULES.minPlayers}
+              aria-label="Giảm số người"
+              title="Giảm số người chơi"
             >
-              <Badge variant="ash">P{i+1}</Badge>
-              <input
-                type="text"
-                placeholder={`Người chơi ${i+1}`}
-                value={name}
-                onChange={e => {
-                  const newNames = [...names];
-                  newNames[i] = e.target.value;
-                  setNames(newNames);
-                }}
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text)',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  outline: 'none'
-                }}
+              <img
+                src="/assets/setup_btn_minus.webp"
+                alt="-"
+                className={styles.stepperBtnImg}
               />
-            </div>
-          ))}
-        </div>
-      </Panel>
+            </button>
 
-      {/* DUY NHẤT 1 PRIMARY BUTTON TRÊN MÀN HÌNH */}
-      <div style={{ marginTop: 'auto', paddingTop: 'var(--s-2)' }}>
-        <Button
-          variant="primary"
-          pulse
-          fullWidth
-          disabled={!isValid}
-          onClick={handleStart}
-        >
-          CHIA VAI & BẮT ĐẦU VÁN ĐẤU ➔
-        </Button>
+            <div className={styles.numberFrameWrapper}>
+              <img
+                src="/assets/setup_number_frame_blank.webp"
+                alt="Frame"
+                className={styles.numberFrameBg}
+              />
+              <span className={styles.numberDisplayText}>{playerCount}</span>
+            </div>
+
+            <button
+              className={styles.stepperBtn}
+              onClick={() => changePlayerCount(1)}
+              disabled={playerCount >= RULES.maxPlayers}
+              aria-label="Tăng số người"
+              title="Tăng số người chơi"
+            >
+              <img
+                src="/assets/setup_btn_plus.webp"
+                alt="+"
+                className={styles.stepperBtnImg}
+              />
+            </button>
+          </div>
+
+          <div className={styles.sliderWrapper}>
+            <input
+              type="range"
+              min={RULES.minPlayers}
+              max={RULES.maxPlayers}
+              value={playerCount}
+              onChange={e => setPlayerCountInput(e.target.value)}
+              className={styles.stepperSlider}
+            />
+            <div className={styles.sliderLabels}>
+              <span>{RULES.minPlayers} người</span>
+              <span>Quản trò: {user?.displayName || 'Khách'}</span>
+              <span>{RULES.maxPlayers} người</span>
+            </div>
+          </div>
+
+          {/* 3. SECTION DANH SÁCH NGƯỜI CHƠI (PRESETS) */}
+          <div className={styles.sectionTabHeader}>
+            <div className={styles.tabPlate}>PRESETS & PLAYERS</div>
+          </div>
+
+          <div className={styles.parchmentCard}>
+            <div className={styles.presetBar}>
+              <span style={{ fontSize: '11px', color: '#44311a', fontWeight: 'bold' }}>
+                DANH SÁCH TÊN ({playerCount})
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={async () => {
+                    const presets = await getCloudPresets();
+                    handleApplyPresets(presets);
+                  }}
+                  title="Điền nhanh các tên mẫu vào danh sách"
+                >
+                  ⚡ Điền mẫu
+                </button>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={handleOpenPresetModal}
+                  title="Thêm hoặc xoá tên mẫu lưu trữ"
+                >
+                  ⚙️ Quản lý
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.playerRowsContainer}>
+              {names.map((name, i) => (
+                <div key={i} className={styles.playerRow}>
+                  {avatars[i] ? (
+                    <img
+                      src={avatars[i]}
+                      alt={name || `P${i + 1}`}
+                      className={styles.avatarCircle}
+                      title="Ảnh đại diện"
+                    />
+                  ) : (
+                    <div className={styles.avatarFallback} title="Người chơi">
+                      {name ? name[0].toUpperCase() : (i + 1)}
+                    </div>
+                  )}
+
+                  <span className={styles.playerIndexBadge}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      const newNames = [...names];
+                      newNames[i] = e.target.value;
+                      setNames(newNames);
+                    }}
+                    placeholder={`Người chơi ${i + 1}`}
+                    maxLength={20}
+                    className={styles.nameInputParchment}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. SECTION PHÂN BỔ VAI TRÒ (ROLES) */}
+          <div className={styles.sectionTabHeader}>
+            <div className={styles.tabPlate}>ROLES DISTRIBUTION</div>
+          </div>
+
+          <div className={styles.parchmentCard}>
+            <div className={styles.rolesControlBar}>
+              <span style={{ fontSize: '11px', color: '#44311a', fontWeight: 'bold' }}>
+                PHÂN VAI ({totalRoles}/{playerCount})
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={handleAutoBalance}
+                  title="Tự động chia tỉ lệ vai trò cân bằng theo luật"
+                >
+                  🎲 Cân bằng
+                </button>
+                <button
+                  type="button"
+                  className={styles.presetBtn}
+                  onClick={handleResetRoles}
+                  title="Đặt lại toàn bộ về 0"
+                >
+                  ↺ Về 0
+                </button>
+              </div>
+            </div>
+
+            <div className={`${styles.balanceStatus} ${isValid ? styles.balanceValid : styles.balanceInvalid}`}>
+              {isValid
+                ? `✓ ĐÃ CHIA ĐỦ ${totalRoles}/${playerCount} VAI • HỢP LỆ`
+                : totalWolves === 0
+                ? '⚠️ CẦN ÍT NHẤT 1 MA SÓI'
+                : `⚠️ CHƯA KHỚP SỐ LƯỢNG (${totalRoles}/${playerCount})`}
+            </div>
+
+            <div className={styles.rolesGrid}>
+              {ROLE_ITEMS.map((role) => (
+                <div key={role.id} className={styles.roleItem} title={role.desc}>
+                  <div className={styles.roleInfo}>
+                    <img
+                      src={role.icon}
+                      alt={role.name}
+                      className={styles.roleIconImg}
+                    />
+                    <span className={styles.roleNameText}>{role.name}</span>
+                  </div>
+
+                  <div className={styles.roleMiniStepper}>
+                    <button
+                      type="button"
+                      className={styles.roleStepBtn}
+                      onClick={() => handleRoleChange(role.id, -1)}
+                      disabled={!distribution[role.id]}
+                    >
+                      -
+                    </button>
+                    <span className={styles.roleCountDisplay}>
+                      {distribution[role.id] || 0}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.roleStepBtn}
+                      onClick={() => handleRoleChange(role.id, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 5. BOTTOM ACTION BAR (CỐ ĐỊNH Ở ĐÁY) */}
+        <div className={styles.bottomActionBar}>
+          <button
+            className={styles.backBtn}
+            onClick={() => navigate('/')}
+            aria-label="Back to Home"
+            title="Quay lại màn Home"
+          >
+            <img
+              src="/assets/setup_btn_back.webp"
+              alt="BACK"
+              className={styles.backBtnImg}
+            />
+          </button>
+
+          <button
+            className={styles.dealBtn}
+            onClick={handleStart}
+            disabled={!isValid}
+            aria-label="Deal Roles and Start Game"
+            title={isValid ? "Bắt đầu chia bài và vào ván chơi!" : "Vui lòng chia đủ số vai trước khi bắt đầu"}
+          >
+            <img
+              src="/assets/setup_btn_deal.webp"
+              alt="DEAL ROLES"
+              className={styles.dealBtnImg}
+            />
+          </button>
+        </div>
       </div>
 
-      {/* MODAL QUẢN LÝ TÊN MẪU (PRESETS) */}
+      {/* MODAL QUẢN LÝ TÊN MẪU (PRESET MODAL) */}
       <Modal
         isOpen={showPresetModal}
         onClose={() => setShowPresetModal(false)}
-        title="DANH SÁCH TÊN MẪU"
-        footer={
-          <div style={{ display: 'flex', gap: 'var(--s-2)', width: '100%' }}>
-            <Button
-              variant="secondary"
-              style={{ flex: 1 }}
-              onClick={() => setShowPresetModal(false)}
-            >
-              Đóng
-            </Button>
-            <Button
-              variant="primary"
-              style={{ flex: 1.5 }}
-              onClick={() => {
-                handleApplyPresets(presetList);
-                setShowPresetModal(false);
-              }}
-            >
-              Áp Dụng
-            </Button>
-          </div>
-        }
+        title="⚙️ QUẢN LÝ DANH SÁCH TÊN MẪU"
       >
-        <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: '0 0 var(--s-3) 0' }}>
-          Thêm tên bạn bè vào đây để điền nhanh 1-chạm vào mọi ván chơi sau này:
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <form onSubmit={handleAddPreset} style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              value={newPresetName}
+              onChange={e => setNewPresetName(e.target.value)}
+              placeholder="Thêm tên mới..."
+              maxLength={20}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                background: 'rgba(5, 7, 14, 0.8)',
+                border: '1px solid var(--gold-500)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '13px'
+              }}
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isAddingPreset || !newPresetName.trim()}
+              style={{ minHeight: '38px', padding: '0 12px', fontSize: '13px' }}
+            >
+              {isAddingPreset ? '...' : '+ Thêm'}
+            </Button>
+          </form>
 
-        <form onSubmit={handleAddPreset} style={{ display: 'flex', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>
-          <input
-            type="text"
-            placeholder="Nhập tên người chơi mới..."
-            value={newPresetName}
-            onChange={e => setNewPresetName(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '10px 12px',
-              background: 'var(--bg-1)',
-              border: '1px solid var(--gold-700)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--text)',
-              fontSize: '14px',
-              outline: 'none'
-            }}
-          />
+          <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {presetList.length === 0 ? (
+              <div style={{ color: 'var(--text-dim)', fontSize: '12px', textAlign: 'center', padding: '12px' }}>
+                Chưa có tên mẫu nào được lưu.
+              </div>
+            ) : (
+              presetList.map(p => (
+                <div
+                  key={p.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '6px 10px',
+                    background: 'rgba(20, 26, 60, 0.6)',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(201, 162, 74, 0.3)'
+                  }}
+                >
+                  <span style={{ fontSize: '13px', color: 'var(--gold-100)', fontWeight: 600 }}>{p.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePreset(p.id)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--red-400)',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: '2px 6px'
+                    }}
+                    title="Xoá tên này"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
           <Button
             variant="secondary"
-            disabled={isAddingPreset || !newPresetName.trim()}
-            style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px' }}
+            fullWidth
+            onClick={() => setShowPresetModal(false)}
+            style={{ minHeight: '40px' }}
           >
-            + Thêm
+            Đóng
           </Button>
-        </form>
-
-        <div style={{
-          maxHeight: '200px',
-          overflowY: 'auto',
-          background: 'rgba(0,0,0,0.3)',
-          borderRadius: 'var(--radius-md)',
-          padding: 'var(--s-2)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--s-1)'
-        }}>
-          {presetList.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-dim)', fontSize: '13px' }}>
-              Chưa có tên mẫu nào.
-            </div>
-          ) : (
-            presetList.map((p, idx) => (
-              <div
-                key={p.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'var(--bg-2)',
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '13px'
-                }}
-              >
-                <span>
-                  <strong style={{ color: 'var(--gold-300)', marginRight: '6px' }}>#{idx + 1}</strong>
-                  {p.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleDeletePreset(p.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--red-300)',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                  title="Xóa tên này"
-                >
-                  ✕
-                </button>
-              </div>
-            ))
-          )}
         </div>
       </Modal>
     </div>
