@@ -11,7 +11,7 @@ import {
   PhaseBanner
 } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
-import type { Phase } from '../game/types';
+import type { Phase, Role } from '../game/types';
 
 export const DevShowcasePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,6 +20,9 @@ export const DevShowcasePage: React.FC = () => {
   const [timerProgress, setTimerProgress] = useState(65);
   const [demoPhase, setDemoPhase] = useState<Phase>('night');
   const [demoRound, setDemoRound] = useState<number>(1);
+  const [demoMyRole, setDemoMyRole] = useState<Role>('wolf');
+  const [demoNightStep, setDemoNightStep] = useState<'guard' | 'wolf' | 'seer' | 'witch' | 'done'>('wolf');
+  const [demoOtherWolfVote, setDemoOtherWolfVote] = useState<'p4' | 'p3'>('p4');
 
   return (
     <div className="screen-container" style={{ gap: 'var(--s-5)' }}>
@@ -410,42 +413,100 @@ export const DevShowcasePage: React.FC = () => {
         </p>
 
         {/* BỘ ĐIỀU KHIỂN TEST VÒNG & GIAI ĐOẠN */}
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginBottom: 'var(--s-4)' }}>
-          <Button
-            variant={demoPhase === 'night' ? 'primary' : 'secondary'}
-            onClick={() => setDemoPhase('night')}
-            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-          >
-            🌙 Ban Đêm
-          </Button>
-          <Button
-            variant={demoPhase === 'day' ? 'primary' : 'secondary'}
-            onClick={() => setDemoPhase('day')}
-            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-          >
-            ☀️ Ban Ngày
-          </Button>
-          <Button
-            variant={demoPhase === 'vote' ? 'primary' : 'secondary'}
-            onClick={() => setDemoPhase('vote')}
-            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-          >
-            ⚖️ Bỏ Phiếu
-          </Button>
-          <Button
-            variant={demoPhase === 'ended' ? 'primary' : 'secondary'}
-            onClick={() => setDemoPhase('ended')}
-            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
-          >
-            🏁 Kết Thúc
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setDemoRound(r => (r % 3) + 1)}
-            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px', color: 'var(--gold-300)' }}
-          >
-            ⏳ Đổi Vòng {demoRound} → {(demoRound % 3) + 1}
-          </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)', marginBottom: 'var(--s-4)' }}>
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'var(--gold-300)', fontWeight: 600 }}>Giai đoạn:</span>
+            <Button
+              variant={demoPhase === 'night' ? 'primary' : 'secondary'}
+              onClick={() => setDemoPhase('night')}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px' }}
+            >
+              🌙 Ban Đêm
+            </Button>
+            <Button
+              variant={demoPhase === 'day' ? 'primary' : 'secondary'}
+              onClick={() => setDemoPhase('day')}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px' }}
+            >
+              ☀️ Ban Ngày
+            </Button>
+            <Button
+              variant={demoPhase === 'vote' ? 'primary' : 'secondary'}
+              onClick={() => setDemoPhase('vote')}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px' }}
+            >
+              ⚖️ Bỏ Phiếu
+            </Button>
+            <Button
+              variant={demoPhase === 'ended' ? 'primary' : 'secondary'}
+              onClick={() => setDemoPhase('ended')}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px' }}
+            >
+              🏁 Kết Thúc
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDemoRound(r => (r % 3) + 1)}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px', color: 'var(--gold-300)' }}
+            >
+              ⏳ Đổi Vòng {demoRound} → {(demoRound % 3) + 1}
+            </Button>
+          </div>
+
+          {/* CHỌN ROLE ĐỂ TEST THAO TÁC */}
+          <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'var(--gold-300)', fontWeight: 600 }}>Role của bạn:</span>
+            {[
+              { r: 'wolf' as Role, label: '🐺 Sói thường' },
+              { r: 'wolf_demon' as Role, label: '😈 Sói quỷ' },
+              { r: 'guard' as Role, label: '🛡️ Bảo vệ' },
+              { r: 'seer' as Role, label: '🔮 Tiên tri' },
+              { r: 'witch' as Role, label: '🧪 Phù thủy' },
+              { r: 'villager' as Role, label: '👨‍🌾 Dân làng' }
+            ].map(item => (
+              <Button
+                key={item.r}
+                variant={demoMyRole === item.r ? 'primary' : 'secondary'}
+                onClick={() => setDemoMyRole(item.r)}
+                style={{ minHeight: '30px', padding: '0 8px', fontSize: '11px' }}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+
+          {/* CHỌN VAI TRÒ ĐANG ĐƯỢC GỌI TRONG ĐÊM */}
+          {demoPhase === 'night' && (
+            <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: 'var(--gold-300)', fontWeight: 600 }}>Thanh tiến trình gọi:</span>
+              {[
+                { step: 'guard' as const, label: '🛡️ Bảo Vệ' },
+                { step: 'wolf' as const, label: '🐺 Ma Sói' },
+                { step: 'seer' as const, label: '🔮 Tiên Tri' },
+                { step: 'witch' as const, label: '🧪 Phù Thủy' },
+                { step: 'done' as const, label: '✨ Xong Đêm' }
+              ].map(s => (
+                <Button
+                  key={s.step}
+                  variant={demoNightStep === s.step ? 'primary' : 'secondary'}
+                  onClick={() => setDemoNightStep(s.step)}
+                  style={{ minHeight: '30px', padding: '0 8px', fontSize: '11px' }}
+                >
+                  {s.label}
+                </Button>
+              ))}
+
+              {demoNightStep === 'wolf' && demoMyRole === 'wolf' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setDemoOtherWolfVote(prev => prev === 'p4' ? 'p3' : 'p4')}
+                  style={{ minHeight: '30px', padding: '0 8px', fontSize: '11px', color: demoOtherWolfVote === 'p4' ? 'var(--green-400)' : 'var(--red-300)' }}
+                >
+                  {demoOtherWolfVote === 'p4' ? '🐺 Sói 2: Đang trùng vote (Đồng thuận)' : '🐺 Sói 2: Đang chọn khác (Bất đồng)'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* CONTAINER PREVIEW PLAYER LIVE VIEW */}
@@ -471,13 +532,22 @@ export const DevShowcasePage: React.FC = () => {
                 phase: demoPhase,
                 rounds: [{
                   number: demoRound,
+                  guardProtectTarget: demoNightStep === 'guard' ? undefined : 'p3',
+                  wolfTarget: demoNightStep === 'guard' || demoNightStep === 'wolf' ? undefined : 'p4',
+                  wolfTargets: demoNightStep === 'guard' || demoNightStep === 'wolf' ? undefined : ['p4'],
+                  wolfVotes: {
+                    mock_me: ['p4'],
+                    p6: [demoOtherWolfVote]
+                  },
+                  seerCheck: demoNightStep === 'guard' || demoNightStep === 'wolf' || demoNightStep === 'seer' ? undefined : { target: 'p2', isWolf: true },
+                  witchSaved: demoNightStep === 'done' ? true : undefined,
                   nightDeaths: demoPhase !== 'night' ? ['p4'] : []
                 }],
                 witchItems: { saveLeft: 1, poisonLeft: 1 },
                 winner: demoPhase === 'ended' ? 'villager' : undefined,
                 players: [
-                  { id: 'mock_me', name: 'Kỳ Anh', role: 'seer', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=KyAnh' },
-                  { id: 'p2', name: 'Minh Quân', role: 'wolf', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MinhQuan' },
+                  { id: 'mock_me', name: 'Kỳ Anh', role: demoMyRole, alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=KyAnh' },
+                  { id: 'p2', name: 'Minh Quân', role: 'villager', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MinhQuan' },
                   { id: 'p3', name: 'Thanh Trúc', role: 'guard', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=ThanhTruc' },
                   { id: 'p4', name: 'Gia Bảo', role: 'villager', alive: demoPhase === 'night', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=GiaBao' },
                   { id: 'p5', name: 'Hải Yến', role: 'witch', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=HaiYen' },

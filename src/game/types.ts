@@ -14,6 +14,7 @@ export interface Round {
   guardProtectTarget?: string;
   wolfTarget?: string;                 // Tương thích ngược (1 mục tiêu)
   wolfTargets?: string[];              // Danh sách mục tiêu sói cắn (hỗ trợ sói quỷ cắn 2 người)
+  wolfVotes?: Record<string, string[]>; // Id từng con sói -> mục tiêu đang vote cắn
   seerCheck?: { target: string; isWolf: boolean };
   witchSaved?: boolean;                // Cứu nạn nhân (boolean)
   witchSavedTarget?: string;           // Id người cụ thể được cứu nếu có nhiều người bị cắn

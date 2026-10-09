@@ -379,3 +379,240 @@
   grid-template-columns: repeat(3, 1fr);
   gap: var(--s-2);
 }
+
+/* HIỆU ỨNG PHÁT SÁNG CHO ROLE STEP TRONG ĐÊM */
+.stepItemRoleActive .stepCircle {
+  background: linear-gradient(135deg, var(--gold-400), var(--gold-600)) !important;
+  border-color: #fff !important;
+  color: var(--bg-0) !important;
+  box-shadow: 0 0 16px var(--gold-300), 0 0 28px rgba(232, 199, 102, 0.6) !important;
+  transform: scale(1.22) !important;
+  font-weight: 800 !important;
+  animation: pulseRoleStep 1.6s infinite ease-in-out;
+}
+
+@keyframes pulseRoleStep {
+  0%, 100% {
+    box-shadow: 0 0 16px var(--gold-300), 0 0 24px rgba(232, 199, 102, 0.5);
+    transform: scale(1.22);
+  }
+  50% {
+    box-shadow: 0 0 24px var(--gold-100), 0 0 36px rgba(232, 199, 102, 0.8);
+    transform: scale(1.28);
+  }
+}
+
+.stepItemRoleActive .stepLabel {
+  color: #fff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 8px rgba(232, 199, 102, 0.7);
+}
+
+/* THẺ TRẠNG THÁI NGỦ TRONG ĐÊM CHO DÂN LÀNG / VAI TRÒ CHƯA ĐẾN LƯỢT */
+.sleepingCard {
+  background: radial-gradient(circle at top, rgba(30, 36, 75, 0.7) 0%, rgba(11, 16, 38, 0.95) 100%);
+  border: 1px solid rgba(142, 36, 170, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--s-4) var(--s-3);
+  text-align: center;
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.sleepingMoon {
+  font-size: 32px;
+  animation: floatMoon 3s ease-in-out infinite;
+}
+
+@keyframes floatMoon {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.sleepingTitle {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 17px;
+  color: var(--gold-100);
+  letter-spacing: 0.05em;
+}
+
+.sleepingSub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  max-width: 380px;
+}
+
+.sleepingCurrentRole {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--s-2);
+  font-size: 12px;
+  background: rgba(201, 162, 74, 0.15);
+  border: 1px solid var(--gold-500);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  color: var(--gold-200);
+}
+
+/* KHUNG THAO TÁC CỦA VAI TRÒ ĐANG ĐƯỢC GỌI */
+.nightActionSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  width: 100%;
+}
+
+.actionPanel {
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
+  border: 2px solid var(--gold-400);
+  border-radius: var(--radius-md);
+  padding: var(--s-3);
+  box-shadow: var(--shadow-panel), 0 0 20px rgba(232, 199, 102, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.actionPanelWolf {
+  border-color: var(--red-300);
+  background: linear-gradient(180deg, rgba(46, 12, 18, 0.8) 0%, var(--bg-1) 100%);
+  box-shadow: var(--shadow-panel), 0 0 20px rgba(229, 57, 53, 0.25);
+}
+
+.actionPanelSeer {
+  border-color: var(--purple-400);
+  background: linear-gradient(180deg, rgba(38, 20, 56, 0.8) 0%, var(--bg-1) 100%);
+  box-shadow: var(--shadow-panel), 0 0 20px rgba(171, 71, 188, 0.25);
+}
+
+.actionPanelWitch {
+  border-color: var(--teal-500);
+  background: linear-gradient(180deg, rgba(16, 42, 42, 0.8) 0%, var(--bg-1) 100%);
+  box-shadow: var(--shadow-panel), 0 0 20px rgba(38, 166, 154, 0.25);
+}
+
+.actionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: var(--s-2);
+}
+
+.actionTitle {
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* ĐỒNG THUẬN BẦY SÓI */
+.wolfConsensusBox {
+  background: rgba(11, 16, 38, 0.7);
+  border: 1px solid rgba(229, 57, 53, 0.3);
+  border-radius: var(--radius-sm);
+  padding: var(--s-2) var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wolfConsensusRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.wolfTargetSelected {
+  color: var(--red-300);
+  font-weight: 700;
+}
+
+.wolfAlertDisagreement {
+  background: rgba(78, 13, 25, 0.8);
+  border: 1px solid var(--red-300);
+  color: #ffcdd2;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.wolfAlertConsensus {
+  background: rgba(27, 94, 32, 0.6);
+  border: 1px solid var(--green-400);
+  color: #c8e6c9;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.targetSelectionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+/* MODAL TIÊN TRI SOI DANH TÍNH */
+.seerModalContent {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+}
+
+.seerCrystalBall {
+  font-size: 48px;
+  filter: drop-shadow(0 0 16px var(--purple-400));
+  animation: glowBall 2s infinite ease-in-out;
+}
+
+@keyframes glowBall {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px var(--purple-400)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 24px rgba(171, 71, 188, 0.9)); }
+}
+
+.seerTargetName {
+  font-family: var(--font-title);
+  font-size: 20px;
+  color: var(--gold-100);
+  margin: 0;
+}
+
+.seerRoleBadge {
+  font-size: 16px;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.04em;
+}
+
+.seerWolfBadge {
+  background: rgba(192, 57, 79, 0.3);
+  border: 2px solid var(--red-300);
+  color: #ff9eaf;
+  box-shadow: 0 0 14px rgba(229, 57, 53, 0.4);
+}
+
+.seerVillagerBadge {
+  background: rgba(67, 160, 71, 0.25);
+  border: 2px solid var(--green-400);
+  color: #a5d6a7;
+  box-shadow: 0 0 14px rgba(67, 160, 71, 0.4);
+}

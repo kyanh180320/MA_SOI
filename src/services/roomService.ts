@@ -265,3 +265,21 @@ export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
     gameData: cleanGameData
   }, { merge: true });
 }
+
+export async function updateRoomGame(roomId: string, updater: (currentGame: Game) => Game): Promise<void> {
+  const roomRef = doc(db, "rooms", roomId);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(roomRef);
+    if (!snap.exists()) return;
+    const room = snap.data() as GameRoom;
+    if (!room.gameData) return;
+
+    const updatedGame = updater(room.gameData);
+    const cleanGameData = JSON.parse(JSON.stringify(updatedGame));
+
+    transaction.update(roomRef, {
+      status: updatedGame.phase === 'ended' ? 'ended' : 'playing',
+      gameData: cleanGameData
+    });
+  });
+}

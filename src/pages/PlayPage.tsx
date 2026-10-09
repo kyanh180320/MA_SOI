@@ -31,6 +31,7 @@ export default function PlayPage() {
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
   const [selectedHunterTarget, setSelectedHunterTarget] = useState<string | null>(null);
   const [hunterPendingDeath, setHunterPendingDeath] = useState<{ hunter: Player; from: 'night' | 'vote' } | null>(null);
+  const [wolfSelectionWarning, setWolfSelectionWarning] = useState<string | null>(null);
 
   if (!game) {
     return (
@@ -404,22 +405,31 @@ export default function PlayPage() {
 
     // 2. LƯỢT SÓI
     if (nightStep === 'wolf') {
-      const hasDemonWolf = alivePlayers.some(p => p.role === 'wolf_demon');
+      const aliveWolves = alivePlayers.filter(p => isWolfTeam(p.role));
+      const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
       const maxTargets = hasDemonWolf ? 2 : 1;
-      const isWolfAlive = alivePlayers.some(p => isWolfTeam(p.role));
+      const isWolfAlive = aliveWolves.length > 0;
+      const wolfVotesMap = currentRound?.wolfVotes || {};
+
+      // Kiểm tra đồng thuận giữa các sói thường khi có từ 2 sói trở lên
+      const allWolvesVoted = aliveWolves.length > 1 && aliveWolves.every(w => (wolfVotesMap[w.id]?.length || 0) > 0);
+      const votedTargetIds = aliveWolves.map(w => wolfVotesMap[w.id]?.[0]).filter(Boolean);
+      const isWolfConsensus = allWolvesVoted && votedTargetIds.length === aliveWolves.length && new Set(votedTargetIds).size === 1;
+      const hasDisagreement = allWolvesVoted && !isWolfConsensus;
 
       const toggleWolfTarget = (id: string) => {
+        setWolfSelectionWarning(null);
         if (selectedWolfTargets.includes(id)) {
           setSelectedWolfTargets(prev => prev.filter(x => x !== id));
         } else {
-          if (maxTargets === 1) {
-            setSelectedWolfTargets([id]);
-          } else {
-            if (selectedWolfTargets.length < maxTargets) {
-              setSelectedWolfTargets(prev => [...prev, id]);
-            } else {
-              setSelectedWolfTargets(prev => [prev[1], id]);
+          if (hasDemonWolf) {
+            if (selectedWolfTargets.length >= 2) {
+              setWolfSelectionWarning("⚠️ Có Sói Quỷ chỉ được chọn tối đa 2 người! Bạn đã chọn đủ 2 người rồi, hãy bấm bỏ chọn 1 người trước nếu muốn đổi mục tiêu.");
+              return;
             }
+            setSelectedWolfTargets(prev => [...prev, id]);
+          } else {
+            setSelectedWolfTargets([id]);
           }
         }
       };
@@ -439,12 +449,61 @@ export default function PlayPage() {
           {hasDemonWolf && (
             <Toast
               variant="danger"
-              message={`😈 SÓI QUỶ còn sống! Bầy sói được cắn 2 người (Đã chọn ${selectedWolfTargets.length}/${maxTargets})`}
+              message={`😈 SÓI QUỶ còn sống! Bầy sói được cắn tối đa 2 người (Đã chọn ${selectedWolfTargets.length}/2)`}
+              style={{ marginBottom: 'var(--s-3)' }}
+            />
+          )}
+          {wolfSelectionWarning && (
+            <Toast
+              variant="danger"
+              message={wolfSelectionWarning}
+              style={{ marginBottom: 'var(--s-3)' }}
+            />
+          )}
+          {!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement && (
+            <Toast
+              variant="danger"
+              message={`⚠️ 2 Sói đang chọn khác người! Bắt buộc tất cả sói thường phải thống nhất chọn CÙNG 1 NGƯỜI mới cắn được!`}
+              style={{ marginBottom: 'var(--s-3)' }}
+            />
+          )}
+          {!hasDemonWolf && aliveWolves.length > 1 && isWolfConsensus && (
+            <Toast
+              variant="success"
+              message={`🎉 Cả bầy sói đã ĐỒNG THUẬN chọn cắn: ${game.players.find(p => p.id === votedTargetIds[0])?.name}!`}
               style={{ marginBottom: 'var(--s-3)' }}
             />
           )}
           {!isWolfAlive && (
             <Toast variant="info" message="Không còn sói sống trong bầy, có thể bỏ qua." style={{ marginBottom: 'var(--s-3)' }} />
+          )}
+
+          {/* HIỂN THỊ Ý KIẾN TỪNG SÓI NẾU CÓ NHIỀU SÓI VÀ CHƠI ONLINE */}
+          {aliveWolves.length > 1 && !hasDemonWolf && (
+            <div style={{
+              background: 'rgba(11, 16, 38, 0.7)',
+              border: '1px solid rgba(229, 57, 53, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px',
+              marginBottom: 'var(--s-3)',
+              fontSize: '12px'
+            }}>
+              <span style={{ color: 'var(--text-dim)', fontWeight: 600 }}>Ý KIẾN CÁC SÓI TRONG BẦY:</span>
+              <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {aliveWolves.map(w => {
+                  const targetId = wolfVotesMap[w.id]?.[0];
+                  const targetPlayer = targetId ? game.players.find(p => p.id === targetId) : null;
+                  return (
+                    <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🐺 {w.name}:</span>
+                      <strong style={{ color: targetPlayer ? 'var(--red-300)' : 'var(--text-dim)' }}>
+                        {targetPlayer ? `👉 ${targetPlayer.name}` : '⏳ Chưa vote'}
+                      </strong>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
@@ -474,9 +533,12 @@ export default function PlayPage() {
                 variant="danger"
                 pulse
                 fullWidth
+                disabled={!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement}
                 onClick={() => handleWolfTargets(selectedWolfTargets)}
               >
-                ✓ Xác Nhận Cắn: {selectedNames.join(', ')}
+                {!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement
+                  ? '🔒 Cần cả 2 sói chọn cùng 1 người'
+                  : `✓ Xác Nhận Cắn: ${selectedNames.join(', ')}`}
               </Button>
             ) : (
               <Button
@@ -492,7 +554,10 @@ export default function PlayPage() {
               <Button
                 variant="ghost"
                 fullWidth
-                onClick={() => setSelectedWolfTargets([])}
+                onClick={() => {
+                  setSelectedWolfTargets([]);
+                  setWolfSelectionWarning(null);
+                }}
               >
                 Bỏ qua (Không cắn ai)
               </Button>
@@ -783,89 +848,178 @@ export default function PlayPage() {
             <span>VÒNG {currentRound?.number || 1}</span>
           </div>
           <Badge variant={game.phase === 'ended' ? 'green' : (game.phase === 'vote' ? 'red' : 'gold')}>
-            {game.phase === 'night' && '🌙 Giai Đoạn Đêm'}
+            {game.phase === 'night' && (
+              <>
+                🌙 Đêm:{' '}
+                {nightStep === 'guard' && '🛡️ Bảo Vệ'}
+                {nightStep === 'wolf' && '🐺 Ma Sói'}
+                {nightStep === 'seer' && '🔮 Tiên Tri'}
+                {nightStep === 'witch' && '🧪 Phù Thủy'}
+                {nightStep === 'done' && '✨ Chờ Bình Minh'}
+              </>
+            )}
             {game.phase === 'day' && '☀️ Ban Ngày'}
             {game.phase === 'vote' && '⚖️ Bỏ Phiếu Treo Cổ'}
             {game.phase === 'ended' && '🏁 Trận Đấu Kết Thúc'}
           </Badge>
         </div>
 
-        {/* Stepper bar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          margin: '4px 0'
-        }}>
+        {/* Stepper bar: Nếu ban đêm hiển thị 4 vai trò đêm phát sáng theo lượt */}
+        {game.phase === 'night' ? (
           <div style={{
-            position: 'absolute',
-            top: '14px',
-            left: '20px',
-            right: '20px',
-            height: '3px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            zIndex: 1
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'relative',
+            margin: '4px 0'
           }}>
             <div style={{
-              height: '100%',
-              background: 'linear-gradient(90deg, var(--gold-500), var(--gold-300))',
-              width: `${(Math.max(0, ['night', 'day', 'vote', 'ended'].indexOf(game.phase)) / 3) * 100}%`,
-              transition: 'width 0.4s ease',
-              boxShadow: '0 0 8px rgba(232, 199, 102, 0.5)'
-            }} />
-          </div>
+              position: 'absolute',
+              top: '14px',
+              left: '20px',
+              right: '20px',
+              height: '3px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              zIndex: 1
+            }}>
+              <div style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, var(--gold-500), var(--gold-300))',
+                width: `${Math.min(100, ((['guard', 'wolf', 'seer', 'witch', 'done'].indexOf(nightStep)) / 3) * 100)}%`,
+                transition: 'width 0.4s ease',
+                boxShadow: '0 0 8px rgba(232, 199, 102, 0.5)'
+              }} />
+            </div>
 
-          {[
-            { id: 'night', label: 'Ban Đêm', icon: '🌙' },
-            { id: 'day', label: 'Ban Ngày', icon: '☀️' },
-            { id: 'vote', label: 'Bỏ Phiếu', icon: '⚖️' },
-            { id: 'ended', label: 'Kết Quả', icon: '☠️' }
-          ].map((step, idx) => {
-            const currentIdx = ['night', 'day', 'vote', 'ended'].indexOf(game.phase);
-            const isPassed = idx < currentIdx;
-            const isActive = idx === currentIdx;
+            {[
+              { id: 'guard', label: 'Bảo Vệ', icon: '🛡️' },
+              { id: 'wolf', label: 'Ma Sói', icon: '🐺' },
+              { id: 'seer', label: 'Tiên Tri', icon: '🔮' },
+              { id: 'witch', label: 'Phù Thủy', icon: '🧪' }
+            ].map((step, idx) => {
+              const currentIdx = ['guard', 'wolf', 'seer', 'witch', 'done'].indexOf(nightStep);
+              const isPassed = idx < currentIdx;
+              const isActive = idx === currentIdx;
 
-            return (
-              <div key={step.id} style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '4px',
-                zIndex: 2,
-                flex: 1
-              }}>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
+              return (
+                <div key={step.id} style={{
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '13px',
-                  background: isActive ? 'var(--gold-500)' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
-                  border: `2px solid ${isActive ? 'var(--gold-100)' : (isPassed ? 'var(--gold-500)' : 'var(--ash)')}`,
-                  color: isActive ? 'var(--bg-0)' : (isPassed ? 'var(--gold-300)' : 'var(--ash)'),
-                  boxShadow: isActive ? '0 0 12px var(--gold-300)' : 'none',
-                  transform: isActive ? 'scale(1.15)' : 'scale(1)',
-                  transition: 'all 0.3s ease',
-                  fontWeight: 'bold'
+                  gap: '4px',
+                  zIndex: 2,
+                  flex: 1
                 }}>
-                  {isPassed ? '✓' : step.icon}
+                  <div style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    background: isActive ? 'linear-gradient(135deg, var(--gold-400), var(--gold-600))' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
+                    border: `2px solid ${isActive ? '#fff' : (isPassed ? 'var(--gold-500)' : 'var(--ash)')}`,
+                    color: isActive ? 'var(--bg-0)' : (isPassed ? 'var(--gold-300)' : 'var(--ash)'),
+                    boxShadow: isActive ? '0 0 16px var(--gold-300), 0 0 24px rgba(232, 199, 102, 0.6)' : 'none',
+                    transform: isActive ? 'scale(1.22)' : 'scale(1)',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold'
+                  }}>
+                    {isPassed ? '✓' : step.icon}
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? '#fff' : 'var(--text-dim)',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    textShadow: isActive ? '0 0 8px rgba(232, 199, 102, 0.8)' : 'none'
+                  }}>
+                    {step.label}
+                    {isActive && ' (Đang gọi)'}
+                  </span>
                 </div>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'var(--gold-100)' : 'var(--text-dim)',
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap'
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'relative',
+            margin: '4px 0'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '14px',
+              left: '20px',
+              right: '20px',
+              height: '3px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              zIndex: 1
+            }}>
+              <div style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, var(--gold-500), var(--gold-300))',
+                width: `${(Math.max(0, ['night', 'day', 'vote', 'ended'].indexOf(game.phase)) / 3) * 100}%`,
+                transition: 'width 0.4s ease',
+                boxShadow: '0 0 8px rgba(232, 199, 102, 0.5)'
+              }} />
+            </div>
+
+            {[
+              { id: 'night', label: 'Ban Đêm', icon: '🌙' },
+              { id: 'day', label: 'Ban Ngày', icon: '☀️' },
+              { id: 'vote', label: 'Bỏ Phiếu', icon: '⚖️' },
+              { id: 'ended', label: 'Kết Quả', icon: '☠️' }
+            ].map((step, idx) => {
+              const currentIdx = ['night', 'day', 'vote', 'ended'].indexOf(game.phase);
+              const isPassed = idx < currentIdx;
+              const isActive = idx === currentIdx;
+
+              return (
+                <div key={step.id} style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  zIndex: 2,
+                  flex: 1
                 }}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '13px',
+                    background: isActive ? 'var(--gold-500)' : (isPassed ? 'var(--bg-3)' : 'var(--bg-1)'),
+                    border: `2px solid ${isActive ? 'var(--gold-100)' : (isPassed ? 'var(--gold-500)' : 'var(--ash)')}`,
+                    color: isActive ? 'var(--bg-0)' : (isPassed ? 'var(--gold-300)' : 'var(--ash)'),
+                    boxShadow: isActive ? '0 0 12px var(--gold-300)' : 'none',
+                    transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                    transition: 'all 0.3s ease',
+                    fontWeight: 'bold'
+                  }}>
+                    {isPassed ? '✓' : step.icon}
+                  </div>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive ? 'var(--gold-100)' : 'var(--text-dim)',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {step.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* PHASE BANNER THEO THỜI GIAN THỰC */}
