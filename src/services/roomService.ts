@@ -2,12 +2,13 @@ import {
   collection, 
   doc, 
   setDoc, 
+  updateDoc,
   deleteDoc, 
   onSnapshot, 
   runTransaction 
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import type { GameRoom, RoomMember, AppUser } from "../game/types";
+import type { GameRoom, RoomMember, AppUser, Game } from "../game/types";
 
 export async function createRoom(roomName: string, maxPlayers: number = 20, user?: AppUser | null): Promise<string> {
   const currentUser = auth.currentUser;
@@ -263,5 +264,13 @@ export async function removeBotFromRoom(roomId: string, botUid?: string): Promis
     transaction.update(roomRef, {
       members: updatedMembers
     });
+  });
+}
+
+export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
+  const roomRef = doc(db, "rooms", roomId);
+  await updateDoc(roomRef, {
+    status: game.phase === 'ended' ? 'ended' : 'playing',
+    gameData: game
   });
 }

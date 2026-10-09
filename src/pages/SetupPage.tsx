@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
-import type { Role, PresetName, GameRoom } from '../game/types';
+import { syncRoomGame } from '../services/roomService';
+import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import {
   Button,
   Panel,
@@ -134,21 +135,32 @@ export default function SetupPage() {
     if (!isValid) return;
 
     const players = names.map((name, i) => ({
-      id: `p_${Date.now()}_${i}`,
+      id: (fromRoom && fromRoom.members && fromRoom.members[i]?.uid) 
+        ? fromRoom.members[i].uid 
+        : `p_${Date.now()}_${i}`,
       name: name.trim() || `Người chơi ${i + 1}`,
       avatar: avatars[i] || undefined,
     }));
 
     const assignedPlayers = assignRoles(players, distribution);
 
-    setGame({
+    const newGame: Game = {
       id: `game_${Date.now()}`,
       createdAt: Date.now(),
       players: assignedPlayers,
       rounds: [{ number: 1, nightDeaths: [] }],
       phase: "night",
-      witchItems: { saveLeft: RULES.witch.saveCount, poisonLeft: RULES.witch.poisonCount }
-    });
+      witchItems: { saveLeft: RULES.witch.saveCount, poisonLeft: RULES.witch.poisonCount },
+      roomId: fromRoom?.id
+    };
+
+    setGame(newGame);
+
+    if (fromRoom?.id) {
+      syncRoomGame(fromRoom.id, newGame).catch(err => {
+        console.error("Không thể đồng bộ game lên phòng:", err);
+      });
+    }
 
     navigate('/play');
   };

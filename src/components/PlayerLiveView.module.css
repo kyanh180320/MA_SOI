@@ -1,0 +1,381 @@
+/* PLAYER LIVE VIEW STYLES */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: var(--s-6);
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.roomMeta {
+  text-align: center;
+  flex: 1;
+}
+
+.roomTitle {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: 17px;
+  color: var(--gold-100);
+  letter-spacing: 0.04em;
+}
+
+.liveIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green-400);
+  background: rgba(67, 160, 71, 0.15);
+  border: 1px solid rgba(67, 160, 71, 0.3);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  margin-top: 2px;
+}
+
+.pulseDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--green-400);
+  box-shadow: 0 0 8px var(--green-400);
+  animation: liveBlink 1.5s infinite ease-in-out;
+}
+
+@keyframes liveBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* THANH TIẾN TRÌNH ROUND & GIAI ĐOẠN */
+.timelinePanel {
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gold-700);
+  padding: var(--s-3);
+  box-shadow: var(--shadow-panel), inset 0 1px 0 rgba(246, 227, 161, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.roundHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid rgba(201, 162, 74, 0.2);
+}
+
+.roundNumber {
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold-100);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.05em;
+}
+
+.phaseBadge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.phaseNight {
+  background: rgba(43, 50, 112, 0.7);
+  color: var(--gold-100);
+  border: 1px solid var(--gold-500);
+  box-shadow: 0 0 10px rgba(142, 36, 170, 0.3);
+}
+
+.phaseDay {
+  background: rgba(201, 162, 74, 0.2);
+  color: var(--gold-300);
+  border: 1px solid var(--gold-300);
+  box-shadow: 0 0 10px rgba(232, 199, 102, 0.3);
+}
+
+.phaseVote {
+  background: rgba(192, 57, 79, 0.25);
+  color: #ff9eaf;
+  border: 1px solid var(--red-300);
+  box-shadow: 0 0 10px rgba(192, 57, 79, 0.3);
+}
+
+.phaseEnded {
+  background: rgba(46, 125, 50, 0.25);
+  color: #a5d6a7;
+  border: 1px solid var(--green-400);
+}
+
+/* STEPPER */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  margin: 4px 0;
+}
+
+.stepLine {
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+.stepLineProgress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(232, 199, 102, 0.5);
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+  flex: 1;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  background: var(--bg-1);
+  border: 2px solid var(--ash);
+  color: var(--ash);
+  transition: all 0.3s ease;
+}
+
+.stepItemActive .stepCircle {
+  background: var(--gold-500);
+  border-color: var(--gold-100);
+  color: var(--bg-0);
+  box-shadow: 0 0 12px var(--gold-300);
+  transform: scale(1.15);
+  font-weight: bold;
+}
+
+.stepItemPassed .stepCircle {
+  background: var(--bg-3);
+  border-color: var(--gold-500);
+  color: var(--gold-300);
+}
+
+.stepLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepItemActive .stepLabel {
+  color: var(--gold-100);
+  font-weight: 700;
+}
+
+/* CALLOUT MÔ TẢ GIAI ĐOẠN */
+.phaseCallout {
+  background: rgba(11, 16, 38, 0.6);
+  border-radius: var(--radius-sm);
+  padding: var(--s-2) var(--s-3);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  border-left: 3px solid var(--gold-500);
+}
+
+.nightVictimAlert {
+  background: rgba(78, 13, 25, 0.6);
+  border: 1px solid var(--red-300);
+  border-radius: var(--radius-sm);
+  padding: var(--s-2) var(--s-3);
+  color: #ffb4be;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* KHU VỰC THẺ BÀI BÍ MẬT */
+.cardSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  background: radial-gradient(circle at 50% 30%, rgba(43, 50, 112, 0.45) 0%, rgba(20, 26, 60, 0.9) 70%);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(201, 162, 74, 0.4);
+  box-shadow: var(--shadow-panel), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.cardSection::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 140px;
+  background: radial-gradient(ellipse, rgba(232, 199, 102, 0.15), transparent 70%);
+  pointer-events: none;
+}
+
+.cardHint {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.cardHintTitle {
+  font-family: var(--font-title);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold-100);
+  letter-spacing: 0.05em;
+}
+
+.cardHintSub {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.cardWrapper {
+  position: relative;
+  padding: var(--s-2) 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  perspective: 1000px;
+}
+
+/* THÔNG TIN CHI TIẾT VAI TRÒ KHI ĐÃ LẬT MỞ */
+.roleDetailCard {
+  width: 100%;
+  background: rgba(11, 16, 38, 0.85);
+  border: 1px solid var(--gold-500);
+  border-radius: var(--radius-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.roleDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.roleDetailTitle {
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold-100);
+}
+
+.roleDesc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.roleActionHint {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold-300);
+  background: rgba(201, 162, 74, 0.12);
+  border-left: 3px solid var(--gold-400);
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+/* TRẠNG THÁI SỐNG / CHẾT CỦA BẢN THÂN */
+.playerStatusBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--s-3);
+  box-shadow: var(--shadow-soft);
+}
+
+.playerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.playerAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-500);
+  object-fit: cover;
+  background: var(--bg-2);
+}
+
+.playerName {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--gold-100);
+}
+
+/* DANH SÁCH NGƯỜI CHƠI TRONG PHÒNG */
+.gridTitle {
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--gold-100);
+  margin: 0 0 var(--s-3) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.playersGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}

@@ -11,11 +11,68 @@
   width: 220px;
   aspect-ratio: 2 / 3;
   transform-style: preserve-3d;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Khi không phải faceDown, lật bài sẽ xoay 180deg (từ mặt trước sang mặt sau) */
 .isFlipped .flipInner {
   transform: rotateY(180deg);
+}
+
+/* Khi faceDown = true, mặc định lá bài ở chế độ úp (hiện mặt sau) */
+.faceDown .flipInner {
+  transform: rotateY(180deg);
+}
+
+/* Khi faceDown = true và được lật mở (isFlipped = true), xoay về 0deg (hiện mặt trước) */
+.faceDown.isFlipped .flipInner {
+  transform: rotateY(0deg);
+}
+
+/* Hiệu ứng lá bài sinh ra (deal entrance) */
+@keyframes cardDealEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(45px) scale(0.82);
+    filter: drop-shadow(0 0 0 rgba(232, 199, 102, 0));
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.04);
+    filter: drop-shadow(0 0 30px rgba(232, 199, 102, 0.8));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.6));
+  }
+}
+
+.spawnAnimation {
+  animation: cardDealEntrance 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes mysteriousAura {
+  0%, 100% {
+    box-shadow:
+      var(--shadow-panel),
+      0 0 12px rgba(201, 162, 74, 0.35),
+      inset 0 0 0 3px var(--gold-500),
+      inset 0 0 0 7px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 8px rgba(232, 199, 102, 0.3);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-panel),
+      0 0 28px rgba(232, 199, 102, 0.75),
+      inset 0 0 0 3px var(--gold-300),
+      inset 0 0 0 7px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 8px rgba(246, 227, 161, 0.6);
+  }
+}
+
+.faceDown:not(.isFlipped) .cardBack {
+  animation: mysteriousAura 3s ease-in-out infinite;
 }
 
 .flipFace {

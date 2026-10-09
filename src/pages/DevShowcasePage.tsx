@@ -10,12 +10,16 @@ import {
   Toast,
   PhaseBanner
 } from '../components/ui';
+import { PlayerLiveView } from '../components/PlayerLiveView';
+import type { Phase } from '../game/types';
 
 export const DevShowcasePage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('p2');
   const [timerProgress, setTimerProgress] = useState(65);
+  const [demoPhase, setDemoPhase] = useState<Phase>('night');
+  const [demoRound, setDemoRound] = useState<number>(1);
 
   return (
     <div className="screen-container" style={{ gap: 'var(--s-5)' }}>
@@ -386,6 +390,109 @@ export const DevShowcasePage: React.FC = () => {
             Bạn đang chọn bỏ phiếu cho người chơi <strong>Minh Quân</strong>. Hành động này không thể hoàn tác sau khi hết thời gian đếm ngược.
           </p>
         </Modal>
+      </Panel>
+
+      {/* 8. THỰC TẾ: GIAO DIỆN NGƯỜI CHƠI ONLINE (LÁ BÀI ÚP & THANH TIẾN TRÌNH ROUND) */}
+      <Panel>
+        <h2 style={{
+          fontFamily: 'var(--font-title)',
+          fontSize: '18px',
+          color: 'var(--gold-100)',
+          marginTop: 0,
+          marginBottom: 'var(--s-2)',
+          borderBottom: '1px solid rgba(201, 162, 74, 0.2)',
+          paddingBottom: 'var(--s-2)'
+        }}>
+          8. Màn Hình Người Chơi Online (Thực Tế)
+        </h2>
+        <p style={{ margin: '0 0 var(--s-3) 0', fontSize: '13px', color: 'var(--text-dim)' }}>
+          Mô phỏng trải nghiệm người chơi vào phòng (không phải host): khi ván bắt đầu, lá bài bí mật sinh ra ở chế độ ÚP kèm hiệu ứng phát sáng. Người chơi chạm để lật mở, theo dõi thanh tiến trình Round và danh sách 3 cột người chơi.
+        </p>
+
+        {/* BỘ ĐIỀU KHIỂN TEST VÒNG & GIAI ĐOẠN */}
+        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginBottom: 'var(--s-4)' }}>
+          <Button
+            variant={demoPhase === 'night' ? 'primary' : 'secondary'}
+            onClick={() => setDemoPhase('night')}
+            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
+          >
+            🌙 Ban Đêm
+          </Button>
+          <Button
+            variant={demoPhase === 'day' ? 'primary' : 'secondary'}
+            onClick={() => setDemoPhase('day')}
+            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
+          >
+            ☀️ Ban Ngày
+          </Button>
+          <Button
+            variant={demoPhase === 'vote' ? 'primary' : 'secondary'}
+            onClick={() => setDemoPhase('vote')}
+            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
+          >
+            ⚖️ Bỏ Phiếu
+          </Button>
+          <Button
+            variant={demoPhase === 'ended' ? 'primary' : 'secondary'}
+            onClick={() => setDemoPhase('ended')}
+            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px' }}
+          >
+            🏁 Kết Thúc
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setDemoRound(r => (r % 3) + 1)}
+            style={{ minHeight: '36px', padding: '0 var(--s-2)', fontSize: '12px', color: 'var(--gold-300)' }}
+          >
+            ⏳ Đổi Vòng {demoRound} → {(demoRound % 3) + 1}
+          </Button>
+        </div>
+
+        {/* CONTAINER PREVIEW PLAYER LIVE VIEW */}
+        <div style={{
+          border: '2px dashed rgba(201, 162, 74, 0.4)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--s-3)',
+          background: 'rgba(11, 16, 38, 0.5)'
+        }}>
+          <PlayerLiveView
+            room={{
+              id: 'MS-9999',
+              name: 'Phòng Ma Sói Online #9999',
+              hostUid: 'host_001',
+              hostName: 'Admin Quản Trò',
+              maxPlayers: 6,
+              status: demoPhase === 'ended' ? 'ended' : 'playing',
+              createdAt: Date.now(),
+              members: [],
+              gameData: {
+                id: 'game_demo',
+                createdAt: Date.now(),
+                phase: demoPhase,
+                rounds: [{
+                  number: demoRound,
+                  nightDeaths: demoPhase !== 'night' ? ['p4'] : []
+                }],
+                witchItems: { saveLeft: 1, poisonLeft: 1 },
+                winner: demoPhase === 'ended' ? 'villager' : undefined,
+                players: [
+                  { id: 'mock_me', name: 'Kỳ Anh', role: 'seer', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=KyAnh' },
+                  { id: 'p2', name: 'Minh Quân', role: 'wolf', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MinhQuan' },
+                  { id: 'p3', name: 'Thanh Trúc', role: 'guard', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=ThanhTruc' },
+                  { id: 'p4', name: 'Gia Bảo', role: 'villager', alive: demoPhase === 'night', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=GiaBao' },
+                  { id: 'p5', name: 'Hải Yến', role: 'witch', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=HaiYen' },
+                  { id: 'p6', name: 'Đức Anh', role: 'wolf', alive: true, avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=DucAnh' }
+                ]
+              }
+            }}
+            user={{
+              uid: 'mock_me',
+              displayName: 'Kỳ Anh',
+              email: 'user@example.com'
+            }}
+            onLeave={() => alert('Thử nghiệm: Người chơi bấm Rời phòng')}
+          />
+        </div>
       </Panel>
 
       {/* FOOTER */}

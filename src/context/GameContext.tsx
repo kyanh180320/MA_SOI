@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Game } from '../game/types';
+import { syncRoomGame } from '../services/roomService';
 
 interface GameContextType {
   game: Game | null;
@@ -27,10 +28,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const game = history.length > 0 ? history[history.length - 1] : null;
 
-  // Sync to localStorage
+  // Sync to localStorage and Firestore Room if game is linked to an online room
   useEffect(() => {
     if (game) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(game));
+      if (game.roomId) {
+        syncRoomGame(game.roomId, game).catch(err => {
+          console.error("Lỗi đồng bộ ván chơi lên phòng online:", err);
+        });
+      }
     } else {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
     }

@@ -8,6 +8,8 @@ export interface RoleCardProps {
   cardBackUrl?: string;
   icon?: string;
   flipped?: boolean;
+  faceDown?: boolean;
+  spawnAnimation?: boolean;
   interactive?: boolean;
   onFlip?: (flipped: boolean) => void;
   className?: string;
@@ -20,6 +22,8 @@ export const RoleCard: React.FC<RoleCardProps> = ({
   cardBackUrl,
   icon = '🐺',
   flipped: controlledFlipped,
+  faceDown = false,
+  spawnAnimation = false,
   interactive = true,
   onFlip,
   className = ''
@@ -41,7 +45,7 @@ export const RoleCard: React.FC<RoleCardProps> = ({
 
   return (
     <div
-      className={`${styles.flip} ${isFlipped ? styles.isFlipped : ''} ${className}`}
+      className={`${styles.flip} ${faceDown ? styles.faceDown : ''} ${isFlipped ? styles.isFlipped : ''} ${spawnAnimation ? styles.spawnAnimation : ''} ${className}`}
       onClick={handleClick}
       role="button"
       tabIndex={interactive ? 0 : undefined}

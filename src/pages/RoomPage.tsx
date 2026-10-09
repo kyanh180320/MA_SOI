@@ -11,6 +11,7 @@ import {
 } from '../services/roomService';
 import type { GameRoom } from '../game/types';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
+import { PlayerLiveView } from '../components/PlayerLiveView';
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -21,6 +22,7 @@ export default function RoomPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isAddingBot, setIsAddingBot] = useState(false);
+  const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
 
   useEffect(() => {
     if (!roomId) return;
@@ -62,6 +64,7 @@ export default function RoomPage() {
   }
 
   const isHost = user && room.hostUid === user.uid;
+  const isGamePlaying = (room.status === 'playing' || room.status === 'ended') && !!room.gameData;
   const members = room.members || [];
 
   const handleLeave = async () => {
@@ -127,6 +130,40 @@ export default function RoomPage() {
       alert((err as Error).message);
     }
   };
+
+  // NẾU VÁN CHƠI ĐANG DIỄN RA:
+  // - Người chơi thông thường (không phải host) sẽ được chuyển ngay vào màn hình chơi trực tiếp PlayerLiveView
+  // - Quản trò (host) nếu bấm xem thử cũng có thể quan sát
+  if ((!isHost || previewAsPlayer) && isGamePlaying) {
+    return (
+      <div className="screen-container" style={{ gap: 'var(--s-3)' }}>
+        {isHost && (
+          <div style={{
+            background: 'var(--bg-2)',
+            border: '1px solid var(--gold-500)',
+            borderRadius: 'var(--radius-sm)',
+            padding: 'var(--s-2) var(--s-3)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 'var(--s-1)'
+          }}>
+            <span style={{ fontSize: '12px', color: 'var(--gold-300)', fontWeight: 600 }}>
+              👁️ Đang xem thử giao diện của Người Chơi
+            </span>
+            <Button
+              variant="secondary"
+              onClick={() => setPreviewAsPlayer(false)}
+              style={{ minHeight: '32px', padding: '0 var(--s-2)', fontSize: '11px' }}
+            >
+              Về Quản Trò ✕
+            </Button>
+          </div>
+        )}
+        <PlayerLiveView room={room} user={user} onLeave={handleLeave} />
+      </div>
+    );
+  }
 
   return (
     <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
@@ -289,22 +326,60 @@ export default function RoomPage() {
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         {isHost ? (
           <>
-            {/* DUY NHẤT 1 PRIMARY BUTTON TRÊN MÀN HÌNH */}
-            <Button
-              variant="primary"
-              pulse
-              fullWidth
-              onClick={handleStartSetup}
-            >
-              🎮 THIẾT LẬP VÁN & CHIA VAI ({members.length} NGƯỜI)
-            </Button>
-            <Button
-              variant="danger"
-              fullWidth
-              onClick={handleClose}
-            >
-              ❌ Giải Tán Phòng
-            </Button>
+            {isGamePlaying ? (
+              <>
+                <Button
+                  variant="primary"
+                  pulse
+                  fullWidth
+                  onClick={() => navigate('/play')}
+                >
+                  🎮 TIẾP TỤC BÀN QUẢN TRÒ (ĐANG DIỄN RA)
+                </Button>
+                <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setPreviewAsPlayer(true)}
+                    style={{ flex: 1, minHeight: '44px', fontSize: '13px' }}
+                  >
+                    👁️ Xem Màn Hình Player
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleStartSetup}
+                    style={{ flex: 1, minHeight: '44px', fontSize: '13px' }}
+                  >
+                    🔄 Bắt Đầu Ván Mới
+                  </Button>
+                </div>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={handleClose}
+                >
+                  ❌ Giải Tán Phòng
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* DUY NHẤT 1 PRIMARY BUTTON TRÊN MÀN HÌNH */}
+                <Button
+                  variant="primary"
+                  pulse
+                  fullWidth
+                  onClick={handleStartSetup}
+                >
+                  🎮 THIẾT LẬP VÁN & CHIA VAI ({members.length} NGƯỜI)
+                </Button>
+                <Button
+                  variant="danger"
+                  fullWidth
+                  onClick={handleClose}
+                >
+                  ❌ Giải Tán Phòng
+                </Button>
+              </>
+            )}
           </>
         ) : (
           <Panel style={{ textAlign: 'center' }}>

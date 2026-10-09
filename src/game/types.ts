@@ -34,6 +34,7 @@ export interface Game {
   phase: Phase;
   witchItems: { saveLeft: number; poisonLeft: number };
   winner?: "wolf" | "villager";
+  roomId?: string;
 }
 
 export interface AppUser {
@@ -70,4 +71,5 @@ export interface GameRoom {
   members: RoomMember[];
   createdAt: number;
   gameId?: string;
+  gameData?: Game;
 }
