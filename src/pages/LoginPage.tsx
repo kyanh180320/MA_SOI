@@ -19,8 +19,12 @@ export default function LoginPage() {
       await loginGoogle();
       navigate('/');
     } catch (err: unknown) {
-      const errorObj = err as { message?: string };
-      setError(errorObj.message || 'Đăng nhập Google thất bại');
+      const errorObj = err as { code?: string; message?: string };
+      if (errorObj.code === 'auth/unauthorized-domain') {
+        setError('Tên miền Vercel này đang đợi Google cập nhật (thường mất 1 - 3 phút sau khi thêm vào Firebase). Bạn có thể đăng nhập bằng Email ở bên dưới để chơi ngay!');
+      } else {
+        setError(errorObj.message || 'Đăng nhập Google thất bại');
+      }
     } finally {
       setLoading(false);
     }
