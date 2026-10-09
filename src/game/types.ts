@@ -40,10 +40,34 @@ export interface AppUser {
   uid: string;
   displayName: string;
   email: string;
-  role: "admin" | "user";
+  role?: "admin" | "user";
+  avatar?: string;
+  photoURL?: string;
 }
 
 export interface PresetName {
   id: string;
   name: string;
+}
+
+export interface RoomMember {
+  uid: string;
+  displayName: string;
+  avatar?: string;
+  isHost: boolean;
+  isBot?: boolean;
+  joinedAt: number;
+}
+
+export interface GameRoom {
+  id: string;
+  name: string;
+  hostUid: string;
+  hostName: string;
+  hostAvatar?: string;
+  maxPlayers: number;
+  status: "waiting" | "setup" | "playing" | "ended";
+  members: RoomMember[];
+  createdAt: number;
+  gameId?: string;
 }

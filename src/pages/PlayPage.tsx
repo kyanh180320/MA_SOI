@@ -42,10 +42,11 @@ export default function PlayPage() {
 
   const handleEndGame = () => {
     if (window.confirm("Bạn có chắc chắn muốn kết thúc và lưu ván này không?")) {
-      import('../services/gameRepository').then(({ saveGameLocal }) => {
-        saveGameLocal(game);
-        setGame(null);
-        navigate('/history');
+      import('../services/gameRepository').then(({ saveGame }) => {
+        saveGame(game).finally(() => {
+          setGame(null);
+          navigate('/history');
+        });
       });
     }
   };

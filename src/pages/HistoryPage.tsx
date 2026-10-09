@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getLocalGames } from '../services/gameRepository';
+import { getCloudGames, getLocalGames } from '../services/gameRepository';
+import { useAuth } from '../context/AuthContext';
 import type { Game, Player, Role } from '../game/types';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [games, setGames] = useState<Game[]>([]);
+  const { user } = useAuth();
+  const [games, setGames] = useState<Game[]>(getLocalGames());
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   useEffect(() => {
-    setGames(getLocalGames());
-  }, []);
+    getCloudGames(user?.uid).then(setGames);
+  }, [user]);
 
   const formatDate = (ts: number) => {
     return new Date(ts).toLocaleString('vi-VN');
