@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import SetupPage from './pages/SetupPage';
@@ -5,10 +6,13 @@ import PlayPage from './pages/PlayPage';
 import HistoryPage from './pages/HistoryPage';
 import LoginPage from './pages/LoginPage';
 import RoomPage from './pages/RoomPage';
-import DevShowcasePage from './pages/DevShowcasePage';
 import { GameProvider } from './context/GameContext';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
+
+const DevShowcasePage = import.meta.env.DEV
+  ? React.lazy(() => import('./pages/DevShowcasePage'))
+  : null;
 
 function App() {
   return (
@@ -22,7 +26,16 @@ function App() {
             <Route path="/play" element={<PlayPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/dev" element={<DevShowcasePage />} />
+            {import.meta.env.DEV && DevShowcasePage && (
+              <Route
+                path="/dev"
+                element={
+                  <Suspense fallback={<div style={{ padding: 20, textAlign: 'center', color: 'var(--text-dim)' }}>Đang tải Dev Showcase...</div>}>
+                    <DevShowcasePage />
+                  </Suspense>
+                }
+              />
+            )}
             <Route path="/admin" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

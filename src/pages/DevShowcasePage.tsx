@@ -565,6 +565,76 @@ export const DevShowcasePage: React.FC = () => {
         </div>
       </Panel>
 
+      {/* 9. KIỂM THỬ PHÔNG CHỮ & FONT DỰ PHÒNG KHI MẤT MẠNG */}
+      <Panel>
+        <h2 style={{
+          fontFamily: 'var(--font-title)',
+          fontSize: '18px',
+          color: 'var(--gold-100)',
+          marginTop: 0,
+          marginBottom: 'var(--s-3)',
+          borderBottom: '1px solid rgba(201, 162, 74, 0.2)',
+          paddingBottom: 'var(--s-2)'
+        }}>
+          9. Thử Nghiệm Typography & Font Dự Phòng (Offline Fallback)
+        </h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: 'var(--s-4)', lineHeight: 1.5 }}>
+          Kiểm tra hiển thị dấu tiếng Việt (Ộ, Đ, Ê, Ố, Ợ, Ă) cho các cụm từ quan trọng của game, đảm bảo không bị lỗi font dù tải trực tiếp từ Google Fonts hay khi mất mạng (dùng font hệ thống).
+        </p>
+
+        {/* Cụm từ cần test */}
+        {['HỘI ĐỒNG PHÁN XÉT', 'ĐÊM XUỐNG', 'THỢ SĂN'].map((phrase) => (
+          <div 
+            key={phrase} 
+            style={{ 
+              marginBottom: 'var(--s-4)', 
+              padding: 'var(--s-3)', 
+              background: 'rgba(0, 0, 0, 0.25)', 
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(201, 162, 74, 0.15)'
+            }}
+          >
+            <div style={{ fontSize: '11px', color: 'var(--gold-300)', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.05em' }}>
+              ✦ TEST CASE: "{phrase}"
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
+              {/* Cột 1: Playfair Display vs Fallback Serif */}
+              <div style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
+                  Playfair Display (Online)
+                </div>
+                <div style={{ fontFamily: '"Playfair Display", serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold-100)', letterSpacing: '0.04em' }}>
+                  {phrase}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--ash)', marginTop: '8px', marginBottom: '2px' }}>
+                  Fallback: Georgia / Times
+                </div>
+                <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', opacity: 0.85 }}>
+                  {phrase}
+                </div>
+              </div>
+
+              {/* Cột 2: Be Vietnam Pro vs Fallback Sans-serif */}
+              <div style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
+                  Be Vietnam Pro (Online)
+                </div>
+                <div style={{ fontFamily: '"Be Vietnam Pro", sans-serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em' }}>
+                  {phrase}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--ash)', marginTop: '8px', marginBottom: '2px' }}>
+                  Fallback: system-ui / sans-serif
+                </div>
+                <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '15px', fontWeight: 700, color: 'var(--text-dim)', opacity: 0.85 }}>
+                  {phrase}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </Panel>
+
       {/* FOOTER */}
       <footer style={{
         textAlign: 'center',

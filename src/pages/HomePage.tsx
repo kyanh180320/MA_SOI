@@ -445,14 +445,16 @@ export default function HomePage() {
             >
               📜 Lịch Sử
             </Button>
-            <Button 
-              variant="secondary" 
-              style={{ flex: 1, minHeight: '46px', fontSize: '13px' }} 
-              onClick={() => navigate('/dev')}
-              title="Xem thư viện linh kiện UI Game"
-            >
-              🎨 Dev UI
-            </Button>
+            {import.meta.env.DEV && (
+              <Button 
+                variant="secondary" 
+                style={{ flex: 1, minHeight: '46px', fontSize: '13px' }} 
+                onClick={() => navigate('/dev')}
+                title="Xem thư viện linh kiện UI Game"
+              >
+                🎨 Dev UI
+              </Button>
+            )}
           </div>
         </div>
       )}
