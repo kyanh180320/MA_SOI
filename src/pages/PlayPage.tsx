@@ -16,11 +16,14 @@ import {
 } from '../components/ui';
 import { NightPhaseController } from '../components/game';
 import { ROLE_MEDALLION_ICONS, PHASE_MEDALLION_ICONS } from '../constants/assets';
+import { CardSelectionRitual } from '../components/CardSelectionRitual';
+import { ROLE_DETAILS } from '../components/PlayerLiveView';
 
 export default function PlayPage() {
   const navigate = useNavigate();
   const { game, updateGame, undo, canUndo, setGame } = useGame();
   const [showRoles, setShowRoles] = useState(true);
+  const [showRitual, setShowRitual] = useState(false);
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -369,8 +372,26 @@ export default function PlayPage() {
           >
             {showRoles ? 'Ẩn Role' : 'Hiện Role'}
           </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setShowRitual(true)}
+            style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px', color: 'var(--gold-300)' }}
+            title="Xem thử hiệu ứng chia bài bí mật của người chơi"
+          >
+            🃏 Xem Rút Bài
+          </Button>
         </div>
       </div>
+
+      {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH */}
+      {showRitual && game && (
+        <CardSelectionRitual
+          playerCount={game.players.length}
+          myRole={game.players[0]?.role || 'wolf'}
+          roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
+          onComplete={() => setShowRitual(false)}
+        />
+      )}
 
       {/* THANH TIẾN TRÌNH ROUND & GIAI ĐOẠN TRỰC QUAN */}
       <div style={{

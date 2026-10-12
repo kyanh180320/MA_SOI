@@ -16,7 +16,8 @@ import type { GameRoom, Game } from '../game/types';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
-import { PlayerLiveView } from '../components/PlayerLiveView';
+import { PlayerLiveView, ROLE_DETAILS } from '../components/PlayerLiveView';
+import { CardSelectionRitual } from '../components/CardSelectionRitual';
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -32,6 +33,8 @@ export default function RoomPage() {
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
   const isLeavingRef = useRef(false);
   const allowNavigationWithoutClosingRef = useRef(false);
+  const [showCeremonyBeforePlay, setShowCeremonyBeforePlay] = useState(false);
+  const [testRitualOpen, setTestRitualOpen] = useState(false);
 
   const isHost = Boolean(user && room && room.hostUid === user.uid);
 
@@ -214,7 +217,8 @@ export default function RoomPage() {
       await syncRoomGame(room.id, newGame);
       setGame(newGame);
       allowNavigationWithoutClosingRef.current = true;
-      navigate('/play');
+      // Hiển thị ngay hiệu ứng chia bài cho Quản trò xem trước khi vào bàn điều khiển
+      setShowCeremonyBeforePlay(true);
     } catch (err: unknown) {
       console.error("Lỗi bắt đầu ván nhanh:", err);
       alert("Lỗi khi bắt đầu ván: " + ((err as Error).message || String(err)));
@@ -270,6 +274,29 @@ export default function RoomPage() {
 
   return (
     <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
+      {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH CHO QUẢN TRÒ XEM TRƯỚC KHI VÀO /play */}
+      {showCeremonyBeforePlay && game && (
+        <CardSelectionRitual
+          playerCount={playerMembers.length}
+          myRole={game.players[0]?.role || 'wolf'}
+          roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
+          onComplete={() => {
+            setShowCeremonyBeforePlay(false);
+            navigate('/play');
+          }}
+        />
+      )}
+
+      {/* XEM THỬ HIỆU ỨNG RÚT BÀI BẤT KỲ LÚC NÀO */}
+      {testRitualOpen && (
+        <CardSelectionRitual
+          playerCount={Math.max(4, playerMembers.length)}
+          myRole="wolf"
+          roleInfo={ROLE_DETAILS['wolf']}
+          onComplete={() => setTestRitualOpen(false)}
+        />
+      )}
+
       {/* HEADER PHÒNG CHỜ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Button
@@ -494,6 +521,15 @@ export default function RoomPage() {
                     ❌ Giải Tán
                   </Button>
                 </div>
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setTestRitualOpen(true)}
+                  style={{ minHeight: '40px', fontSize: '12px', color: 'var(--gold-200)', background: 'rgba(201, 162, 74, 0.1)' }}
+                  title="Chạm để xem thử hiệu ứng chia bài bí mật"
+                >
+                  🃏 Xem Thử Hiệu Ứng Chia Bài ({playerMembers.length} lá)
+                </Button>
               </>
             )}
           </>

@@ -13,7 +13,7 @@ interface PlayerLiveViewProps {
   onLeave: () => void;
 }
 
-const ROLE_DETAILS: Record<Role, {
+export const ROLE_DETAILS: Record<Role, {
   name: string;
   team: string;
   icon: string;
@@ -139,36 +139,31 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const nightStep = getNightStep(currentRound);
 
   // Tìm người chơi ứng với tài khoản user hiện tại:
-  const myPlayer: Player | undefined = (() => {
-    if (!user) return undefined;
+  const myPlayer: Player = (() => {
+    if (user) {
+      // 1. Khớp theo UID
+      const byId = game.players.find(p => p.id === user.uid);
+      if (byId) return byId;
 
-    // 1. Khớp theo UID
-    const byId = game.players.find(p => p.id === user.uid);
-    if (byId) return byId;
+      // 2. Khớp theo tên hiển thị
+      if (user.displayName) {
+        const byName = game.players.find(p => 
+          p.name.trim().toLowerCase() === user.displayName.trim().toLowerCase()
+        );
+        if (byName) return byName;
+      }
 
-    // 2. Khớp theo tên hiển thị
-    if (user.displayName) {
-      const byName = game.players.find(p => 
-        p.name.trim().toLowerCase() === user.displayName.trim().toLowerCase()
-      );
-      if (byName) return byName;
-    }
-
-    // 3. Khớp theo thứ tự thành viên (không tính Quản trò) trong phòng
-    const memberIndex = (room.members || []).filter(m => !m.isHost).findIndex(m => m.uid === user.uid);
-    if (memberIndex >= 0 && memberIndex < game.players.length) {
-      return game.players[memberIndex];
-    }
-
-    // Quản trò (chủ phòng) khi bấm xem thử (previewAsPlayer) sẽ xem vai trò đầu tiên để test
-    if (room.hostUid === user.uid) {
-      return game.players[0];
+      // 3. Khớp theo thứ tự thành viên (không tính Quản trò) trong phòng
+      const memberIndex = (room.members || []).filter(m => !m.isHost).findIndex(m => m.uid === user.uid);
+      if (memberIndex >= 0 && memberIndex < game.players.length) {
+        return game.players[memberIndex];
+      }
     }
 
     return game.players[0];
   })();
 
-  const roleInfo = myPlayer ? ROLE_DETAILS[myPlayer.role] : null;
+  const roleInfo = ROLE_DETAILS[myPlayer.role] || ROLE_DETAILS['villager'];
 
   // Trạng thái hiển thị hiệu ứng rút bài định mệnh khi bắt đầu ván
   const ritualKey = `werewolf_ritual_seen_${game.id}_${user?.uid || 'guest'}`;
