@@ -105,7 +105,6 @@ export const getNightStep = (currentRound?: Round): 'guard' | 'wolf' | 'seer' | 
 
 export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLeave }) => {
   const game = room.gameData;
-  const [isFlipped, setIsFlipped] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // States dành cho thao tác của các vai trò
@@ -192,13 +191,6 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     : 0;
 
   const nightProgressPercent = Math.min(100, (nightStepIndex / 3) * 100);
-
-  const handleToggleFlip = () => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(25);
-    }
-    setIsFlipped(prev => !prev);
-  };
 
   // Nạn nhân đêm qua (nếu ở phase ban ngày)
   const nightVictims = currentRound?.nightDeaths?.map(id => {
@@ -1041,17 +1033,12 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
         </div>
       )}
 
-      {/* 4. THẺ BÀI BÍ MẬT DÀNH CHO NGƯỜI CHƠI (CHẾ ĐỘ ÚP & HIỆU ỨNG LẬT) */}
+      {/* 4. THẺ BÀI VAI TRÒ CỦA NGƯỜI CHƠI */}
       {myPlayer && roleInfo ? (
         <div className={styles.cardSection}>
           <div className={styles.cardHint}>
             <div className={styles.cardHintTitle}>
-              {isFlipped ? '👁️ VAI TRÒ BÍ MẬT CỦA BẠN' : '✦ THẺ BÀI BÍ MẬT'}
-            </div>
-            <div className={styles.cardHintSub}>
-              {isFlipped 
-                ? 'Chạm vào thẻ bài hoặc nút bên dưới để úp lại (bảo mật khi chơi)'
-                : 'Chạm vào lá bài để mở lật xem thân phận của bạn'}
+              👁️ VAI TRÒ BÍ MẬT CỦA BẠN
             </div>
             <button
               type="button"
@@ -1071,54 +1058,38 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </button>
           </div>
 
-          {/* LÁ BÀI 3D VỚI HIỆU ỨNG XUẤT HIỆN & CHẾ ĐỘ ÚP */}
-          <div 
-            className={styles.cardWrapper} 
-            onClick={handleToggleFlip}
-            title={isFlipped ? "Chạm để úp thẻ lại" : "Chạm để lật mở thẻ"}
-          >
+          {/* LÁ BÀI 3D VỚI NGHỆ THUẬT VAI TRÒ LUÔN MỞ SẴN */}
+          <div className={styles.cardWrapper}>
             <RoleCard
               roleName={roleInfo.name}
               teamName={roleInfo.team}
               artUrl={myPlayer?.role ? ROLE_CARD_IMAGES[myPlayer.role] : undefined}
               cardBackUrl={CARD_BACK_IMAGE}
               icon={roleInfo.icon}
-              faceDown={true}
-              flipped={isFlipped}
-              spawnAnimation={true}
+              faceDown={false}
+              flipped={false}
+              spawnAnimation={false}
               interactive={false}
             />
           </div>
 
-          {/* NÚT THAO TÁC ÚP / MỞ TIỆN LỢI */}
-          <Button
-            variant={isFlipped ? "secondary" : "primary"}
-            pulse={!isFlipped}
-            onClick={handleToggleFlip}
-            style={{ minHeight: '44px', width: '220px', fontSize: '13px' }}
-          >
-            {isFlipped ? '🔒 ÚP BÀI LẠI (GIẤU ĐI)' : '👁️ MỞ LẬT XEM VAI TRÒ'}
-          </Button>
-
-          {/* BẢNG GIẢI THÍCH CHI TIẾT VAI TRÒ KHI ĐÃ LẬT MỞ */}
-          {isFlipped && (
-            <div className={styles.roleDetailCard}>
-              <div className={styles.roleDetailHeader}>
-                <span className={styles.roleDetailTitle}>
-                  {roleInfo.icon} {roleInfo.name}
-                </span>
-                <Badge variant={roleInfo.team === 'Phe Ma Sói' ? 'red' : 'gold'}>
-                  {roleInfo.team}
-                </Badge>
-              </div>
-
-              <p className={styles.roleDesc}>{roleInfo.description}</p>
-
-              <div className={styles.roleActionHint}>
-                {roleInfo.actionHint}
-              </div>
+          {/* BẢNG GIẢI THÍCH CHI TIẾT VAI TRÒ */}
+          <div className={styles.roleDetailCard}>
+            <div className={styles.roleDetailHeader}>
+              <span className={styles.roleDetailTitle}>
+                {roleInfo.icon} {roleInfo.name}
+              </span>
+              <Badge variant={roleInfo.team === 'Phe Ma Sói' ? 'red' : 'gold'}>
+                {roleInfo.team}
+              </Badge>
             </div>
-          )}
+
+            <p className={styles.roleDesc}>{roleInfo.description}</p>
+
+            <div className={styles.roleActionHint}>
+              {roleInfo.actionHint}
+            </div>
+          </div>
         </div>
       ) : (
         /* CHẾ ĐỘ KHÁN GIẢ (NẾU VÀO PHÒNG SAU KHI GAME BẮT ĐẦU) */
@@ -1130,59 +1101,6 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
           </p>
         </Panel>
       )}
-
-      {/* 5. TRẠNG THÁI SỐNG / CHẾT CỦA BẢN THÂN */}
-      {myPlayer && (
-        <div className={styles.playerStatusBox}>
-          <div className={styles.playerInfo}>
-            {myPlayer.avatar ? (
-              <img src={myPlayer.avatar} alt={myPlayer.name} className={styles.playerAvatar} />
-            ) : (
-              <div className={styles.playerAvatar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                👤
-              </div>
-            )}
-            <div>
-              <div className={styles.playerName}>{myPlayer.name} (Bạn)</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                {myPlayer.alive ? 'Đang tham gia ván đấu' : 'Đã bị loại khỏi ván ☠️'}
-              </div>
-            </div>
-          </div>
-
-          <Badge variant={myPlayer.alive ? 'green' : 'ash'}>
-            {myPlayer.alive ? '💚 BẠN CÒN SỐNG' : '☠️ ĐÃ BỊ LOẠI'}
-          </Badge>
-        </div>
-      )}
-
-      {/* 6. TÌNH HÌNH CẢ PHÒNG (LƯỚI 3 CỘT ĐÚNG TIÊU CHUẨN MOBILE) */}
-      <Panel>
-        <div className={styles.gridTitle}>
-          <span>TÌNH HÌNH NGƯỜI CHƠI</span>
-          <Badge variant="gold">
-            {alivePlayers.length}/{game.players.length} Còn sống
-          </Badge>
-        </div>
-
-        <div className={styles.playersGrid}>
-          {game.players.map((p) => {
-            const isMe = user && p.id === user.uid;
-            return (
-              <PlayerTile
-                key={p.id}
-                name={p.name + (isMe ? ' (Bạn)' : '')}
-                avatarUrl={p.avatar}
-                role={p.alive ? 'Đang chơi' : 'Đã chết ☠️'}
-                badgeLabel={p.alive ? 'Sống' : 'Chết'}
-                badgeVariant={p.alive ? 'green' : 'ash'}
-                isAlive={p.alive}
-                layout="grid"
-              />
-            );
-          })}
-        </div>
-      </Panel>
 
       {/* MODAL KẾT QUẢ TIÊN TRI SOI THÂN PHẬN */}
       {seerResultModal && (
