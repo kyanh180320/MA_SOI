@@ -10,6 +10,10 @@ import { db, auth } from "./firebase";
 import type { GameRoom, RoomMember, AppUser, Game } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
 
+/** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
+export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
+  (members || []).filter(m => !m.isHost);
+
 export async function createRoom(roomName: string, maxPlayers: number = 20, user?: AppUser | null): Promise<string> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error("Bạn cần đăng nhập để tạo phòng.");
@@ -99,7 +103,7 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
       return;
     }
 
-    if (currentMembers.length >= room.maxPlayers) {
+    if (getPlayerMembers(currentMembers).length >= room.maxPlayers) {
       throw new Error(`Phòng đã đầy (${room.maxPlayers}/${room.maxPlayers} người).`);
     }
 
@@ -166,7 +170,7 @@ export async function addBotToRoom(roomId: string): Promise<void> {
     const room = snap.data() as GameRoom;
     const currentMembers = room.members || [];
 
-    if (currentMembers.length >= room.maxPlayers) {
+    if (getPlayerMembers(currentMembers).length >= room.maxPlayers) {
       throw new Error(`Phòng đã đầy (${room.maxPlayers}/${room.maxPlayers} người).`);
     }
 
@@ -199,14 +203,14 @@ export async function addBotsUntil(roomId: string, targetTotal: number = 6): Pro
     const currentMembers = [...(room.members || [])];
     const maxLimit = Math.min(room.maxPlayers, targetTotal);
 
-    if (currentMembers.length >= maxLimit) {
+    if (getPlayerMembers(currentMembers).length >= maxLimit) {
       return;
     }
 
     const usedNames = new Set(currentMembers.map(m => m.displayName));
     let availableIndex = 0;
 
-    while (currentMembers.length < maxLimit) {
+    while (getPlayerMembers(currentMembers).length < maxLimit) {
       while (availableIndex < BOT_NAMES.length && usedNames.has(BOT_NAMES[availableIndex])) {
         availableIndex++;
       }

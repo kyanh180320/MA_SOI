@@ -9,7 +9,8 @@ import {
   addBotToRoom, 
   addBotsUntil, 
   removeBotFromRoom,
-  syncRoomGame
+  syncRoomGame,
+  getPlayerMembers
 } from '../services/roomService';
 import type { GameRoom, Game } from '../game/types';
 import { getRoleDistribution, assignRoles } from '../game/roles';
@@ -76,6 +77,8 @@ export default function RoomPage() {
   const isHost = user && room.hostUid === user.uid;
   const isGamePlaying = (room.status === 'playing' || room.status === 'ended') && !!room.gameData;
   const members = room.members || [];
+  // Chủ phòng là Quản trò nên không tham gia chơi
+  const playerMembers = getPlayerMembers(members);
 
   const handleLeave = async () => {
     if (!roomId) return;
@@ -127,7 +130,7 @@ export default function RoomPage() {
     if (!roomId || isAddingBot) return;
     setIsAddingBot(true);
     try {
-      const target = Math.max(RULES.minPlayers, members.length + 1);
+      const target = Math.max(RULES.minPlayers, playerMembers.length + 1);
       await addBotsUntil(roomId, target);
     } catch (err: unknown) {
       alert((err as Error).message);
@@ -148,15 +151,15 @@ export default function RoomPage() {
   // Khởi động ván chơi nhanh trực tiếp từ phòng (tự động phân bổ vai trò cân bằng)
   const handleQuickStart = async () => {
     if (!roomId || isStartingGame) return;
-    if (members.length < RULES.minPlayers) {
-      alert(`Cần ít nhất ${RULES.minPlayers} người để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.`);
+    if (playerMembers.length < RULES.minPlayers) {
+      alert(`Cần ít nhất ${RULES.minPlayers} người chơi (không tính Quản trò) để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.`);
       return;
     }
 
     setIsStartingGame(true);
     try {
-      const distribution = getRoleDistribution(members.length, { randomize: true });
-      const players = members.map(m => ({
+      const distribution = getRoleDistribution(playerMembers.length, { randomize: true });
+      const players = playerMembers.map(m => ({
         id: m.uid,
         name: m.displayName,
         avatar: m.avatar || ""
@@ -283,7 +286,7 @@ export default function RoomPage() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Số người tham gia:</div>
             <Badge variant="gold" style={{ marginTop: '2px' }}>
-              👥 {members.length}/{room.maxPlayers}
+              👥 {playerMembers.length}/{room.maxPlayers}
             </Badge>
           </div>
         </div>
@@ -311,7 +314,7 @@ export default function RoomPage() {
             <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
               <Button
                 variant="secondary"
-                disabled={isAddingBot || members.length >= room.maxPlayers}
+                disabled={isAddingBot || playerMembers.length >= room.maxPlayers}
                 onClick={handleAddOneBot}
                 style={{ flex: 1, minHeight: '44px', fontSize: '13px' }}
               >
@@ -319,7 +322,7 @@ export default function RoomPage() {
               </Button>
               <Button
                 variant="secondary"
-                disabled={isAddingBot || members.length >= room.maxPlayers}
+                disabled={isAddingBot || playerMembers.length >= room.maxPlayers}
                 onClick={handleFillBots}
                 style={{ flex: 1, minHeight: '44px', fontSize: '13px', color: 'var(--gold-100)' }}
               >
@@ -339,7 +342,7 @@ export default function RoomPage() {
           color: 'var(--gold-100)',
           letterSpacing: '0.04em'
         }}>
-          DANH SÁCH NGƯỜI TRONG PHÒNG ({members.length})
+          DANH SÁCH TRONG PHÒNG ({playerMembers.length} người chơi)
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
@@ -431,12 +434,12 @@ export default function RoomPage() {
                   variant="primary"
                   pulse
                   fullWidth
-                  disabled={isStartingGame || members.length < RULES.minPlayers}
+                  disabled={isStartingGame || playerMembers.length < RULES.minPlayers}
                   onClick={handleQuickStart}
                 >
                   {isStartingGame 
                     ? '⏳ ĐANG CHIA VAI & BẮT ĐẦU...' 
-                    : `⚡ BẮT ĐẦU VÁN NGAY (${members.length} NGƯỜI)`}
+                    : `⚡ BẮT ĐẦU VÁN NGAY (${playerMembers.length} NGƯỜI)`}
                 </Button>
                 <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
                   <Button

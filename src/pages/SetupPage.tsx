@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
-import { syncRoomGame } from '../services/roomService';
+import { syncRoomGame, getPlayerMembers } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
 import styles from './SetupPage.module.css';
@@ -111,22 +111,24 @@ export default function SetupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromRoom = location.state?.fromRoom as GameRoom | undefined;
+  // Chủ phòng là Quản trò nên không nằm trong danh sách người chơi
+  const roomPlayers = getPlayerMembers(fromRoom?.members);
 
   const { setGame } = useGame();
   const { user } = useAuth();
 
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
-    if (fromRoom && fromRoom.members && fromRoom.members.length > 0) {
-      return String(Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, fromRoom.members.length)));
+    if (roomPlayers.length > 0) {
+      return String(Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, roomPlayers.length)));
     }
     return String(RULES.minPlayers);
   });
   const playerCount = parseInt(playerCountInput) || RULES.minPlayers;
 
   const [names, setNames] = useState<string[]>(() => {
-    if (fromRoom && fromRoom.members && fromRoom.members.length > 0) {
-      const count = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, fromRoom.members.length));
-      const list = fromRoom.members.map(m => m.displayName);
+    if (roomPlayers.length > 0) {
+      const count = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, roomPlayers.length));
+      const list = roomPlayers.map(m => m.displayName);
       while (list.length < count) list.push("");
       return list.slice(0, count);
     }
@@ -134,9 +136,9 @@ export default function SetupPage() {
   });
 
   const [avatars, setAvatars] = useState<string[]>(() => {
-    if (fromRoom && fromRoom.members && fromRoom.members.length > 0) {
-      const count = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, fromRoom.members.length));
-      const list = fromRoom.members.map(m => m.avatar || "");
+    if (roomPlayers.length > 0) {
+      const count = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, roomPlayers.length));
+      const list = roomPlayers.map(m => m.avatar || "");
       while (list.length < count) list.push("");
       return list.slice(0, count);
     }
@@ -228,7 +230,7 @@ export default function SetupPage() {
     if (!isValid) return;
 
     const players = names.map((name, i) => {
-      const matchedMember = fromRoom?.members?.find(m => m.displayName.trim() === name.trim()) || fromRoom?.members?.[i];
+      const matchedMember = roomPlayers.find(m => m.displayName.trim() === name.trim()) || roomPlayers[i];
       return {
         id: matchedMember?.uid || `p_${Date.now()}_${i}`,
         name: name.trim() || `Người chơi ${i + 1}`,

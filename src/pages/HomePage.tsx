@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { subscribeRooms, createRoom, joinRoom, closeRoom } from '../services/roomService';
+import { subscribeRooms, createRoom, joinRoom, closeRoom, getPlayerMembers } from '../services/roomService';
 import type { GameRoom } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
 import styles from './HomePage.module.css';
@@ -298,7 +298,7 @@ export default function HomePage() {
             </div>
           ) : (
             rooms.map((room) => {
-              const memberCount = room.members?.length || 0;
+              const memberCount = getPlayerMembers(room.members).length;
               const isFull = memberCount >= room.maxPlayers;
               const isMyRoom = user && room.hostUid === user.uid;
 

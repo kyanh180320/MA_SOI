@@ -141,6 +141,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const myPlayer: Player | undefined = (() => {
     if (!user) return undefined;
 
+    // Quản trò (chủ phòng) không phải người chơi
+    if (room.hostUid === user.uid) return undefined;
+
     // 1. Khớp theo UID
     const byId = game.players.find(p => p.id === user.uid);
     if (byId) return byId;
@@ -153,9 +156,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       if (byName) return byName;
     }
 
-    // 3. Khớp theo thứ tự thành viên trong phòng
-    const memberIndex = room.members?.findIndex(m => m.uid === user.uid);
-    if (memberIndex !== undefined && memberIndex >= 0 && memberIndex < game.players.length) {
+    // 3. Khớp theo thứ tự thành viên (không tính Quản trò) trong phòng
+    const memberIndex = (room.members || []).filter(m => !m.isHost).findIndex(m => m.uid === user.uid);
+    if (memberIndex >= 0 && memberIndex < game.players.length) {
       return game.players[memberIndex];
     }
 
