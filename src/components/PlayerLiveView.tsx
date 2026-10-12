@@ -281,10 +281,15 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       await updateRoomGame(room.id, (g) => {
         const rounds = [...g.rounds];
         const last = rounds.length - 1;
+        // Sói không thể cắn đồng đội phe Sói
+        const validTargets = finalTargets.filter(id => {
+          const p = g.players.find(player => player.id === id);
+          return p && !isWolfTeam(p.role);
+        });
         rounds[last] = {
           ...rounds[last],
-          wolfTarget: finalTargets[0] || 'none',
-          wolfTargets: finalTargets.length > 0 ? finalTargets : ['none']
+          wolfTarget: validTargets[0] || 'none',
+          wolfTargets: validTargets.length > 0 ? validTargets : ['none']
         };
         return { ...g, rounds };
       });
