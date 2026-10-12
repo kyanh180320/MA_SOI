@@ -7,9 +7,17 @@ import type { Player } from './types';
 
 describe('roles', () => {
   describe('getRoleDistribution', () => {
-    it('should throw error if n < 6 or n > 20', () => {
-      expect(() => getRoleDistribution(5)).toThrowError();
+    it('should throw error if n < 4 or n > 20', () => {
+      expect(() => getRoleDistribution(3)).toThrowError();
       expect(() => getRoleDistribution(21)).toThrowError();
+    });
+
+    it('should correctly distribute roles for 4 players with a single wolf', () => {
+      expect(getRoleDistribution(4)).toEqual({ wolf: 1, wolf_demon: 0, seer: 1, witch: 0, guard: 0, hunter: 0, villager: 2 });
+    });
+
+    it('should correctly distribute roles for 5 players with a single wolf', () => {
+      expect(getRoleDistribution(5)).toEqual({ wolf: 1, wolf_demon: 0, seer: 1, witch: 0, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 6 players', () => {
@@ -33,7 +41,7 @@ describe('roles', () => {
     });
 
     it('should provide dynamic balanced distribution that totals to n and may omit some roles', () => {
-      for (let n = 6; n <= 15; n++) {
+      for (let n = 4; n <= 15; n++) {
         const dist = getRoleDistribution(n, { randomize: true });
         const total = Object.values(dist).reduce((a, b) => a + b, 0);
         expect(total).toBe(n);

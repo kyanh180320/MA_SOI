@@ -457,14 +457,14 @@ export default function HomePage() {
             </label>
             <input
               type="range"
-              min="6"
+              min="4"
               max="20"
               value={maxPlayers}
               onChange={(e) => setMaxPlayers(Number(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--gold-400)' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-dim)' }}>
-              <span>6 người</span>
+              <span>4 người</span>
               <span>12 người</span>
               <span>20 người</span>
             </div>

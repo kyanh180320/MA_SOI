@@ -8,7 +8,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
 
   // Nếu không yêu cầu ngẫu nhiên cân bằng, trả về phân bổ cơ bản mặc định
   if (!options?.randomize) {
-    const wolves = Math.max(2, Math.floor(n / 3));
+    const wolves = n <= 5 ? 1 : Math.max(2, Math.floor(n / 3));
     const seer = 1;
     const witch = n >= 7 ? 1 : 0;
     const guard = n >= 9 ? 1 : 0;
@@ -28,7 +28,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   // Thuật toán cân bằng linh hoạt: Không nhất thiết phải có đủ mọi role
   // 1. Phân bổ phe Sói
   let wolfDemonCount = 0;
-  let normalWolfCount = Math.max(2, Math.floor(n / 3));
+  let normalWolfCount = n <= 5 ? 1 : Math.max(2, Math.floor(n / 3));
 
   // Sói quỷ có thể xuất hiện khi từ 8 người trở lên (tỉ lệ 40%)
   if (n >= 8 && Math.random() < 0.4) {

@@ -125,7 +125,7 @@ export default function RoomPage() {
     if (!roomId || isAddingBot) return;
     setIsAddingBot(true);
     try {
-      const target = Math.max(6, members.length + 1);
+      const target = Math.max(RULES.minPlayers, members.length + 1);
       await addBotsUntil(roomId, target);
     } catch (err: unknown) {
       alert((err as Error).message);
@@ -146,8 +146,8 @@ export default function RoomPage() {
   // Khởi động ván chơi nhanh trực tiếp từ phòng (tự động phân bổ vai trò cân bằng)
   const handleQuickStart = async () => {
     if (!roomId || isStartingGame) return;
-    if (members.length < 6) {
-      alert("Cần ít nhất 6 người để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.");
+    if (members.length < RULES.minPlayers) {
+      alert(`Cần ít nhất ${RULES.minPlayers} người để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.`);
       return;
     }
 
@@ -321,7 +321,7 @@ export default function RoomPage() {
                 onClick={handleFillBots}
                 style={{ flex: 1, minHeight: '44px', fontSize: '13px', color: 'var(--gold-100)' }}
               >
-                ⚡ Thêm Đủ 6
+                ⚡ Thêm Đủ {RULES.minPlayers}
               </Button>
             </div>
           </div>
@@ -429,7 +429,7 @@ export default function RoomPage() {
                   variant="primary"
                   pulse
                   fullWidth
-                  disabled={isStartingGame || members.length < 6}
+                  disabled={isStartingGame || members.length < RULES.minPlayers}
                   onClick={handleQuickStart}
                 >
                   {isStartingGame 

@@ -34,7 +34,7 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
     hostUid: currentUser.uid,
     hostName: hostDisplayName,
     hostAvatar: hostAvatar,
-    maxPlayers: Math.min(20, Math.max(6, maxPlayers)),
+    maxPlayers: Math.min(20, Math.max(4, maxPlayers)),
     status: "waiting",
     members: [hostMember],
     createdAt: Date.now()
