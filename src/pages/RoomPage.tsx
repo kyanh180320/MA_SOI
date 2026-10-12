@@ -21,7 +21,7 @@ export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setGame } = useGame();
+  const { game, setGame } = useGame();
 
   const [room, setRoom] = useState<GameRoom | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +85,7 @@ export default function RoomPage() {
 
     if (window.confirm(confirmMsg)) {
       isLeavingRef.current = true;
+      if (game?.roomId === roomId) setGame(null);
       await leaveRoom(roomId);
       navigate('/');
     }
@@ -94,6 +95,7 @@ export default function RoomPage() {
     if (!roomId) return;
     if (window.confirm('Bạn có chắc muốn giải tán phòng chơi này không? Toàn bộ người chơi sẽ bị kích ra ngoài.')) {
       isLeavingRef.current = true;
+      if (game?.roomId === roomId) setGame(null);
       await closeRoom(roomId);
       navigate('/');
     }

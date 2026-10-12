@@ -50,6 +50,8 @@ export function subscribeRooms(callback: (rooms: GameRoom[]) => void): () => voi
     const list: GameRoom[] = [];
     snapshot.forEach(docSnap => {
       const data = docSnap.data() as GameRoom;
+      // Bỏ qua "phòng ma" (thiếu chủ phòng/thành viên do bị ghi đè lại sau khi đã xoá)
+      if (!data.hostUid || !data.members || data.members.length === 0) return;
       if (data.status === "waiting" || data.status === "setup" || data.status === "playing") {
         list.push({ ...data, id: docSnap.id });
       }
@@ -260,10 +262,15 @@ export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
   // Loại bỏ hoàn toàn các trường undefined vì Firestore SDK sẽ văng lỗi Unsupported field value: undefined
   const cleanGameData = JSON.parse(JSON.stringify(game));
-  await setDoc(roomRef, {
-    status: game.phase === 'ended' ? 'ended' : 'playing',
-    gameData: cleanGameData
-  }, { merge: true });
+  // Chỉ cập nhật nếu phòng còn tồn tại, tuyệt đối không tạo lại phòng đã bị chủ phòng xoá
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(roomRef);
+    if (!snap.exists()) return;
+    transaction.update(roomRef, {
+      status: game.phase === 'ended' ? 'ended' : 'playing',
+      gameData: cleanGameData
+    });
+  });
 }
 
 export async function updateRoomGame(roomId: string, updater: (currentGame: Game) => Game): Promise<void> {
