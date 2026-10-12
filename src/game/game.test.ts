@@ -1,9 +1,41 @@
 import { describe, it, expect } from 'vitest';
 import { getRoleDistribution, assignRoles } from './roles';
-import { resolveNight } from './night';
+import { resolveNight, mergeRemoteNightActions } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
-import type { Player } from './types';
+import type { Player, Game } from './types';
+
+describe('mergeRemoteNightActions', () => {
+  const base: Game = {
+    id: 'g', createdAt: 0, players: [], phase: 'night',
+    witchItems: { saveLeft: 1, poisonLeft: 1 },
+    rounds: [{ number: 1, nightDeaths: [] }],
+  };
+  const withRound = (g: Game, r: object): Game => ({ ...g, rounds: [{ ...g.rounds[0], ...r }] });
+
+  it('adopts guard action done by player so host moves to next step', () => {
+    const merged = mergeRemoteNightActions(base, withRound(base, { guardProtectTarget: 'p1' }));
+    expect(merged?.rounds[0].guardProtectTarget).toBe('p1');
+  });
+
+  it('does not overwrite steps the host already has', () => {
+    const local = withRound(base, { guardProtectTarget: 'none' });
+    expect(mergeRemoteNightActions(local, withRound(base, { guardProtectTarget: 'p1' }))).toBeNull();
+  });
+
+  it('adopts witch action and decreases potions', () => {
+    const remote = { ...withRound(base, { witchSaved: true, witchSavedTarget: 'p2' }), witchItems: { saveLeft: 0, poisonLeft: 1 } };
+    const merged = mergeRemoteNightActions(base, remote);
+    expect(merged?.rounds[0].witchSavedTarget).toBe('p2');
+    expect(merged?.witchItems.saveLeft).toBe(0);
+  });
+
+  it('ignores different rounds or non-night phases', () => {
+    const remote = { ...withRound(base, { guardProtectTarget: 'p1' }), rounds: [{ number: 2, nightDeaths: [], guardProtectTarget: 'p1' }] };
+    expect(mergeRemoteNightActions(base, remote)).toBeNull();
+    expect(mergeRemoteNightActions({ ...base, phase: 'day' }, withRound(base, { guardProtectTarget: 'p1' }))).toBeNull();
+  });
+});
 
 describe('roles', () => {
   describe('getRoleDistribution', () => {

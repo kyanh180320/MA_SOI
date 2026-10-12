@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
-import { resolveNight } from '../game/night';
+import { resolveNight, mergeRemoteNightActions } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import type { Role, Player } from '../game/types';
-import { closeRoom } from '../services/roomService';
+import { closeRoom, subscribeRoom } from '../services/roomService';
 import { saveGame } from '../services/gameRepository';
 import {
   Button,
@@ -26,6 +26,29 @@ export default function PlayPage() {
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
   const [selectedHunterTarget, setSelectedHunterTarget] = useState<string | null>(null);
   const [hunterPendingDeath, setHunterPendingDeath] = useState<{ hunter: Player; from: 'night' | 'vote' } | null>(null);
+
+  // Chế độ online: lắng nghe phòng để nhận hành động ban đêm do người chơi thao tác trên điện thoại,
+  // từ đó màn hình Quản trò tự động nhảy sang lượt gọi vai trò tiếp theo.
+  const gameRef = useRef(game);
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
+
+  const roomId = game?.roomId;
+  useEffect(() => {
+    if (!roomId) return;
+    const unsubscribe = subscribeRoom(roomId, (room) => {
+      const local = gameRef.current;
+      if (!local || !room?.gameData) return;
+      const merged = mergeRemoteNightActions(local, room.gameData);
+      if (merged) {
+        gameRef.current = merged;
+        updateGame(() => merged);
+      }
+    });
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   if (!game) {
     return (

@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import type { GameRoom, RoomMember, AppUser, Game } from "../game/types";
+import { mergeRemoteNightActions } from "../game/night";
 
 export async function createRoom(roomName: string, maxPlayers: number = 20, user?: AppUser | null): Promise<string> {
   const currentUser = auth.currentUser;
@@ -260,14 +261,17 @@ export async function removeBotFromRoom(roomId: string, botUid?: string): Promis
 
 export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
-  // Loại bỏ hoàn toàn các trường undefined vì Firestore SDK sẽ văng lỗi Unsupported field value: undefined
-  const cleanGameData = JSON.parse(JSON.stringify(game));
   // Chỉ cập nhật nếu phòng còn tồn tại, tuyệt đối không tạo lại phòng đã bị chủ phòng xoá
   await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(roomRef);
     if (!snap.exists()) return;
+    const remote = (snap.data() as GameRoom).gameData;
+    // Giữ lại hành động ban đêm người chơi vừa ghi lên mà Quản trò chưa kịp nhận, tránh bị ghi đè
+    const toWrite = mergeRemoteNightActions(game, remote) ?? game;
+    // Loại bỏ hoàn toàn các trường undefined vì Firestore SDK sẽ văng lỗi Unsupported field value: undefined
+    const cleanGameData = JSON.parse(JSON.stringify(toWrite));
     transaction.update(roomRef, {
-      status: game.phase === 'ended' ? 'ended' : 'playing',
+      status: toWrite.phase === 'ended' ? 'ended' : 'playing',
       gameData: cleanGameData
     });
   });
