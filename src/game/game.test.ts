@@ -108,6 +108,30 @@ describe('night', () => {
       const deaths = resolveNight({ wolfTargets: ['p1', 'p2'], witchSavedTarget: 'p2' });
       expect(deaths).toEqual(['p1']);
     });
+
+    it('should not allow wolves to bite wolf team members', () => {
+      const mockPlayers: Player[] = [
+        { id: 'w1', name: 'Wolf 1', role: 'wolf', alive: true },
+        { id: 'w2', name: 'Wolf 2', role: 'wolf_demon', alive: true },
+        { id: 'v1', name: 'Villager 1', role: 'villager', alive: true },
+      ];
+      // Sói chọn cắn sói w2 và dân v1
+      const deaths = resolveNight({ wolfTargets: ['w2', 'v1'] }, mockPlayers);
+      expect(deaths).toEqual(['v1']);
+
+      // Sói chọn cắn đơn w1
+      const deathsSingle = resolveNight({ wolfTarget: 'w1' }, mockPlayers);
+      expect(deathsSingle).toEqual([]);
+    });
+
+    it('should not allow witch to poison herself', () => {
+      const mockPlayers: Player[] = [
+        { id: 'witch1', name: 'Witch', role: 'witch', alive: true },
+        { id: 'v1', name: 'Villager 1', role: 'villager', alive: true },
+      ];
+      const deaths = resolveNight({ witchPoisonTarget: 'witch1' }, mockPlayers);
+      expect(deaths).toEqual([]);
+    });
   });
 });
 

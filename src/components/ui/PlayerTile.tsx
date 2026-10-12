@@ -7,6 +7,7 @@ export interface PlayerTileProps {
   avatarUrl?: string;
   role?: string;
   isAlive?: boolean;
+  disabled?: boolean;
   isSelected?: boolean;
   votesCount?: number;
   badgeLabel?: string;
@@ -21,6 +22,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
   avatarUrl,
   role,
   isAlive = true,
+  disabled = false,
   isSelected = false,
   votesCount = 0,
   badgeLabel,
@@ -37,16 +39,20 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
     isGridLayout ? styles.tileGrid : styles.tileRow,
     isSelected ? styles.selected : '',
     !isAlive ? styles.dead : '',
+    disabled ? styles.disabled : '',
     className
   ].filter(Boolean).join(' ');
+
+  const isClickable = isAlive && !disabled;
 
   return (
     <div
       className={classNames}
-      onClick={isAlive ? onClick : undefined}
+      onClick={isClickable ? onClick : undefined}
       role="button"
-      tabIndex={isAlive ? 0 : -1}
-      aria-label={`${name}${!isAlive ? ' (Đã chết)' : ''}`}
+      tabIndex={isClickable ? 0 : -1}
+      aria-label={`${name}${!isAlive ? ' (Đã chết)' : ''}${disabled ? ' (Không thể chọn)' : ''}`}
+      aria-disabled={disabled}
     >
       {/* Huy hiệu số vote hoặc góc trên khi ở dạng Grid */}
       {isGridLayout && votesCount > 0 && (

@@ -212,6 +212,12 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const handleSelectWolfTarget = async (targetId: string) => {
     setWolfWarningMsg(null);
 
+    const targetPlayer = game.players.find(p => p.id === targetId);
+    if (targetPlayer && isWolfTeam(targetPlayer.role)) {
+      setWolfWarningMsg("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+      return;
+    }
+
     // TRƯỜNG HỢP 1: CÓ SÓI QUỶ (Tối đa 2 người)
     if (hasDemonWolf) {
       if (selectedWolfTargets.includes(targetId)) {
@@ -396,7 +402,13 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
         if (witchSaveActive) {
           newItems.saveLeft = Math.max(0, newItems.saveLeft - 1);
         }
-        if (selectedWitchPoison) {
+        const isTargetWitch = selectedWitchPoison && (
+          selectedWitchPoison === myPlayer?.id || 
+          game.players.some(p => p.id === selectedWitchPoison && p.role === 'witch')
+        );
+        const validPoisonTarget = isTargetWitch ? null : selectedWitchPoison;
+
+        if (validPoisonTarget) {
           newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
         }
 
@@ -404,7 +416,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
           ...rounds[last],
           witchSaved: witchSaveActive,
           witchSavedTarget: witchSaveActive && currentWolfVictims[0] ? currentWolfVictims[0] : undefined,
-          witchPoisonTarget: selectedWitchPoison || undefined
+          witchPoisonTarget: validPoisonTarget || undefined
         };
 
         return { ...g, rounds, witchItems: newItems };
@@ -685,10 +697,17 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       key={p.id}
                       name={p.name}
                       avatarUrl={p.avatar}
-                      badgeLabel={isSelected ? '🎯 Cắn' : (isWolf ? 'Phe Sói' : undefined)}
+                      badgeLabel={isSelected ? '🎯 Cắn' : (isWolf ? '🐺 Phe Sói' : undefined)}
                       badgeVariant={isSelected ? 'red' : 'ash'}
                       isSelected={isSelected}
-                      onClick={() => handleSelectWolfTarget(p.id)}
+                      disabled={isWolf}
+                      onClick={() => {
+                        if (isWolf) {
+                          setWolfWarningMsg("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+                          return;
+                        }
+                        handleSelectWolfTarget(p.id);
+                      }}
                     />
                   );
                 })}
@@ -767,11 +786,12 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   return (
                     <PlayerTile
                       key={p.id}
-                      name={p.name + (isPrevProtected ? ' (Đêm trước)' : '')}
+                      name={p.name}
                       avatarUrl={p.avatar}
-                      badgeLabel={isSelected ? '🛡️ Bảo vệ' : (isPrevProtected ? '🔒 Khóa' : undefined)}
+                      badgeLabel={isSelected ? '🛡️ Bảo vệ' : (isPrevProtected ? '🔒 Đêm trước' : undefined)}
                       badgeVariant={isSelected ? 'gold' : 'ash'}
                       isSelected={isSelected}
+                      disabled={isPrevProtected}
                       onClick={() => {
                         if (isPrevProtected) {
                           alert("Không thể bảo vệ cùng một người 2 đêm liên tiếp!");
@@ -916,16 +936,24 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 {game.witchItems.poisonLeft > 0 ? (
                   <div className={styles.targetSelectionGrid}>
                     {alivePlayers.map(p => {
+                      const isSelf = p.id === myPlayer?.id || p.role === 'witch';
                       const isPoisonSelected = selectedWitchPoison === p.id;
                       return (
                         <PlayerTile
                           key={p.id}
                           name={p.name}
                           avatarUrl={p.avatar}
-                          badgeLabel={isPoisonSelected ? '☠️ Độc' : undefined}
-                          badgeVariant="red"
+                          badgeLabel={isPoisonSelected ? '☠️ Độc' : (isSelf ? '🧪 Bản thân' : undefined)}
+                          badgeVariant={isPoisonSelected ? 'red' : 'ash'}
                           isSelected={isPoisonSelected}
-                          onClick={() => setSelectedWitchPoison(prev => prev === p.id ? null : p.id)}
+                          disabled={isSelf}
+                          onClick={() => {
+                            if (isSelf) {
+                              alert("Phù thủy không thể tự ném bình độc giết chính mình!");
+                              return;
+                            }
+                            setSelectedWitchPoison(prev => prev === p.id ? null : p.id);
+                          }}
                         />
                       );
                     })}

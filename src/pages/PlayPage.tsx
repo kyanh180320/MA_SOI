@@ -108,10 +108,15 @@ export default function PlayPage() {
   const handleWolfTargets = (targetIds: string[]) => {
     updateGame(g => {
       const rounds = [...g.rounds];
+      // Sói không thể cắn đồng đội thuộc phe Sói
+      const validTargetIds = targetIds.filter(id => {
+        const p = g.players.find(player => player.id === id);
+        return p && !isWolfTeam(p.role);
+      });
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
-        wolfTarget: targetIds[0] || 'none',
-        wolfTargets: targetIds.length > 0 ? targetIds : ['none']
+        wolfTarget: validTargetIds[0] || 'none',
+        wolfTargets: validTargetIds.length > 0 ? validTargetIds : ['none']
       };
       return { ...g, rounds };
     });
@@ -132,16 +137,20 @@ export default function PlayPage() {
   const handleWitchAction = (saveTargetId: string | null, poisonTargetId: string | null) => {
     updateGame(g => {
       const rounds = [...g.rounds];
+      // Phù thủy không thể tự ném bình độc giết chính mình
+      const isSelfPoison = poisonTargetId && g.players.some(p => p.id === poisonTargetId && p.role === 'witch');
+      const validPoisonTargetId = isSelfPoison ? null : poisonTargetId;
+
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
         witchSaved: !!saveTargetId,
         witchSavedTarget: saveTargetId || undefined,
-        witchPoisonTarget: poisonTargetId || undefined
+        witchPoisonTarget: validPoisonTargetId || undefined
       };
       
       const newItems = { ...g.witchItems };
       if (saveTargetId) newItems.saveLeft = Math.max(0, newItems.saveLeft - 1);
-      if (poisonTargetId) newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
+      if (validPoisonTargetId) newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
 
       return { ...g, rounds, witchItems: newItems };
     });
@@ -196,7 +205,7 @@ export default function PlayPage() {
 
   const finishNight = () => {
     const lastRound = game.rounds[game.rounds.length - 1];
-    const deaths = resolveNight(lastRound);
+    const deaths = resolveNight(lastRound, game.players);
     
     const newPlayers = game.players.map(p => 
       deaths.includes(p.id) ? { ...p, alive: false } : p

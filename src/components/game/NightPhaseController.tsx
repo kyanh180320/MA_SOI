@@ -98,10 +98,10 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 name={p.name}
                 avatarUrl={p.avatar}
                 role={showRoles ? getRoleLabel(p.role) : undefined}
-                badgeLabel={isSelected ? '🛡 Sẽ bảo vệ' : (isLocked ? 'Vòng trước' : undefined)}
+                badgeLabel={isSelected ? '🛡 Sẽ bảo vệ' : (isLocked ? '🔒 Vòng trước' : undefined)}
                 badgeVariant={isSelected ? 'green' : 'ash'}
                 isSelected={isSelected}
-                isAlive={!isLocked}
+                disabled={isLocked}
                 onClick={() => !isLocked && toggleGuardSelect(p.id)}
               />
             );
@@ -164,6 +164,12 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     const toggleWolfTarget = (id: string) => {
       setWolfSelectionWarning(null);
+      const targetPlayer = game.players.find(p => p.id === id);
+      if (targetPlayer && isWolfTeam(targetPlayer.role)) {
+        setWolfSelectionWarning("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+        return;
+      }
+
       if (selectedWolfTargets.includes(id)) {
         setSelectedWolfTargets(prev => prev.filter(x => x !== id));
       } else {
@@ -282,10 +288,17 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 name={p.name}
                 avatarUrl={p.avatar}
                 role={showRoles ? getRoleLabel(p.role) : undefined}
-                badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? 'Phe Sói' : undefined)}
+                badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? '🐺 Phe Sói' : undefined)}
                 badgeVariant={isTarget ? 'red' : 'ash'}
                 isSelected={isTarget}
-                onClick={() => toggleWolfTarget(p.id)}
+                disabled={isWolf}
+                onClick={() => {
+                  if (isWolf) {
+                    setWolfSelectionWarning("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+                    return;
+                  }
+                  toggleWolfTarget(p.id);
+                }}
               />
             );
           })}
@@ -589,16 +602,22 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
               {alivePlayers.map(p => {
                 const isPoisonTarget = witchPoisonSelection === p.id;
+                const isWitch = p.role === 'witch';
+
                 return (
                   <PlayerTile
                     key={p.id}
                     name={p.name}
                     avatarUrl={p.avatar}
                     role={showRoles ? getRoleLabel(p.role) : undefined}
-                    badgeLabel={isPoisonTarget ? '☠️ Đầu độc' : undefined}
-                    badgeVariant="red"
+                    badgeLabel={isPoisonTarget ? '☠️ Đầu độc' : (isWitch ? '🧪 Phù Thủy' : undefined)}
+                    badgeVariant={isPoisonTarget ? 'red' : 'ash'}
                     isSelected={isPoisonTarget}
-                    onClick={() => setWitchPoisonSelection(isPoisonTarget ? null : p.id)}
+                    disabled={isWitch}
+                    onClick={() => {
+                      if (isWitch) return;
+                      setWitchPoisonSelection(isPoisonTarget ? null : p.id);
+                    }}
                   />
                 );
               })}

@@ -141,6 +141,14 @@
     inset 0 2px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
+/* TRẠNG THÁI: BỊ KHÓA / KHÔNG THỂ CHỌN (DISABLED) */
+.disabled {
+  opacity: 0.55;
+  filter: grayscale(0.5);
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
 /* TRẠNG THÁI: ĐÃ CHẾT (DEAD) */
 .dead {
   filter: grayscale(0.85) brightness(0.6);
