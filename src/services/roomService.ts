@@ -53,10 +53,24 @@ export function subscribeRooms(callback: (rooms: GameRoom[]) => void): () => voi
   const colRef = collection(db, "rooms");
   return onSnapshot(colRef, (snapshot) => {
     const list: GameRoom[] = [];
+    const now = Date.now();
+    const MAX_ROOM_AGE = 4 * 60 * 60 * 1000; // 4 tiếng
+
     snapshot.forEach(docSnap => {
       const data = docSnap.data() as GameRoom;
-      // Bỏ qua "phòng ma" (thiếu chủ phòng/thành viên do bị ghi đè lại sau khi đã xoá)
-      if (!data.hostUid || !data.members || data.members.length === 0) return;
+      
+      // Tự động dọn dẹp các phòng quá cũ (trên 4 tiếng) bị bỏ quên
+      if (data.createdAt && now - data.createdAt > MAX_ROOM_AGE) {
+        deleteDoc(docSnap.ref).catch(() => {});
+        return;
+      }
+
+      // Bỏ qua và xoá "phòng ma" (thiếu chủ phòng/thành viên hoặc chủ phòng không còn trong members)
+      if (!data.hostUid || !data.members || data.members.length === 0 || !data.members.some(m => m.uid === data.hostUid)) {
+        deleteDoc(docSnap.ref).catch(() => {});
+        return;
+      }
+
       if (data.status === "waiting" || data.status === "setup" || data.status === "playing") {
         list.push({ ...data, id: docSnap.id });
       }
@@ -140,9 +154,14 @@ export async function leaveRoom(roomId: string): Promise<void> {
     } else {
       // Người chơi thông thường rời đi: loại bỏ người đó khỏi danh sách phòng
       const remainingMembers = currentMembers.filter(m => m.uid !== currentUser.uid);
-      transaction.update(roomRef, {
-        members: remainingMembers
-      });
+      // Nếu không còn ai hoặc chủ phòng không còn trong phòng, xoá phòng luôn
+      if (remainingMembers.length === 0 || !remainingMembers.some(m => m.uid === room.hostUid)) {
+        transaction.delete(roomRef);
+      } else {
+        transaction.update(roomRef, {
+          members: remainingMembers
+        });
+      }
     }
   });
 }

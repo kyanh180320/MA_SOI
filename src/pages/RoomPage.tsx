@@ -31,6 +31,7 @@ export default function RoomPage() {
   const [isStartingGame, setIsStartingGame] = useState(false);
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
   const isLeavingRef = useRef(false);
+  const allowNavigationWithoutClosingRef = useRef(false);
 
   useEffect(() => {
     if (!roomId) return;
@@ -50,6 +51,38 @@ export default function RoomPage() {
 
     return () => unsubscribe();
   }, [roomId, navigate]);
+
+  // Tự động dọn dẹp hoặc xoá phòng khi tắt tab / reload hoặc bấm phím Back
+  useEffect(() => {
+    if (!roomId) return;
+
+    const handleBeforeUnload = () => {
+      if (allowNavigationWithoutClosingRef.current) return;
+      if (isHost) {
+        closeRoom(roomId).catch(() => {});
+      } else {
+        leaveRoom(roomId).catch(() => {});
+      }
+    };
+
+    const handlePopState = () => {
+      if (allowNavigationWithoutClosingRef.current || isLeavingRef.current) return;
+      isLeavingRef.current = true;
+      if (isHost) {
+        closeRoom(roomId).catch(() => {});
+      } else {
+        leaveRoom(roomId).catch(() => {});
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isHost, roomId]);
 
   if (loading) {
     return (
@@ -105,6 +138,7 @@ export default function RoomPage() {
   };
 
   const handleStartSetup = () => {
+    allowNavigationWithoutClosingRef.current = true;
     navigate('/setup', { state: { fromRoom: room } });
   };
 
@@ -178,6 +212,7 @@ export default function RoomPage() {
 
       await syncRoomGame(room.id, newGame);
       setGame(newGame);
+      allowNavigationWithoutClosingRef.current = true;
       navigate('/play');
     } catch (err: unknown) {
       console.error("Lỗi bắt đầu ván nhanh:", err);

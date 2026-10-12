@@ -298,8 +298,8 @@ export default function HomePage() {
             </div>
           ) : (
             rooms.map((room) => {
-              const memberCount = getPlayerMembers(room.members).length;
-              const isFull = memberCount >= room.maxPlayers;
+              const playerCount = getPlayerMembers(room.members).length;
+              const isFull = playerCount >= room.maxPlayers;
               const isMyRoom = user && room.hostUid === user.uid;
 
               return (
@@ -315,7 +315,7 @@ export default function HomePage() {
                       👑 {room.hostName} • Mã: <span style={{ color: 'var(--gold-300)' }}>#{room.id}</span>
                     </div>
                     <div style={{ fontSize: '11px', marginTop: '4px', color: isFull ? 'var(--red-400)' : 'var(--green-400)' }}>
-                      👥 {memberCount}/{room.maxPlayers} người • {room.status === 'playing' ? '🎮 Đang chơi' : '⏳ Đang chờ'}
+                      👥 {playerCount}/{room.maxPlayers} người chơi (+ 👑 Quản trò) • {room.status === 'playing' ? '🎮 Đang chơi' : '⏳ Đang chờ'}
                     </div>
                   </div>
 

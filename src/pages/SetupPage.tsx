@@ -533,8 +533,14 @@ export default function SetupPage() {
           <button
             type="button"
             className={styles.gothicStoneBtn}
-            onClick={() => navigate('/')}
-            title="Quay lại màn Home"
+            onClick={() => {
+              if (fromRoom?.id) {
+                navigate(`/room/${fromRoom.id}`);
+              } else {
+                navigate('/');
+              }
+            }}
+            title={fromRoom ? "Quay lại phòng chờ" : "Quay lại màn Home"}
           >
             ← QUAY LẠI
           </button>
