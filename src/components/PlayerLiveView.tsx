@@ -5,6 +5,7 @@ import { updateRoomGame } from '../services/roomService';
 import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
+import { CardSelectionRitual } from './CardSelectionRitual';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -141,9 +142,6 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const myPlayer: Player | undefined = (() => {
     if (!user) return undefined;
 
-    // Quản trò (chủ phòng) không phải người chơi
-    if (room.hostUid === user.uid) return undefined;
-
     // 1. Khớp theo UID
     const byId = game.players.find(p => p.id === user.uid);
     if (byId) return byId;
@@ -162,10 +160,26 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       return game.players[memberIndex];
     }
 
-    return undefined;
+    // Quản trò (chủ phòng) khi bấm xem thử (previewAsPlayer) sẽ xem vai trò đầu tiên để test
+    if (room.hostUid === user.uid) {
+      return game.players[0];
+    }
+
+    return game.players[0];
   })();
 
   const roleInfo = myPlayer ? ROLE_DETAILS[myPlayer.role] : null;
+
+  // Trạng thái hiển thị hiệu ứng rút bài định mệnh khi bắt đầu ván
+  const ritualKey = `werewolf_ritual_seen_${game.id}_${user?.uid || 'guest'}`;
+  const [showRitual, setShowRitual] = useState<boolean>(() => {
+    return !sessionStorage.getItem(ritualKey);
+  });
+
+  const handleRitualComplete = () => {
+    sessionStorage.setItem(ritualKey, 'true');
+    setShowRitual(false);
+  };
   const alivePlayers = game.players.filter(p => p.alive);
 
   // Tính tiến độ thanh tiến trình
@@ -461,6 +475,16 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   return (
     <div className={styles.container}>
+      {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH KHI QUẢN TRÒ BẮT ĐẦU VÁN */}
+      {showRitual && myPlayer && roleInfo && (
+        <CardSelectionRitual
+          playerCount={game.players.length}
+          myRole={myPlayer.role}
+          roleInfo={roleInfo}
+          onComplete={handleRitualComplete}
+        />
+      )}
+
       {/* 1. THANH ĐIỀU HƯỚNG TRÊN CÙNG */}
       <div className={styles.header}>
         <Button
@@ -1034,6 +1058,22 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 ? 'Chạm vào thẻ bài hoặc nút bên dưới để úp lại (bảo mật khi chơi)'
                 : 'Chạm vào lá bài để mở lật xem thân phận của bạn'}
             </div>
+            <button
+              type="button"
+              onClick={() => setShowRitual(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--gold-300)',
+                fontSize: '11px',
+                cursor: 'pointer',
+                marginTop: '4px',
+                textDecoration: 'underline'
+              }}
+              title="Xem lại hiệu ứng chia và rút bài định mệnh"
+            >
+              ✨ Xem lại hiệu ứng rút bài
+            </button>
           </div>
 
           {/* LÁ BÀI 3D VỚI HIỆU ỨNG XUẤT HIỆN & CHẾ ĐỘ ÚP */}

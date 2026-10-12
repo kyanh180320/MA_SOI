@@ -1,0 +1,443 @@
+/* ==========================================================================
+   CARD SELECTION RITUAL (HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH)
+   Phong cách Gothic Dark Fantasy, Huyền bí, Sang trọng chuẩn Game Ma Sói
+   ========================================================================== */
+
+.ritualOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: radial-gradient(circle at 50% 40%, rgba(18, 22, 45, 0.98) 0%, rgba(4, 6, 14, 0.99) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-4) var(--s-3);
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: ritualFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ritualOverlay.closing {
+  animation: ritualFadeOut 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ritualFadeIn {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes ritualFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+  }
+}
+
+/* HIỆU ỨNG ÁNH TRĂNG VÀ KHÔNG GIAN HUYỀN BÍ */
+.ambientFog {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(201, 162, 74, 0.15) 0%, rgba(138, 43, 226, 0.08) 50%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+  animation: fogPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes fogPulse {
+  0% {
+    opacity: 0.5;
+    transform: translateX(-50%) scale(0.9);
+  }
+  100% {
+    opacity: 0.9;
+    transform: translateX(-50%) scale(1.15);
+  }
+}
+
+/* HEADER TIÊU ĐỀ */
+.ritualHeader {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-top: var(--s-2);
+  max-width: 420px;
+}
+
+.moonIcon {
+  font-size: 28px;
+  display: inline-block;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 0 12px rgba(246, 227, 161, 0.7));
+  animation: moonFloat 3s ease-in-out infinite alternate;
+}
+
+@keyframes moonFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-5px); }
+}
+
+.ritualTitle {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--gold-100);
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 199, 102, 0.5);
+}
+
+.ritualSubtitle {
+  font-size: 13px;
+  color: var(--gold-300);
+  line-height: 1.4;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.ritualHint {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 14px;
+  background: rgba(201, 162, 74, 0.15);
+  border: 1px solid rgba(232, 199, 102, 0.4);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.5px;
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(232, 199, 102, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba(232, 199, 102, 0.6);
+  }
+}
+
+/* KHUNG CHỨA CÁC LÁ BÀI */
+.cardsContainer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: var(--s-3) 0;
+  min-height: 320px;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  perspective: 1000px;
+  transition: all 0.5s ease;
+}
+
+@media (min-width: 420px) {
+  .cardsGrid {
+    max-width: 400px;
+    gap: 14px;
+  }
+}
+
+/* LÁ BÀI ÚP THÔNG THƯỜNG */
+.cardSlot {
+  position: relative;
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease, filter 0.3s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* Hiệu ứng lần lượt xuất hiện từng lá bài từ từ */
+.cardSlotEntrance {
+  animation: cardDealDrop 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+@keyframes cardDealDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.6) rotate(-8deg);
+    filter: drop-shadow(0 0 0 rgba(232, 199, 102, 0));
+  }
+  60% {
+    transform: translateY(6px) scale(1.05) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.8));
+  }
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.75),
+    inset 0 0 0 2px var(--gold-500),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 5px rgba(232, 199, 102, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: var(--bg-1);
+}
+
+.cardBackImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.cardSlot:hover:not(.disabled) .cardInner {
+  transform: translateY(-8px) scale(1.06);
+  box-shadow:
+    0 16px 28px rgba(0, 0, 0, 0.9),
+    0 0 18px rgba(232, 199, 102, 0.8),
+    inset 0 0 0 2px var(--gold-300),
+    inset 0 0 0 4px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 5px rgba(246, 227, 161, 0.7);
+}
+
+/* Các lá bài không được chọn sẽ mờ dần và biến mất */
+.cardDismiss {
+  opacity: 0 !important;
+  transform: scale(0.4) translateY(40px) !important;
+  pointer-events: none;
+  transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ==========================================================================
+   LÁ BÀI ĐƯỢC CHỌN TIẾN VỀ TRUNG TÂM & MỞ LÊN (SPOTLIGHT REVEAL)
+   ========================================================================== */
+
+.spotlightCardContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  width: 100%;
+  perspective: 1200px;
+  animation: spotlightAppear 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes spotlightAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.goldenBurst {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(246, 227, 161, 0.45) 0%, rgba(201, 162, 74, 0.2) 40%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(25px);
+  pointer-events: none;
+  z-index: 1;
+  animation: goldenPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes goldenPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+/* THẺ BÀI LẬT 3D TRUNG TÂM */
+.spotlightCardFlip {
+  position: relative;
+  width: 180px;
+  aspect-ratio: 2 / 3;
+  perspective: 1000px;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.spotlightInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.2, 0.85, 0.2, 1);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.9);
+  border-radius: var(--radius-lg);
+}
+
+.spotlightCardFlip.isRevealed .spotlightInner {
+  transform: rotateY(180deg);
+}
+
+.faceFace {
+  position: absolute;
+  inset: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 2.5px var(--gold-400),
+    inset 0 0 0 5px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 6.5px rgba(232, 199, 102, 0.4);
+}
+
+.faceBack {
+  background: var(--bg-1);
+}
+
+.faceFront {
+  transform: rotateY(180deg);
+  background-color: var(--bg-2);
+}
+
+.faceImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* THÔNG TIN VAI TRÒ SAU KHI LẬT MỞ */
+.revealedRoleInfo {
+  position: relative;
+  z-index: 20;
+  text-align: center;
+  margin-top: var(--s-3);
+  animation: infoSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-width: 320px;
+}
+
+@keyframes infoSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.revealedBadge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-300);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+.revealedRoleName {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--gold-100);
+  margin: 0 0 4px 0;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 16px rgba(232, 199, 102, 0.6);
+}
+
+.revealedTeamTag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.revealedDesc {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* NÚT ĐIỀU HƯỚNG DƯỚI ĐÁY */
+.ritualFooter {
+  position: relative;
+  z-index: 20;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.enterGameBtn {
+  width: 100%;
+  min-height: 48px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #f6e3a1 0%, #d4aa54 50%, #9e7529 100%);
+  color: #1a0f05;
+  border: 1px solid #ffe8aa;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(232, 199, 102, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.enterGameBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.8), 0 0 24px rgba(232, 199, 102, 0.8);
+}
+
+.enterGameBtn:active {
+  transform: translateY(1px);
+}
