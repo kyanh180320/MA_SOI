@@ -33,6 +33,8 @@ export default function RoomPage() {
   const isLeavingRef = useRef(false);
   const allowNavigationWithoutClosingRef = useRef(false);
 
+  const isHost = Boolean(user && room && room.hostUid === user.uid);
+
   useEffect(() => {
     if (!roomId) return;
 
@@ -107,7 +109,6 @@ export default function RoomPage() {
     );
   }
 
-  const isHost = user && room.hostUid === user.uid;
   const isGamePlaying = (room.status === 'playing' || room.status === 'ended') && !!room.gameData;
   const members = room.members || [];
   // Chủ phòng là Quản trò nên không tham gia chơi
