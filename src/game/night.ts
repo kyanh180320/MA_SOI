@@ -1,6 +1,40 @@
 import type { Game, Player, Round } from "./types";
 import { isWolfTeam } from "./win";
 
+export type NightRoleStep = 'guard' | 'wolf' | 'seer' | 'witch';
+export type NightStep = NightRoleStep | 'done' | 'wait';
+
+const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch'];
+
+/**
+ * Các lượt thực sự cần gọi trong đêm, dựa trên những vai còn sống.
+ * Sói thường và Sói quỷ cùng dùng một lượt "wolf".
+ */
+export function getActiveNightRoleSteps(players: Player[]): NightRoleStep[] {
+  return NIGHT_ROLE_ORDER.filter(step => {
+    if (step === 'wolf') {
+      return players.some(player => player.alive && isWolfTeam(player.role));
+    }
+    return players.some(player => player.alive && player.role === step);
+  });
+}
+
+/**
+ * Tìm lượt ban đêm kế tiếp. Những role không có trong ván hoặc đã chết được bỏ qua.
+ */
+export function getNightStep(currentRound: Round | undefined, players: Player[]): NightStep {
+  if (!currentRound) return 'wait';
+
+  for (const step of getActiveNightRoleSteps(players)) {
+    if (step === 'guard' && currentRound.guardProtectTarget === undefined) return step;
+    if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
+    if (step === 'seer' && currentRound.seerCheck === undefined) return step;
+    if (step === 'witch' && currentRound.witchSaved === undefined && currentRound.witchSavedTarget === undefined) return step;
+  }
+
+  return 'done';
+}
+
 /**
  * Gộp hành động ban đêm mà người chơi (online) đã ghi lên phòng vào ván cục bộ của Quản trò.
  * Chỉ bổ sung các bước mà Quản trò CHƯA có (không ghi đè), chỉ áp dụng cùng round & đang ban đêm.

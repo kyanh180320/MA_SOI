@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
-import { resolveNight, mergeRemoteNightActions } from '../game/night';
+import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import type { Role, Player } from '../game/types';
 import { closeRoom, subscribeRoom } from '../services/roomService';
@@ -112,16 +112,16 @@ export default function PlayPage() {
     }
   };
 
-  const getNightStep = () => {
-    if (!currentRound) return 'wait';
-    if (currentRound.guardProtectTarget === undefined) return 'guard';
-    if (currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return 'wolf';
-    if (currentRound.seerCheck === undefined) return 'seer';
-    if (currentRound.witchSaved === undefined && currentRound.witchSavedTarget === undefined) return 'witch';
-    return 'done';
-  };
-
-  const nightStep = getNightStep();
+  const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
+  const nightStep = getNightStep(currentRound, game.players);
+  const nightStepIndex = nightStep === 'done'
+    ? activeNightRoleSteps.length
+    : activeNightRoleSteps.indexOf(nightStep as (typeof activeNightRoleSteps)[number]);
+  const nightProgressPercent = nightStep === 'done'
+    ? 100
+    : activeNightRoleSteps.length <= 1
+      ? 0
+      : Math.max(0, (nightStepIndex / (activeNightRoleSteps.length - 1)) * 100);
 
   const handleGuardProtect = (targetId: string | null) => {
     updateGame(g => {
@@ -433,7 +433,7 @@ export default function PlayPage() {
           </Badge>
         </div>
 
-        {/* Stepper bar: Nếu ban đêm hiển thị 4 vai trò đêm phát sáng theo lượt */}
+        {/* Stepper bar: chỉ hiển thị những vai trò ban đêm thực sự còn sống */}
         {game.phase === 'night' ? (
           <div style={{
             display: 'flex',
@@ -454,7 +454,7 @@ export default function PlayPage() {
               <div style={{
                 height: '100%',
                 background: 'linear-gradient(90deg, var(--gold-500), var(--gold-300))',
-                width: `${Math.min(100, ((['guard', 'wolf', 'seer', 'witch', 'done'].indexOf(nightStep)) / 3) * 100)}%`,
+                width: `${nightProgressPercent}%`,
                 transition: 'width 0.4s ease',
                 boxShadow: '0 0 8px rgba(232, 199, 102, 0.5)'
               }} />
@@ -465,10 +465,9 @@ export default function PlayPage() {
               { id: 'wolf', label: 'Ma Sói', iconUrl: ROLE_MEDALLION_ICONS.wolf },
               { id: 'seer', label: 'Tiên Tri', iconUrl: ROLE_MEDALLION_ICONS.seer },
               { id: 'witch', label: 'Phù Thủy', iconUrl: ROLE_MEDALLION_ICONS.witch }
-            ].map((step, idx) => {
-              const currentIdx = ['guard', 'wolf', 'seer', 'witch', 'done'].indexOf(nightStep);
-              const isPassed = idx < currentIdx;
-              const isActive = idx === currentIdx;
+            ].filter(step => activeNightRoleSteps.includes(step.id as (typeof activeNightRoleSteps)[number])).map((step, idx) => {
+              const isPassed = idx < nightStepIndex || nightStep === 'done';
+              const isActive = idx === nightStepIndex && nightStep !== 'done';
 
               return (
                 <div key={step.id} style={{

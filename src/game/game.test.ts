@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getRoleDistribution, assignRoles } from './roles';
-import { resolveNight, mergeRemoteNightActions } from './night';
+import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
 import type { Player, Game } from './types';
@@ -107,6 +107,40 @@ describe('roles', () => {
 });
 
 describe('night', () => {
+  describe('getNightStep', () => {
+    const player = (id: string, role: Player['role'], alive = true): Player => ({ id, name: id, role, alive });
+
+    it('skips roles that were not selected for the game', () => {
+      const players = [player('w1', 'wolf'), player('v1', 'villager'), player('s1', 'seer')];
+      const round = { number: 1, nightDeaths: [] };
+
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf', 'seer']);
+      expect(getNightStep(round, players)).toBe('wolf');
+      expect(getNightStep({ ...round, wolfTarget: 'v1' }, players)).toBe('seer');
+      expect(getNightStep({ ...round, wolfTarget: 'v1', seerCheck: { target: 'w1', isWolf: true } }, players)).toBe('done');
+    });
+
+    it('skips night roles that have died', () => {
+      const players = [
+        player('w1', 'wolf'),
+        player('g1', 'guard', false),
+        player('s1', 'seer', false),
+        player('wt1', 'witch', false),
+        player('v1', 'villager')
+      ];
+      const round = { number: 2, nightDeaths: [] };
+
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
+      expect(getNightStep(round, players)).toBe('wolf');
+      expect(getNightStep({ ...round, wolfTargets: ['v1'] }, players)).toBe('done');
+    });
+
+    it('treats demon wolf as the wolf night step', () => {
+      const players = [player('wd1', 'wolf_demon'), player('v1', 'villager')];
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
+    });
+  });
+
   describe('resolveNight', () => {
     it('should kill target if bitten and not saved', () => {
       expect(resolveNight({ wolfTarget: 'p1' })).toEqual(['p1']);

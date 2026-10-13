@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import type { GameRoom, AppUser, Role, Player, Round } from '../game/types';
+import type { GameRoom, AppUser, Role, Player } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
 import { updateRoomGame } from '../services/roomService';
 import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { CardSelectionRitual } from './CardSelectionRitual';
+import { getActiveNightRoleSteps, getNightStep } from '../game/night';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -94,15 +95,6 @@ export const PHASE_STEPS = [
   { id: 'ended', label: 'Kết Quả', icon: '☠️' }
 ];
 
-export const getNightStep = (currentRound?: Round): 'guard' | 'wolf' | 'seer' | 'witch' | 'done' => {
-  if (!currentRound) return 'guard';
-  if (currentRound.guardProtectTarget === undefined) return 'guard';
-  if (currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return 'wolf';
-  if (currentRound.seerCheck === undefined) return 'seer';
-  if (currentRound.witchSaved === undefined && currentRound.witchSavedTarget === undefined) return 'witch';
-  return 'done';
-};
-
 export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLeave }) => {
   const game = room.gameData;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,6 +110,12 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const [witchSaveActive, setWitchSaveActive] = useState(false);
   const [selectedWitchPoison, setSelectedWitchPoison] = useState<string | null>(null);
+
+  // Khai báo hook trước nhánh loading để thứ tự hook luôn ổn định khi gameData được đồng bộ.
+  const ritualKey = `werewolf_ritual_seen_${game?.id || 'pending'}_${user?.uid || 'guest'}`;
+  const [showRitual, setShowRitual] = useState<boolean>(() => {
+    return !sessionStorage.getItem(ritualKey);
+  });
 
   if (!game) {
     return (
@@ -135,7 +133,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const currentPhase = game.phase;
 
   // Xác định bước vai trò ban đêm hiện tại
-  const nightStep = getNightStep(currentRound);
+  const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
+  const nightStep = getNightStep(currentRound, game.players);
 
   // Tìm người chơi ứng với tài khoản user hiện tại:
   const myPlayer: Player = (() => {
@@ -164,12 +163,6 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const roleInfo = ROLE_DETAILS[myPlayer.role] || ROLE_DETAILS['villager'];
 
-  // Trạng thái hiển thị hiệu ứng rút bài định mệnh khi bắt đầu ván
-  const ritualKey = `werewolf_ritual_seen_${game.id}_${user?.uid || 'guest'}`;
-  const [showRitual, setShowRitual] = useState<boolean>(() => {
-    return !sessionStorage.getItem(ritualKey);
-  });
-
   const handleRitualComplete = () => {
     sessionStorage.setItem(ritualKey, 'true');
     setShowRitual(false);
@@ -177,20 +170,20 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const alivePlayers = game.players.filter(p => p.alive);
 
   // Tính tiến độ thanh tiến trình
-  const nightStepIndex = (() => {
-    if (nightStep === 'guard') return 0;
-    if (nightStep === 'wolf') return 1;
-    if (nightStep === 'seer') return 2;
-    if (nightStep === 'witch') return 3;
-    return 4; // Hoàn thành đêm
-  })();
+  const nightStepIndex = nightStep === 'done'
+    ? activeNightRoleSteps.length
+    : activeNightRoleSteps.indexOf(nightStep as (typeof activeNightRoleSteps)[number]);
 
   const currentPhaseIndex = PHASE_STEPS.findIndex(s => s.id === currentPhase);
   const phaseProgressPercent = currentPhaseIndex >= 0 
     ? (currentPhaseIndex / (PHASE_STEPS.length - 1)) * 100 
     : 0;
 
-  const nightProgressPercent = Math.min(100, (nightStepIndex / 3) * 100);
+  const nightProgressPercent = nightStep === 'done'
+    ? 100
+    : activeNightRoleSteps.length <= 1
+      ? 0
+      : Math.max(0, (nightStepIndex / (activeNightRoleSteps.length - 1)) * 100);
 
   // Nạn nhân đêm qua (nếu ở phase ban ngày)
   const nightVictims = currentRound?.nightDeaths?.map(id => {
@@ -532,9 +525,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               />
             </div>
 
-            {NIGHT_ROLE_STEPS.map((step, idx) => {
-              const isPassed = idx < nightStepIndex;
-              const isActive = idx === nightStepIndex;
+            {NIGHT_ROLE_STEPS.filter(step => activeNightRoleSteps.includes(step.id as (typeof activeNightRoleSteps)[number])).map((step, idx) => {
+              const isPassed = idx < nightStepIndex || nightStep === 'done';
+              const isActive = idx === nightStepIndex && nightStep !== 'done';
 
               return (
                 <div 
