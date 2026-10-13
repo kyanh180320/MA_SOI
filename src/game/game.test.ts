@@ -3,7 +3,48 @@ import { getRoleDistribution, assignRoles } from './roles';
 import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
+import { applyLiveNightActions, sanitizeGameForSync } from './onlineSync';
 import type { Player, Game } from './types';
+
+describe('online sync', () => {
+  const game: Game = {
+    id: 'online-game',
+    createdAt: 0,
+    players: [
+      { id: 'w1', name: 'Wolf', role: 'wolf', alive: true, avatar: 'data:image/jpeg;base64,very-large' },
+      { id: 'v1', name: 'Villager', role: 'villager', alive: true, avatar: 'https://example.com/avatar.jpg' },
+    ],
+    phase: 'night',
+    witchItems: { saveLeft: 1, poisonLeft: 1 },
+    rounds: [{ number: 2, nightDeaths: [] }],
+  };
+
+  it('hydrates small live actions into the current game snapshot', () => {
+    const hydrated = applyLiveNightActions(game, {
+      gameId: game.id,
+      roundNumber: 2,
+      guardProtectTarget: 'v1',
+      wolfVotes: { w1: ['v1'] },
+    });
+
+    expect(hydrated.rounds[0].guardProtectTarget).toBe('v1');
+    expect(hydrated.rounds[0].wolfVotes).toEqual({ w1: ['v1'] });
+  });
+
+  it('ignores stale actions from another round', () => {
+    expect(applyLiveNightActions(game, {
+      gameId: game.id,
+      roundNumber: 1,
+      guardProtectTarget: 'v1',
+    })).toBe(game);
+  });
+
+  it('removes inline base64 avatars but keeps remote image URLs', () => {
+    const sanitized = sanitizeGameForSync(game);
+    expect(sanitized.players[0].avatar).toBe('');
+    expect(sanitized.players[1].avatar).toBe('https://example.com/avatar.jpg');
+  });
+});
 
 describe('mergeRemoteNightActions', () => {
   const base: Game = {
@@ -34,6 +75,11 @@ describe('mergeRemoteNightActions', () => {
     const remote = { ...withRound(base, { guardProtectTarget: 'p1' }), rounds: [{ number: 2, nightDeaths: [], guardProtectTarget: 'p1' }] };
     expect(mergeRemoteNightActions(base, remote)).toBeNull();
     expect(mergeRemoteNightActions({ ...base, phase: 'day' }, withRound(base, { guardProtectTarget: 'p1' }))).toBeNull();
+  });
+
+  it('never carries night actions from an older game into a new game', () => {
+    const oldGame = { ...withRound(base, { wolfTarget: 'p1' }), id: 'old-game' };
+    expect(mergeRemoteNightActions(base, oldGame)).toBeNull();
   });
 });
 

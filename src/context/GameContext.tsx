@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { Game } from '../game/types';
 import { syncRoomGame } from '../services/roomService';
@@ -6,6 +6,7 @@ import { syncRoomGame } from '../services/roomService';
 interface GameContextType {
   game: Game | null;
   setGame: (game: Game | null) => void;
+  applyRemoteGame: (game: Game) => void;
   updateGame: (updater: (prev: Game) => Game) => void;
   undo: () => void;
   canUndo: boolean;
@@ -16,6 +17,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'werewolf_current_game';
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const remoteGamesRef = useRef(new WeakSet<Game>());
   const [history, setHistory] = useState<Game[]>(() => {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -33,9 +35,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (game) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(game));
       if (game.roomId) {
-        syncRoomGame(game.roomId, game).catch(err => {
-          console.error("Lỗi đồng bộ ván chơi lên phòng online:", err);
-        });
+        if (remoteGamesRef.current.has(game)) {
+          remoteGamesRef.current.delete(game);
+        } else {
+          syncRoomGame(game.roomId, game).catch(err => {
+            console.error("Lỗi đồng bộ ván chơi lên phòng online:", err);
+          });
+        }
       }
     } else {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -59,6 +65,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Snapshot nhận từ Firestore chỉ cập nhật local state. Không ghi ngược lại
+  // cùng một dữ liệu lên Firestore lần nữa.
+  const applyRemoteGame = (remoteGame: Game) => {
+    remoteGamesRef.current.add(remoteGame);
+    setHistory(prev => {
+      if (prev.length === 0) return [remoteGame];
+      return [...prev, remoteGame];
+    });
+  };
+
   const undo = () => {
     setHistory(prev => {
       if (prev.length > 1) {
@@ -69,7 +85,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <GameContext.Provider value={{ game, setGame, updateGame, undo, canUndo: history.length > 1 }}>
+    <GameContext.Provider value={{ game, setGame, applyRemoteGame, updateGame, undo, canUndo: history.length > 1 }}>
       {children}
     </GameContext.Provider>
   );

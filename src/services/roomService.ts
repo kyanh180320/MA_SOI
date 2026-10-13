@@ -4,11 +4,23 @@ import {
   setDoc, 
   deleteDoc, 
   onSnapshot, 
-  runTransaction 
+  runTransaction,
+  updateDoc,
+  FieldPath,
+  deleteField,
+  query,
+  where,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import type { GameRoom, RoomMember, AppUser, Game } from "../game/types";
+import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
+import {
+  applyLiveNightActions,
+  createLiveNightActionsBaseline,
+  sanitizeGameForSync,
+  sanitizeMembersForSync,
+  sanitizeRoomAvatar,
+} from "../game/onlineSync";
 
 /** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
 export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
@@ -22,7 +34,7 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
   const roomId = `${Math.floor(100000 + Math.random() * 900000)}`;
   const roomRef = doc(db, "rooms", roomId);
 
-  const hostAvatar = user?.avatar || user?.photoURL || currentUser.photoURL || "";
+  const hostAvatar = sanitizeRoomAvatar(user?.avatar || user?.photoURL || currentUser.photoURL || "");
   const hostDisplayName = user?.displayName || currentUser.displayName || "Quản trò";
 
   const hostMember: RoomMember = {
@@ -51,7 +63,9 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
 
 export function subscribeRooms(callback: (rooms: GameRoom[]) => void): () => void {
   const colRef = collection(db, "rooms");
-  return onSnapshot(colRef, (snapshot) => {
+  // Không tải các room đã kết thúc (thường chứa gameData lớn) về trang chủ.
+  const activeRoomsQuery = query(colRef, where("status", "in", ["waiting", "setup", "playing"]));
+  return onSnapshot(activeRoomsQuery, (snapshot) => {
     const list: GameRoom[] = [];
     const now = Date.now();
     const MAX_ROOM_AGE = 4 * 60 * 60 * 1000; // 4 tiếng
@@ -85,15 +99,29 @@ export function subscribeRooms(callback: (rooms: GameRoom[]) => void): () => voi
 
 export function subscribeRoom(roomId: string, callback: (room: GameRoom | null) => void): () => void {
   const roomRef = doc(db, "rooms", roomId);
-  return onSnapshot(roomRef, (docSnap) => {
+  return onSnapshot(roomRef, { includeMetadataChanges: true }, (docSnap) => {
     if (docSnap.exists()) {
-      callback({ ...(docSnap.data() as GameRoom), id: docSnap.id });
+      const data = docSnap.data() as GameRoom;
+      const gameData = data.gameData
+        ? applyLiveNightActions(data.gameData, data.liveNightActions)
+        : undefined;
+      callback({
+        ...data,
+        id: docSnap.id,
+        gameData,
+        syncState: docSnap.metadata.fromCache
+          ? "offline"
+          : docSnap.metadata.hasPendingWrites
+            ? "syncing"
+            : "synced",
+      });
     } else {
       callback(null);
     }
   }, (err) => {
     console.error(`Lỗi khi lắng nghe phòng ${roomId}:`, err);
-    callback(null);
+    // Lỗi mạng tạm thời không có nghĩa là chủ phòng đã giải tán phòng.
+    // Giữ snapshot gần nhất trên UI thay vì đẩy tất cả người chơi ra ngoài.
   });
 }
 
@@ -124,13 +152,13 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
     const newMember: RoomMember = {
       uid: currentUser.uid,
       displayName: user?.displayName || currentUser.displayName || "Người chơi",
-      avatar: user?.avatar || user?.photoURL || currentUser.photoURL || "",
+      avatar: sanitizeRoomAvatar(user?.avatar || user?.photoURL || currentUser.photoURL || ""),
       isHost: false,
       joinedAt: Date.now()
     };
 
     transaction.update(roomRef, {
-      members: [...currentMembers, newMember]
+      members: sanitizeMembersForSync([...currentMembers, newMember])
     });
   });
 }
@@ -288,32 +316,124 @@ export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
   await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(roomRef);
     if (!snap.exists()) return;
-    const remote = (snap.data() as GameRoom).gameData;
+    const room = snap.data() as GameRoom;
+    const remote = room.gameData
+      ? applyLiveNightActions(room.gameData, room.liveNightActions)
+      : undefined;
     // Giữ lại hành động ban đêm người chơi vừa ghi lên mà Quản trò chưa kịp nhận, tránh bị ghi đè
-    const toWrite = mergeRemoteNightActions(game, remote) ?? game;
+    const toWrite = sanitizeGameForSync(mergeRemoteNightActions(game, remote) ?? game);
     // Loại bỏ hoàn toàn các trường undefined vì Firestore SDK sẽ văng lỗi Unsupported field value: undefined
     const cleanGameData = JSON.parse(JSON.stringify(toWrite));
     transaction.update(roomRef, {
       status: toWrite.phase === 'ended' ? 'ended' : 'playing',
-      gameData: cleanGameData
+      gameData: cleanGameData,
+      members: sanitizeMembersForSync(room.members),
+      liveNightActions: createLiveNightActionsBaseline(toWrite),
     });
   });
 }
 
-export async function updateRoomGame(roomId: string, updater: (currentGame: Game) => Game): Promise<void> {
+type LiveField = { path: string[]; value: unknown };
+
+/**
+ * Ghi các field nhỏ, không transaction: UI nhận local snapshot ngay cả khi mạng yếu
+ * và Firestore tự xếp hàng đợi để đồng bộ lại.
+ */
+async function updateLiveNightFields(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  fields: LiveField[],
+): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(roomRef);
-    if (!snap.exists()) return;
-    const room = snap.data() as GameRoom;
-    if (!room.gameData) return;
+  const allFields: LiveField[] = [
+    { path: ["liveNightActions", "gameId"], value: gameId },
+    { path: ["liveNightActions", "roundNumber"], value: roundNumber },
+    ...fields,
+  ];
+  const [first, ...rest] = allFields;
+  const remainingArgs = rest.flatMap(field => [new FieldPath(...field.path), field.value]);
+  await updateDoc(
+    roomRef,
+    new FieldPath(...first.path),
+    first.value,
+    ...remainingArgs,
+  );
+}
 
-    const updatedGame = updater(room.gameData);
-    const cleanGameData = JSON.parse(JSON.stringify(updatedGame));
+export function submitGuardAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  targetId: string,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "guardProtectTarget"], value: targetId },
+  ]);
+}
 
-    transaction.update(roomRef, {
-      status: updatedGame.phase === 'ended' ? 'ended' : 'playing',
-      gameData: cleanGameData
-    });
-  });
+export function submitWolfVotes(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  votes: Record<string, string[]>,
+): Promise<void> {
+  return updateLiveNightFields(
+    roomId,
+    gameId,
+    roundNumber,
+    Object.entries(votes).map(([playerId, targets]) => ({
+      path: ["liveNightActions", "wolfVotes", playerId],
+      value: targets,
+    })),
+  );
+}
+
+export function submitWolfAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  targetIds: string[],
+): Promise<void> {
+  const safeTargets = targetIds.length > 0 ? targetIds : ["none"];
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "wolfTarget"], value: safeTargets[0] },
+    { path: ["liveNightActions", "wolfTargets"], value: safeTargets },
+  ]);
+}
+
+export function submitSeerAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  seerCheck: NonNullable<LiveNightActions["seerCheck"]>,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "seerCheck"], value: seerCheck },
+  ]);
+}
+
+export function submitWitchAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  action: {
+    saved: boolean;
+    savedTarget?: string;
+    poisonTarget?: string;
+    witchItems: Game["witchItems"];
+  },
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "witchSaved"], value: action.saved },
+    {
+      path: ["liveNightActions", "witchSavedTarget"],
+      value: action.savedTarget ?? deleteField(),
+    },
+    {
+      path: ["liveNightActions", "witchPoisonTarget"],
+      value: action.poisonTarget ?? deleteField(),
+    },
+    { path: ["liveNightActions", "witchItems"], value: action.witchItems },
+  ]);
 }

@@ -114,7 +114,7 @@ export default function SetupPage() {
   // Chủ phòng là Quản trò nên không nằm trong danh sách người chơi
   const roomPlayers = getPlayerMembers(fromRoom?.members);
 
-  const { setGame } = useGame();
+  const { setGame, applyRemoteGame } = useGame();
   const { user } = useAuth();
 
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
@@ -250,15 +250,18 @@ export default function SetupPage() {
       roomId: fromRoom?.id
     };
 
-    setGame(newGame);
-
     if (fromRoom?.id) {
       try {
         await syncRoomGame(fromRoom.id, newGame);
+        applyRemoteGame(newGame);
       } catch (err: unknown) {
         console.error("Không thể đồng bộ game lên phòng:", err);
         alert("Lỗi đồng bộ phòng online: " + ((err as Error).message || String(err)));
+        // Vẫn giữ game local; GameContext sẽ thử đồng bộ lại khi có thể.
+        setGame(newGame);
       }
+    } else {
+      setGame(newGame);
     }
 
     navigate('/play');

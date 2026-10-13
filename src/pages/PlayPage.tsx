@@ -21,7 +21,7 @@ import { ROLE_DETAILS } from '../components/PlayerLiveView';
 
 export default function PlayPage() {
   const navigate = useNavigate();
-  const { game, updateGame, undo, canUndo, setGame } = useGame();
+  const { game, updateGame, applyRemoteGame, undo, canUndo, setGame } = useGame();
   const [showRoles, setShowRoles] = useState(true);
   const [showRitual, setShowRitual] = useState(false);
 
@@ -46,7 +46,7 @@ export default function PlayPage() {
       const merged = mergeRemoteNightActions(local, room.gameData);
       if (merged) {
         gameRef.current = merged;
-        updateGame(() => merged);
+        applyRemoteGame(merged);
       }
     });
     return () => unsubscribe();

@@ -41,7 +41,7 @@ export function getNightStep(currentRound: Round | undefined, players: Player[])
  * Trả về ván mới nếu có thay đổi, hoặc null nếu không có gì cần gộp.
  */
 export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game | null {
-  if (!remote || local.phase !== 'night' || remote.phase !== 'night') return null;
+  if (!remote || remote.id !== local.id || local.phase !== 'night' || remote.phase !== 'night') return null;
   const lr = local.rounds[local.rounds.length - 1];
   const rr = remote.rounds[remote.rounds.length - 1];
   if (!lr || !rr || lr.number !== rr.number) return null;

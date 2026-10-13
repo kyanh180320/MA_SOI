@@ -23,7 +23,7 @@ export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { game, setGame } = useGame();
+  const { game, setGame, applyRemoteGame } = useGame();
 
   const [room, setRoom] = useState<GameRoom | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,7 +215,7 @@ export default function RoomPage() {
       };
 
       await syncRoomGame(room.id, newGame);
-      setGame(newGame);
+      applyRemoteGame(newGame);
       allowNavigationWithoutClosingRef.current = true;
       // Hiển thị ngay hiệu ứng chia bài cho Quản trò xem trước khi vào bàn điều khiển
       setShowCeremonyBeforePlay(true);

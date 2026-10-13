@@ -38,6 +38,26 @@ export interface Game {
   roomId?: string;
 }
 
+/**
+ * Các thao tác ban đêm đang chờ Quản trò xử lý.
+ *
+ * Tách khỏi gameData để mỗi lần người chơi bấm trên điện thoại chỉ phải
+ * ghi một payload rất nhỏ, thay vì transaction toàn bộ ván chơi.
+ */
+export interface LiveNightActions {
+  gameId: string;
+  roundNumber: number;
+  guardProtectTarget?: string;
+  wolfTarget?: string;
+  wolfTargets?: string[];
+  wolfVotes?: Record<string, string[]>;
+  seerCheck?: { target: string; isWolf: boolean };
+  witchSaved?: boolean;
+  witchSavedTarget?: string;
+  witchPoisonTarget?: string;
+  witchItems?: Game['witchItems'];
+}
+
 export interface AppUser {
   uid: string;
   displayName: string;
@@ -73,4 +93,7 @@ export interface GameRoom {
   createdAt: number;
   gameId?: string;
   gameData?: Game;
+  liveNightActions?: LiveNightActions;
+  /** Trạng thái cục bộ từ Firestore metadata, không được ghi lên server. */
+  syncState?: "synced" | "syncing" | "offline";
 }

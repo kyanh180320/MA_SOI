@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { GameRoom, AppUser, Role, Player } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
-import { updateRoomGame } from '../services/roomService';
+import {
+  submitGuardAction,
+  submitSeerAction,
+  submitWitchAction,
+  submitWolfAction,
+  submitWolfVotes,
+} from '../services/roomService';
 import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
@@ -110,6 +116,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const [witchSaveActive, setWitchSaveActive] = useState(false);
   const [selectedWitchPoison, setSelectedWitchPoison] = useState<string | null>(null);
+  const wolfVoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (wolfVoteTimerRef.current) clearTimeout(wolfVoteTimerRef.current);
+  }, []);
 
   // Khai báo hook trước nhánh loading để thứ tự hook luôn ổn định khi gameData được đồng bộ.
   const ritualKey = `werewolf_ritual_seen_${game?.id || 'pending'}_${user?.uid || 'guest'}`;
@@ -206,7 +217,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const consensusPlayer = consensusTargetId ? game.players.find(p => p.id === consensusTargetId) : null;
 
   // Xử lý khi Sói bấm chọn mục tiêu
-  const handleSelectWolfTarget = async (targetId: string) => {
+  const handleSelectWolfTarget = (targetId: string) => {
     setWolfWarningMsg(null);
 
     const targetPlayer = game.players.find(p => p.id === targetId);
@@ -234,27 +245,19 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
     // Nếu có từ 2 sói thường trở lên, đồng bộ ngay vote của sói này lên Firestore
     if (myPlayer && aliveWolves.length > 1) {
-      try {
-        await updateRoomGame(room.id, (g) => {
-          const rounds = [...g.rounds];
-          const last = rounds.length - 1;
-          const votes = { ...(rounds[last].wolfVotes || {}) };
-          votes[myPlayer.id] = [targetId];
+      const votes: Record<string, string[]> = { [myPlayer.id]: [targetId] };
+      aliveWolves.forEach(w => {
+        const isBot = w.id.startsWith('bot_') || room.members?.find(m => m.uid === w.id)?.isBot;
+        if (isBot) votes[w.id] = [targetId];
+      });
 
-          // Nếu có bot trong bầy sói, bot tự động theo vote của người chơi để ván không bị kẹt
-          aliveWolves.forEach(w => {
-            const isBot = w.id.startsWith('bot_') || room.members?.find(m => m.uid === w.id)?.isBot;
-            if (isBot) {
-              votes[w.id] = [targetId];
-            }
-          });
-
-          rounds[last] = { ...rounds[last], wolfVotes: votes };
-          return { ...g, rounds };
+      // Debounce thao tác chọn nhanh: UI đổi ngay, chỉ gửi lựa chọn cuối sau 180ms.
+      if (wolfVoteTimerRef.current) clearTimeout(wolfVoteTimerRef.current);
+      wolfVoteTimerRef.current = setTimeout(() => {
+        submitWolfVotes(room.id, game.id, roundNumber, votes).catch(e => {
+          console.error("Lỗi cập nhật vote bầy sói:", e);
         });
-      } catch (e) {
-        console.error("Lỗi cập nhật vote bầy sói:", e);
-      }
+      }, 180);
     }
   };
 
@@ -275,21 +278,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
         }
       }
 
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        // Sói không thể cắn đồng đội phe Sói
-        const validTargets = finalTargets.filter(id => {
-          const p = g.players.find(player => player.id === id);
-          return p && !isWolfTeam(p.role);
-        });
-        rounds[last] = {
-          ...rounds[last],
-          wolfTarget: validTargets[0] || 'none',
-          wolfTargets: validTargets.length > 0 ? validTargets : ['none']
-        };
-        return { ...g, rounds };
+      const validTargets = finalTargets.filter(id => {
+        const p = game.players.find(player => player.id === id);
+        return p && !isWolfTeam(p.role);
       });
+      await submitWolfAction(room.id, game.id, roundNumber, validTargets);
       setSelectedWolfTargets([]);
     } catch (e) {
       console.error("Lỗi xác nhận cắn người:", e);
@@ -303,16 +296,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const handleSkipWolfBite = async () => {
     setIsSubmitting(true);
     try {
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        rounds[last] = {
-          ...rounds[last],
-          wolfTarget: 'none',
-          wolfTargets: ['none']
-        };
-        return { ...g, rounds };
-      });
+      await submitWolfAction(room.id, game.id, roundNumber, []);
       setSelectedWolfTargets([]);
     } catch (e) {
       console.error("Lỗi bỏ qua lượt sói:", e);
@@ -331,15 +315,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const handleConfirmGuardProtect = async (targetId: string | null) => {
     setIsSubmitting(true);
     try {
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        rounds[last] = {
-          ...rounds[last],
-          guardProtectTarget: targetId || 'none'
-        };
-        return { ...g, rounds };
-      });
+      await submitGuardAction(room.id, game.id, roundNumber, targetId || 'none');
       setSelectedGuardTarget(null);
     } catch (e) {
       console.error("Lỗi bảo vệ:", e);
@@ -364,17 +340,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     if (!seerResultModal) return;
     setIsSubmitting(true);
     try {
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        rounds[last] = {
-          ...rounds[last],
-          seerCheck: {
-            target: seerResultModal.target.id,
-            isWolf: seerResultModal.isWolf
-          }
-        };
-        return { ...g, rounds };
+      await submitSeerAction(room.id, game.id, roundNumber, {
+        target: seerResultModal.target.id,
+        isWolf: seerResultModal.isWolf,
       });
       setSeerResultModal(null);
       setSelectedSeerTarget(null);
@@ -396,32 +364,21 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const handleConfirmWitchAction = async () => {
     setIsSubmitting(true);
     try {
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        const newItems = { ...g.witchItems };
+      const newItems = { ...game.witchItems };
+      if (witchSaveActive) newItems.saveLeft = Math.max(0, newItems.saveLeft - 1);
 
-        if (witchSaveActive) {
-          newItems.saveLeft = Math.max(0, newItems.saveLeft - 1);
-        }
-        const isTargetWitch = selectedWitchPoison && (
-          selectedWitchPoison === myPlayer?.id || 
-          game.players.some(p => p.id === selectedWitchPoison && p.role === 'witch')
-        );
-        const validPoisonTarget = isTargetWitch ? null : selectedWitchPoison;
+      const isTargetWitch = selectedWitchPoison && (
+        selectedWitchPoison === myPlayer?.id ||
+        game.players.some(p => p.id === selectedWitchPoison && p.role === 'witch')
+      );
+      const validPoisonTarget = isTargetWitch ? null : selectedWitchPoison;
+      if (validPoisonTarget) newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
 
-        if (validPoisonTarget) {
-          newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
-        }
-
-        rounds[last] = {
-          ...rounds[last],
-          witchSaved: witchSaveActive,
-          witchSavedTarget: witchSaveActive && currentWolfVictims[0] ? currentWolfVictims[0] : undefined,
-          witchPoisonTarget: validPoisonTarget || undefined
-        };
-
-        return { ...g, rounds, witchItems: newItems };
+      await submitWitchAction(room.id, game.id, roundNumber, {
+        saved: witchSaveActive,
+        savedTarget: witchSaveActive ? currentWolfVictims[0] : undefined,
+        poisonTarget: validPoisonTarget || undefined,
+        witchItems: newItems,
       });
       setWitchSaveActive(false);
       setSelectedWitchPoison(null);
@@ -435,14 +392,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const handleSkipWitch = async () => {
     setIsSubmitting(true);
     try {
-      await updateRoomGame(room.id, (g) => {
-        const rounds = [...g.rounds];
-        const last = rounds.length - 1;
-        rounds[last] = {
-          ...rounds[last],
-          witchSaved: false
-        };
-        return { ...g, rounds };
+      await submitWitchAction(room.id, game.id, roundNumber, {
+        saved: false,
+        witchItems: game.witchItems,
       });
       setWitchSaveActive(false);
       setSelectedWitchPoison(null);
@@ -455,6 +407,30 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   return (
     <div className={styles.container}>
+      {(room.syncState === 'offline' || room.syncState === 'syncing' || isSubmitting) && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'sticky',
+            top: '8px',
+            zIndex: 30,
+            alignSelf: 'center',
+            padding: '7px 12px',
+            borderRadius: '999px',
+            border: '1px solid rgba(225, 188, 102, 0.45)',
+            background: 'rgba(17, 13, 10, 0.92)',
+            color: 'var(--gold-100)',
+            fontSize: '12px',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          {room.syncState === 'offline'
+            ? '📶 Mạng yếu — thao tác đã lưu trên máy, sẽ tự gửi lại'
+            : '↻ Đang đồng bộ thao tác…'}
+        </div>
+      )}
+
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH KHI QUẢN TRÒ BẮT ĐẦU VÁN */}
       {showRitual && myPlayer && roleInfo && (
         <CardSelectionRitual

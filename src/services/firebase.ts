@@ -1,6 +1,12 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBn6gF9Nbx8Dz_mHTeTt-pg6fvoj6PRvjo",
@@ -14,4 +20,20 @@ const firebaseConfig = {
 
 export const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
+
+// IndexedDB cache giúp listener hiện dữ liệu gần nhất ngay trên điện thoại và
+// xếp hàng đợi write khi mạng chập chờn. Multi-tab tránh lỗi khi người dùng
+// vô tình mở game ở nhiều tab.
+let firestore: Firestore;
+try {
+  firestore = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+} catch {
+  // HMR/khởi tạo lại module: dùng instance đã có.
+  firestore = getFirestore(app);
+}
+
+export const db: Firestore = firestore;
