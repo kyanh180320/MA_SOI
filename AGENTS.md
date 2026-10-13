@@ -2,6 +2,8 @@
 
 File này áp dụng cho toàn bộ repository. Mọi AI/coding agent phải đọc hết file này trước khi phân tích, sửa code, review, commit hoặc deploy.
 
+Bối cảnh sản phẩm: đây là game nội bộ cho một nhóm bạn tin cậy. Bảo mật chống người chơi cố ý xem dữ liệu/role không phải mục tiêu. Không đề xuất backend phức tạp, tách read model hoặc hệ thống phân quyền chỉ vì bảo mật. Chỉ giữ các biện pháp tối thiểu cần cho tính đúng, tránh xóa nhầm, mất dữ liệu, write rác và chi phí/lag không cần thiết.
+
 Mục tiêu cao nhất, theo thứ tự:
 
 1. Đúng logic và không làm mất dữ liệu.
@@ -56,11 +58,11 @@ Ngân sách là mục tiêu kỹ thuật, không phải lý do để hy sinh tí
 - Tránh fan-out listener: một màn hình không nên mở nhiều listener cho cùng một dữ liệu.
 - Danh sách phòng chỉ đọc metadata cần hiển thị. Khi quy mô tăng, dùng document directory/summary riêng, không tải `gameData` của mọi phòng.
 
-### Dữ liệu và bảo mật
+### Dữ liệu và an toàn vận hành
 
-- Không phát tán role bí mật hoặc thông tin người chơi không được phép xem. Tính năng mới phải thiết kế read model theo quyền người dùng.
-- Firestore Rules phải validate quyền host/player, field được sửa, room membership và giới hạn kích thước dữ liệu. Không chỉ tin validation phía client.
-- Không log token, email, role bí mật, payload cá nhân hoặc config nhạy cảm.
+- Chấp nhận việc `gameData` chứa role của cả phòng để giữ kiến trúc đơn giản và realtime nhanh. Không coi đây là lỗi cần sửa trong phạm vi nội bộ.
+- Firestore Rules chỉ cần đủ để tránh người ngoài vô tình ghi/xóa dữ liệu, payload quá lớn hoặc thao tác làm hỏng phòng. Không đánh đổi độ mượt để xây phân quyền chi tiết.
+- Không log token hoặc config nhạy cảm. Role game không được coi là dữ liệu bảo mật trong project này.
 - Tính số read/write và kích thước dữ liệu trước khi tạo listener/collection mới.
 
 ## 4. React và state management
@@ -80,7 +82,7 @@ Ngân sách là mục tiêu kỹ thuật, không phải lý do để hy sinh tí
 - Animation liên tục chỉ nên thay đổi `transform` và `opacity`. Tránh animate `width`, `height`, `top`, `left`, blur/filter lớn hoặc box-shadow phức tạp.
 - Tránh layout thrashing: không xen kẽ đọc layout và ghi style trong loop/frame.
 - Tự động giảm số phần tử/particle khi số người chơi tăng. Với 13–20 người, ưu tiên bố cục đại diện/nhóm thay vì render một hiệu ứng nặng cho từng người.
-- Tôn trọ `prefers-reduced-motion`; trải nghiệm không được phụ thuộc vào việc animation phải chạy xong.
+- Tôn trọng `prefers-reduced-motion`; trải nghiệm không được phụ thuộc vào việc animation phải chạy xong.
 - Nút bấm trên mobile phải có vùng chạm tối thiểu 44×44 px, có pressed/disabled/loading state rõ ràng.
 - Không chặn main thread bằng xử lý ảnh, shuffle lớn, JSON stringify lớn hoặc loop nặng ngay lúc user tap.
 - Ảnh phải có kích thước phù hợp, định dạng tối ưu, width/height hoặc aspect-ratio để tránh layout shift; lazy load nếu không ở màn hình đầu.
