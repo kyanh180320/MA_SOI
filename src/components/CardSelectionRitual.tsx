@@ -70,7 +70,7 @@ export const CardSelectionRitual: React.FC<CardSelectionRitualProps> = ({
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(80);
       }
-    }, 760);
+    }, 620);
   };
 
   // Đếm ngược tự động chuyển vào trận sau khi đã mở bài
@@ -248,6 +248,7 @@ export const CardSelectionRitual: React.FC<CardSelectionRitualProps> = ({
                 <>
                   <div className={styles.revealFlash} />
                   <div className={styles.revealShockwave} />
+                  <div className={styles.revealShockwaveSecondary} />
                   <div className={styles.revealParticles} aria-hidden="true">
                     {Array.from({ length: 12 }, (_, index) => (
                       <span
