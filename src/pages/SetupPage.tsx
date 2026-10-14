@@ -10,36 +10,6 @@ import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
 import styles from './SetupPage.module.css';
 
-// SVG Ruy băng "VÁN MỚI" chuẩn Gothic với đuôi én hai bên
-function SvgRibbon() {
-  return (
-    <svg viewBox="0 0 400 70" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.ribbonSvg}>
-      <defs>
-        <linearGradient id="ribbonBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#8d6837" />
-          <stop offset="45%" stopColor="#674b24" />
-          <stop offset="100%" stopColor="#3d2a13" />
-        </linearGradient>
-        <linearGradient id="ribbonTailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#614421" />
-          <stop offset="100%" stopColor="#2c1d0e" />
-        </linearGradient>
-      </defs>
-      {/* Đuôi én bên trái */}
-      <path d="M48 48 L10 56 L26 35 L10 14 L48 22 Z" fill="url(#ribbonTailGrad)" stroke="#c49e5d" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Đuôi én bên phải */}
-      <path d="M352 48 L390 56 L374 35 L390 14 L352 22 Z" fill="url(#ribbonTailGrad)" stroke="#c49e5d" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Nếp gấp 3D */}
-      <polygon points="48,22 48,48 60,35" fill="#1b1208" />
-      <polygon points="352,22 352,48 340,35" fill="#1b1208" />
-      {/* Thân ruy băng chính cuộn cong */}
-      <path d="M44 14 Q200 4 356 14 L350 54 Q200 64 50 54 Z" fill="url(#ribbonBodyGrad)" stroke="#eed79b" strokeWidth="2" strokeLinejoin="round" />
-      {/* Viền chỉ vàng hoàng gia */}
-      <path d="M50 18 Q200 9 350 18 M346 50 Q200 59 54 50" stroke="#f6e3a1" strokeWidth="1.2" strokeDasharray="6 3" opacity="0.75" />
-    </svg>
-  );
-}
-
 // Viên ngọc Ruby SVG hình thoi đính trên nút
 function SvgRubyGem({ className }: { className?: string }) {
   return (
@@ -304,7 +274,6 @@ export default function SetupPage() {
         <div className={styles.contentArea}>
           {/* 1. RUY BĂNG TIÊU ĐỀ: "VÁN MỚI" BẰNG SVG & CODE */}
           <div className={styles.ribbonWrapper}>
-            <SvgRibbon />
             <span className={styles.ribbonText}>VÁN MỚI</span>
           </div>
 
@@ -377,11 +346,6 @@ export default function SetupPage() {
           </div>
 
           <div className={styles.parchmentPanel}>
-            <SvgCornerFlourish className={`${styles.panelFlourishTL}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishTR}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishBL}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishBR}`} />
-
             <div className={styles.presetBar}>
               <span className={styles.presetInfoTitle}>
                 NGƯỜI CHƠI ({playerCount})
@@ -452,11 +416,6 @@ export default function SetupPage() {
           </div>
 
           <div className={styles.parchmentPanel}>
-            <SvgCornerFlourish className={`${styles.panelFlourishTL}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishTR}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishBL}`} />
-            <SvgCornerFlourish className={`${styles.panelFlourishBR}`} />
-
             <div className={styles.rolesTopBar}>
               <span className={styles.presetInfoTitle}>
                 TỔNG SỐ VAI: {totalRoles}/{playerCount}

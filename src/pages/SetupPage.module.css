@@ -1,11 +1,12 @@
 /* =========================================================================
-   GOTHIC FANTASY SETUP PAGE - PURE CSS & SVG (MATCHING set_up.png)
-   ZERO CROPPED SLICES, PURE CODE & TOKENS, 100% VIETNAMESE TYPOGRAPHY
+   GOTHIC FANTASY SETUP PAGE - ARTWORK + LIVE HTML (MATCHING set_up.png)
+   TEXT VÀ CONTROL LUÔN LÀ HTML; ARTWORK CHỈ LÀ SKIN KHÔNG CHỨA CHỮ
    TỐI ƯU HÓA HOÀN HẢO CHO 360PX, 375PX & 390PX
    ========================================================================= */
 
 .setupWrapper {
-  height: 100dvh;
+  height: 100vh;
+  height: -webkit-fill-available;
   width: 100%;
   max-width: 100vw;
   background: #060914;
@@ -21,19 +22,23 @@
 .setupFrame {
   position: relative;
   width: 100%;
-  max-width: 390px;
+  max-width: 470px;
   height: 100%;
-  max-height: 100dvh;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background: radial-gradient(circle at 50% 20%, #151c3a 0%, #0d1124 50%, #060914 100%);
+  background-color: #080b1d;
+  background-image: url('/assets/ui/setup-background.webp');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
   margin: 0 auto;
   overflow: hidden;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
 }
 
-@media (min-width: 391px) {
+@media (min-width: 471px) {
   .setupFrame {
     border-left: 1.5px solid rgba(201, 162, 74, 0.25);
     border-right: 1.5px solid rgba(201, 162, 74, 0.25);
@@ -46,10 +51,10 @@
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 10px 100px 10px;
+  padding: 28px 24px 122px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--gold-700) rgba(10, 15, 30, 0.6);
@@ -64,7 +69,7 @@
 }
 
 /* =========================================================================
-   1. RUY BĂNG "VÁN MỚI" (SVG BANNER + CHỮ PHỦ LÊN BẰNG CODE)
+   1. RUY BĂNG "VÁN MỚI" (ART TRỐNG + CHỮ HTML)
    ========================================================================= */
 .ribbonWrapper {
   position: relative;
@@ -72,23 +77,21 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 2px 0;
-}
-
-.ribbonSvg {
+  min-height: 76px;
+  margin: 0 0 2px;
   width: 100%;
-  max-width: 290px;
-  height: 48px;
+  max-width: 370px;
+  background: url('/assets/ui/ribbon-gold.webp') center / 100% 100% no-repeat;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.85));
 }
 
 .ribbonText {
   position: absolute;
-  top: 45%;
+  top: 43%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: var(--font-title);
-  font-size: 19px;
+  font-size: clamp(22px, 6.4vw, 30px);
   font-weight: 800;
   letter-spacing: 0.14em;
   color: #faecc9;
@@ -108,26 +111,29 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: -5px;
+  margin-bottom: -9px;
   position: relative;
   z-index: 5;
 }
 
 .tabPlate {
-  background: linear-gradient(180deg, #36323c 0%, #201e26 55%, #14131a 100%);
-  border: 1.5px solid #8c7349;
-  border-radius: 4px;
-  clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 12px) 100%, 12px 100%, 0% calc(100% - 8px), 0% 8px);
-  padding: 5px 22px;
-  box-shadow: 
-    0 4px 10px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    inset 0 0 0 1px #4e3d23;
+  min-width: 210px;
+  min-height: 52px;
+  padding: 0 28px;
+  border: 12px solid transparent;
+  border-image-source: url('/assets/ui/button-stone.webp');
+  border-image-slice: 30% 13% fill;
+  border-image-width: 12px 18px;
+  border-image-repeat: stretch;
+  background-color: #20232b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tabPlateTitle {
   font-family: var(--font-title);
-  font-size: 12.5px;
+  font-size: clamp(14px, 4vw, 17px);
   font-weight: 800;
   color: var(--gold-100);
   letter-spacing: 0.12em;
@@ -144,8 +150,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 1px;
+  gap: 14px;
+  margin-top: 5px;
 }
 
 /* NÚT STEPPER VUÔNG VÁT GÓC ĐA GIÁC THEO CONCEPT */
@@ -154,15 +160,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 52px;
-  background: linear-gradient(180deg, #524233 0%, #382c20 50%, #211911 100%);
-  border: 1.5px solid #8e734c;
-  clip-path: polygon(10px 0%, calc(100% - 10px) 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0% calc(100% - 10px), 0% 10px);
-  box-shadow: 
-    0 4px 0 #140e08,
-    0 6px 12px rgba(0, 0, 0, 0.7),
-    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  width: 70px;
+  height: 66px;
+  padding: 0;
+  background-color: #20232b;
+  border: 15px solid transparent;
+  border-image-source: url('/assets/ui/button-stone.webp');
+  border-image-slice: 30% 13% fill;
+  border-image-width: 15px;
+  border-image-repeat: stretch;
   cursor: pointer;
   outline: none;
   transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.08s ease;
@@ -172,12 +178,8 @@
 
 /* NÚT + CÓ LÕI ĐỒNG ĐỎ ẤM NỔI BẬT THEO CONCEPT */
 .stepperBtnPlus {
-  background: linear-gradient(180deg, #743422 0%, #4e1e12 50%, #301007 100%);
-  border-color: #a8583c;
-  box-shadow: 
-    0 4px 0 #1b0703,
-    0 6px 12px rgba(0, 0, 0, 0.7),
-    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  background-color: #68101f;
+  border-image-source: url('/assets/ui/button-ruby.webp');
 }
 
 .stepperBevelBtn:hover:not(:disabled) {
@@ -185,11 +187,8 @@
 }
 
 .stepperBevelBtn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 
-    0 1px 0 #1b1208,
-    0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(2px) scale(0.98);
+  filter: brightness(0.82);
 }
 
 .stepperBevelBtn:disabled {
@@ -200,7 +199,7 @@
 
 .stepperSign {
   font-family: var(--font-title);
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 800;
   color: #eed79b;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -210,27 +209,26 @@
 /* VIÊN NGỌC RUBY ĐÍNH BÊN HÔNG NÚT */
 .sideRubyLeft, .sideRubyRight {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   pointer-events: none;
   top: 50%;
   transform: translateY(-50%);
 }
-.sideRubyLeft { left: -6px; }
-.sideRubyRight { right: -6px; }
+.sideRubyLeft { left: -11px; }
+.sideRubyRight { right: -11px; }
 
 /* KHUNG SỐ GIẤY DA CỔ */
 .numberParchmentBox {
   position: relative;
-  width: 104px;
-  height: 58px;
-  background: radial-gradient(circle at 50% 40%, #edd8b4 0%, #d8bf95 65%, #bca175 100%);
-  border: 2px solid #5a4023;
-  border-radius: 6px;
-  box-shadow: 
-    inset 0 0 14px rgba(70, 45, 12, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 5px 12px rgba(0, 0, 0, 0.7);
+  width: 132px;
+  height: 78px;
+  background-color: #d8c29d;
+  border: 14px solid transparent;
+  border-image-source: url('/assets/ui/panel-parchment.webp');
+  border-image-slice: 22% 7% fill;
+  border-image-width: 14px;
+  border-image-repeat: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,7 +248,7 @@
 
 .numberDisplay {
   font-family: var(--font-title);
-  font-size: 38px;
+  font-size: 50px;
   font-weight: 800;
   color: #7b4f17;
   text-shadow: 
@@ -263,15 +261,15 @@
 .sliderBox {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 0 4px;
+  gap: 7px;
+  padding: 0 8px;
 }
 
 .gothicSlider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
+  height: 10px;
   border-radius: 4px;
   background: linear-gradient(180deg, #0a0e1c 0%, #151a2e 100%);
   border: 1.5px solid #5c4d32;
@@ -283,8 +281,8 @@
 .gothicSlider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 3px;
   background: radial-gradient(circle at 35% 35%, #ff526d 0%, #a81329 60%, #4f0511 100%);
   border: 1.5px solid #ecd7a8;
@@ -301,8 +299,8 @@
 }
 
 .gothicSlider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 3px;
   background: radial-gradient(circle at 35% 35%, #ff526d 0%, #a81329 60%, #4f0511 100%);
   border: 1.5px solid #ecd7a8;
@@ -314,7 +312,7 @@
 .sliderMetaLabels {
   display: flex;
   justify-content: space-between;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--gold-300);
   font-weight: 600;
 }
@@ -324,34 +322,20 @@
    ========================================================================= */
 .parchmentPanel {
   position: relative;
-  background: linear-gradient(180deg, #d8c29d 0%, #c4ab82 100%);
-  border: 2px solid #5a452a;
-  border-radius: 8px;
-  padding: 8px 8px;
-  box-shadow: 
-    inset 0 0 0 1.5px #d9bf98,
-    inset 0 0 0 3px #6f5434,
-    inset 0 0 18px rgba(80, 50, 15, 0.35),
-    0 5px 14px rgba(0, 0, 0, 0.7);
+  background-color: #d4bd94;
+  border: 15px solid transparent;
+  border-image-source: url('/assets/ui/panel-parchment.webp');
+  border-image-slice: 22% 7% fill;
+  border-image-width: 15px;
+  border-image-repeat: stretch;
+  padding: 4px;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.65));
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 10px;
   box-sizing: border-box;
   width: 100%;
 }
-
-/* HOA VĂN 4 GÓC PANEL */
-.panelFlourishTL, .panelFlourishTR, .panelFlourishBL, .panelFlourishBR {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  opacity: 0.45;
-  pointer-events: none;
-}
-.panelFlourishTL { top: 2px; left: 2px; }
-.panelFlourishTR { top: 2px; right: 2px; transform: scaleX(-1); }
-.panelFlourishBL { bottom: 2px; left: 2px; transform: scaleY(-1); }
-.panelFlourishBR { bottom: 2px; right: 2px; transform: scale(-1); }
 
 /* THANH CÔNG CỤ PRESET */
 .presetBar {
@@ -363,7 +347,7 @@
 }
 
 .presetInfoTitle {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #3b2a16;
   letter-spacing: 0.03em;
@@ -373,9 +357,10 @@
   background: linear-gradient(180deg, #38342d 0%, #221f1a 100%);
   border: 1px solid #735e40;
   color: #eed79b;
-  font-size: 10.5px;
+  min-height: 38px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 3px 7px;
+  padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -391,11 +376,11 @@
 
 /* DANH SÁCH HÀNG NGƯỜI CHƠI CUỘN ĐƯỢC */
 .playerScrollList {
-  max-height: 175px;
+  max-height: 286px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
   padding-right: 2px;
   scrollbar-width: thin;
   scrollbar-color: #634f34 transparent;
@@ -412,10 +397,12 @@
 .playerRowItem {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(50, 36, 20, 0.12);
-  border-radius: 5px;
-  padding: 3px 5px;
+  gap: 8px;
+  min-height: 54px;
+  background: rgba(50, 36, 20, 0.1);
+  border-bottom: 1px solid rgba(92, 62, 29, 0.26);
+  border-radius: 7px;
+  padding: 5px 7px;
   min-width: 0;
   box-sizing: border-box;
   width: 100%;
@@ -423,8 +410,8 @@
 
 /* AVATAR PLACEHOLDER TRÒN VIỀN ĐỒNG (KHÔNG CHỨA SỐ ĐỂ TRÁNH LẶP) */
 .avatarRing {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: 1.5px solid #635032;
   background: linear-gradient(135deg, #3d3120 0%, #1f180f 100%);
@@ -446,8 +433,8 @@
 }
 
 .avatarSilhouette {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   opacity: 0.8;
   color: #eed79b;
 }
@@ -455,10 +442,10 @@
 /* SỐ THỨ TỰ DUY NHẤT (01, 02... KHÔNG LẶP LẠI) */
 .playerIndexTag {
   font-family: var(--font-title);
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 700;
   color: #3b2812;
-  min-width: 20px;
+  min-width: 24px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -470,9 +457,10 @@
   background: #ece0c9;
   border: 1.5px solid #8e7753;
   border-radius: 4px;
-  padding: 5px 8px;
+  min-height: 44px;
+  padding: 8px 11px;
   font-family: var(--font-title);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #24180b; /* Chữ mực nâu đậm */
@@ -508,9 +496,9 @@
 
 /* HỘP TRẠNG THÁI "ĐÃ CHIA ĐỦ" DÙNG TOKEN */
 .rolesStatusBanner {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 4px 6px;
+  padding: 7px 8px;
   border-radius: 4px;
   text-align: center;
   letter-spacing: 0.02em;
@@ -532,7 +520,7 @@
 .rolesGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -541,10 +529,11 @@
   background: linear-gradient(180deg, #cfb790 0%, #bca177 100%);
   border: 1.5px solid #6b5335;
   border-radius: 6px;
-  padding: 5px 6px;
+  min-height: 92px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
   box-sizing: border-box;
   min-width: 0;
   box-shadow: 
@@ -562,8 +551,8 @@
 }
 
 .roleMedallionIcon {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: contain;
   flex-shrink: 0;
@@ -571,7 +560,7 @@
 
 .roleNameText {
   font-family: var(--font-title);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: #301f0c;
   line-height: 1.2;
@@ -583,19 +572,19 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 5px;
   width: 100%;
 }
 
 .roleMiniBtn {
-  width: 24px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   border-radius: 3px;
   border: 1px solid #6e5839;
   background: linear-gradient(180deg, #433523 0%, #2b2114 100%);
   color: #eed79b;
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 19px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -621,7 +610,7 @@
 
 .roleCountNum {
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
   color: #271a0b;
   min-width: 16px;
@@ -638,14 +627,12 @@
   left: 0;
   right: 0;
   width: 100%;
-  padding: 8px 10px calc(8px + var(--safe-bottom, 0px)) 10px;
-  background: linear-gradient(180deg, rgba(9, 13, 31, 0) 0%, rgba(9, 13, 31, 0.95) 25%, #05070e 100%);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  padding: 16px 24px calc(14px + var(--safe-bottom, 0px));
+  background: linear-gradient(180deg, rgba(7, 9, 20, 0) 0%, rgba(7, 9, 20, 0.94) 24%, #050711 58%);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   z-index: 30;
   box-sizing: border-box;
 }
@@ -655,22 +642,21 @@
   position: relative;
   flex: 1;
   min-width: 0;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #3d414a 0%, #252830 50%, #15181e 100%);
-  border: 1.5px solid #6c7385;
+  min-height: 64px;
+  padding: 0 8px;
+  background-color: #20232b;
+  border: 14px solid transparent;
+  border-image-source: url('/assets/ui/button-stone.webp');
+  border-image-slice: 30% 13% fill;
+  border-image-width: 14px 18px;
+  border-image-repeat: stretch;
   color: #eed79b;
   font-family: var(--font-title);
-  font-size: 13px;
+  font-size: clamp(12px, 3.4vw, 16px);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   cursor: pointer;
-  box-shadow: 
-    0 4px 0 #0d0f13,
-    0 8px 16px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(117, 124, 141, 0.4),
-    inset 0 2px 0 rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -686,11 +672,8 @@
 }
 
 .gothicStoneBtn:active {
-  transform: translateY(2px);
-  box-shadow: 
-    0 1px 0 #0d0f12,
-    0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(2px) scale(0.99);
+  filter: brightness(0.82);
 }
 
 /* NÚT CHIA BÀI & BẮT ĐẦU (RUBY RED BUTTON THEO RULE-UI, CÓ NGỌC SVG TRÊN CHÓP) */
@@ -698,13 +681,17 @@
   position: relative;
   flex: 1.4;
   min-width: 0;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #aa1930 0%, #7d1021 50%, #460611 100%);
-  border: 1.5px solid #d44d62;
+  min-height: 64px;
+  padding: 0 8px;
+  background-color: #68101f;
+  border: 14px solid transparent;
+  border-image-source: url('/assets/ui/button-ruby.webp');
+  border-image-slice: 30% 13% fill;
+  border-image-width: 14px 18px;
+  border-image-repeat: stretch;
   color: #faecc9;
   font-family: var(--font-title);
-  font-size: 13px;
+  font-size: clamp(11.5px, 3.3vw, 16px);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-shadow: 
@@ -712,11 +699,6 @@
     0 2px 4px rgba(0, 0, 0, 0.95),
     0 0 12px rgba(239, 68, 68, 0.5);
   cursor: pointer;
-  box-shadow: 
-    0 4px 0 #200206,
-    0 8px 18px rgba(170, 25, 48, 0.5),
-    inset 0 0 0 1.5px rgba(232, 199, 102, 0.5),
-    inset 0 2px 0 rgba(255, 255, 255, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -732,28 +714,40 @@
 }
 
 .gothicRubyBtn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 
-    0 1px 0 #2a0309,
-    0 3px 6px rgba(0, 0, 0, 0.6),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(2px) scale(0.99);
+  filter: brightness(0.82);
 }
 
 .gothicRubyBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   filter: grayscale(0.7);
-  box-shadow: 0 3px 0 #1b1208;
 }
 
 /* VIÊN NGỌC RUBY ĐÍNH TRÊN ĐỈNH NÚT DEAL ROLES */
 .rubyBroochTop {
   position: absolute;
-  top: -10px;
+  top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 18px;
+  width: 24px;
+  height: 22px;
   pointer-events: none;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+@media (max-width: 380px) {
+  .contentArea {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .bottomStickyBar {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .roleCardCell {
+    padding: 7px 6px;
+  }
 }
