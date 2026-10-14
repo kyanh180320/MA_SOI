@@ -152,7 +152,6 @@
   min-height: 320px;
 }
 
-.gridRitual,
 .deckRitual {
   width: 100%;
   display: flex;
@@ -160,77 +159,14 @@
   align-items: center;
 }
 
-.cardsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  justify-items: center;
-  align-items: center;
-  width: 100%;
-  max-width: 360px;
-  perspective: 1000px;
-  transition: all 0.5s ease;
-}
-
-.compactGrid {
-  grid-template-columns: repeat(4, 1fr);
-  max-width: 370px;
-  gap: 10px 8px;
-}
-
-.compactGrid .cardSlot {
-  width: clamp(68px, 20vw, 82px);
-}
-
-.compactDeckBadge,
-.deckCountBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  color: var(--gold-100);
-  background: linear-gradient(180deg, rgba(91, 62, 27, 0.62), rgba(35, 25, 18, 0.76));
-  border: 1px solid rgba(232, 199, 102, 0.58);
-  box-shadow: inset 0 0 14px rgba(232, 199, 102, 0.08), 0 6px 18px rgba(0, 0, 0, 0.35);
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.compactDeckBadge {
-  padding: 6px 13px;
-  margin-bottom: 12px;
-}
-
-/* Nhóm 13–20 người: biểu diễn cả bộ bài bằng một quạt 7 lá dễ chọn. */
+/* Quạt 7 lá cố định, độc lập với số người trong phòng. */
 .deckRitual {
   min-height: 320px;
   justify-content: flex-start;
 }
 
-.deckCountBadge {
-  padding: 5px 14px 5px 7px;
-}
-
-.deckCountNumber {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #241407;
-  background: radial-gradient(circle at 35% 30%, #fff3bc, #d5aa50 58%, #81591d);
-  border: 1px solid #ffe9a6;
-  box-shadow: 0 0 12px rgba(232, 199, 102, 0.55);
-  font-family: var(--font-title);
-  font-size: 14px;
-}
-
 .deckInstruction {
-  margin: 7px 0 0;
+  margin: 0;
   color: var(--text-dim);
   font-size: 11px;
   font-style: italic;
@@ -303,22 +239,7 @@
     inset 0 0 0 5px rgba(246, 227, 161, 0.7);
 }
 
-@media (min-width: 420px) {
-  .cardsGrid {
-    max-width: 400px;
-    gap: 14px;
-  }
-}
-
 @media (max-width: 359px) {
-  .compactGrid {
-    gap: 8px 5px;
-  }
-
-  .compactGrid .cardSlot {
-    width: 65px;
-  }
-
   .cardSlot.fanCardSlot,
   .deckStack {
     width: 76px;
@@ -341,27 +262,6 @@
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease, filter 0.3s ease;
   user-select: none;
   touch-action: manipulation;
-}
-
-/* Hiệu ứng lần lượt xuất hiện từng lá bài từ từ */
-.cardSlotEntrance {
-  animation: cardDealDrop 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
-}
-
-@keyframes cardDealDrop {
-  0% {
-    opacity: 0;
-    transform: translateY(-50px) scale(0.6) rotate(-8deg);
-    filter: drop-shadow(0 0 0 rgba(232, 199, 102, 0));
-  }
-  60% {
-    transform: translateY(6px) scale(1.05) rotate(2deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
-    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.8));
-  }
 }
 
 .cardInner {
@@ -795,7 +695,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cardSlotEntrance,
   .fanCardSlot,
   .cardConverging .spotlightCardMotion,
   .spotlightCardFlip.isRevealed .spotlightInner,

@@ -3,8 +3,9 @@ import type { Role } from '../game/types';
 import { CARD_BACK_IMAGE, ROLE_CARD_IMAGES } from '../constants/assets';
 import styles from './CardSelectionRitual.module.css';
 
+const CARD_CHOICES = [1, 2, 3, 4, 5, 6, 7] as const;
+
 export interface CardSelectionRitualProps {
-  playerCount: number;
   myRole: Role;
   roleInfo: {
     name: string;
@@ -18,19 +19,12 @@ export interface CardSelectionRitualProps {
 }
 
 export const CardSelectionRitual: React.FC<CardSelectionRitualProps> = ({
-  playerCount,
   myRole,
   roleInfo,
   onComplete,
 }) => {
-  // Số lượng lá bài = số người chơi (không tính quản trò, tối thiểu 4)
-  const totalCards = Math.max(4, playerCount);
-  const isFanMode = totalCards >= 13;
-  const isCompactGrid = totalCards >= 9 && totalCards <= 12;
-  const visibleCardCount = isFanMode ? 7 : isCompactGrid ? 8 : totalCards;
-  const cardList = Array.from({ length: visibleCardCount });
-  const hiddenCardCount = totalCards - visibleCardCount;
-
+  // Các lá chỉ là lựa chọn thị giác: vai đã được chia trước khi nghi thức xuất hiện.
+  // Giữ một quạt bài cố định để trải nghiệm không thay đổi theo số người trong phòng.
   // Giai đoạn: 'dealing' (chia bài) -> 'chosen' (đã chọn 1 lá) -> 'revealed' (lật mở vai trò) -> 'closing' (đóng màn hình)
   const [stage, setStage] = useState<'dealing' | 'chosen' | 'revealed' | 'closing'>('dealing');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -118,7 +112,7 @@ export const CardSelectionRitual: React.FC<CardSelectionRitualProps> = ({
             ? 'Hãy ghi nhớ kỹ thân phận bí mật và nhiệm vụ của bạn!'
             : stage === 'chosen'
               ? 'Lá bài đang đáp lại lựa chọn của bạn...'
-              : `Quản trò đang chia ${totalCards} lá bài cho ${totalCards} người chơi.`}
+              : 'Những lá bài định mệnh đang chờ bạn lựa chọn.'}
         </p>
         {stage === 'dealing' && (
           <div className={styles.ritualHint}>
@@ -130,106 +124,56 @@ export const CardSelectionRitual: React.FC<CardSelectionRitualProps> = ({
       {/* VÙNG CHỨA CÁC LÁ BÀI */}
       <div className={styles.cardsContainer}>
         {(stage === 'dealing' || stage === 'chosen') && (
-          isFanMode ? (
-            /* Nhóm đông: chỉ hiện 7 lá xòe trên chồng bài, tổng số vẫn được thể hiện bằng badge. */
-            <div className={`${styles.deckRitual} ${stage === 'chosen' ? styles.isChoosing : ''}`}>
-              <div className={styles.deckCountBadge}>
-                <span className={styles.deckCountNumber}>{totalCards}</span>
-                <span>LÁ BÀI ĐỊNH MỆNH</span>
+          <div className={`${styles.deckRitual} ${stage === 'chosen' ? styles.isChoosing : ''}`}>
+            <p className={styles.deckInstruction}>Chọn một lá trong quạt bài để rút số phận</p>
+
+            <div className={styles.cardsFan}>
+              <div className={styles.deckStack} aria-hidden="true">
+                <img src={CARD_BACK_IMAGE} alt="" />
+                <img src={CARD_BACK_IMAGE} alt="" />
+                <img src={CARD_BACK_IMAGE} alt="" />
               </div>
-              <p className={styles.deckInstruction}>Chọn một lá trong quạt bài để rút số phận</p>
 
-              <div className={styles.cardsFan}>
-                <div className={styles.deckStack} aria-hidden="true">
-                  <img src={CARD_BACK_IMAGE} alt="" />
-                  <img src={CARD_BACK_IMAGE} alt="" />
-                  <img src={CARD_BACK_IMAGE} alt="" />
-                </div>
+              {CARD_CHOICES.map((cardNumber, idx) => {
+                const middleIndex = Math.floor(CARD_CHOICES.length / 2);
+                const distanceFromCenter = idx - middleIndex;
+                const isSelected = selectedIndex === idx;
+                const isDismissed = selectedIndex !== null && !isSelected;
 
-                {cardList.map((_, idx) => {
-                  const middleIndex = Math.floor(visibleCardCount / 2);
-                  const distanceFromCenter = idx - middleIndex;
-                  const isSelected = selectedIndex === idx;
-                  const isDismissed = selectedIndex !== null && !isSelected;
-
-                  return (
-                    <button
-                      type="button"
-                      key={idx}
-                      className={`
-                        ${styles.cardSlot}
-                        ${styles.fanCardSlot}
-                        ${isSelected ? styles.selectedOrigin : ''}
-                        ${isDismissed ? styles.cardDismiss : ''}
-                      `}
-                      style={{
-                        '--fan-x': `${distanceFromCenter * 34}px`,
-                        '--fan-y': `${Math.abs(distanceFromCenter) * 10}px`,
-                        '--fan-angle': `${distanceFromCenter * 6}deg`,
-                        '--fan-delay': `${idx * 65}ms`,
-                        zIndex: 20 - Math.abs(distanceFromCenter),
-                        transitionDelay: isDismissed ? `${Math.abs(distanceFromCenter) * 25}ms` : '0ms',
-                      } as React.CSSProperties}
-                      onClick={(event) => handleSelectCard(idx, event.currentTarget)}
-                      aria-label={`Chọn lá bài định mệnh số ${idx + 1}`}
-                    >
-                      <div className={styles.cardInner}>
-                        <img
-                          src={CARD_BACK_IMAGE}
-                          alt="Mặt sau lá bài Ma Sói"
-                          className={styles.cardBackImg}
-                          loading="eager"
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                return (
+                  <button
+                    type="button"
+                    key={cardNumber}
+                    className={`
+                      ${styles.cardSlot}
+                      ${styles.fanCardSlot}
+                      ${isSelected ? styles.selectedOrigin : ''}
+                      ${isDismissed ? styles.cardDismiss : ''}
+                    `}
+                    style={{
+                      '--fan-x': `${distanceFromCenter * 34}px`,
+                      '--fan-y': `${Math.abs(distanceFromCenter) * 10}px`,
+                      '--fan-angle': `${distanceFromCenter * 6}deg`,
+                      '--fan-delay': `${idx * 65}ms`,
+                      zIndex: 20 - Math.abs(distanceFromCenter),
+                      transitionDelay: isDismissed ? `${Math.abs(distanceFromCenter) * 25}ms` : '0ms',
+                    } as React.CSSProperties}
+                    onClick={(event) => handleSelectCard(idx, event.currentTarget)}
+                    aria-label={`Chọn lá bài định mệnh số ${cardNumber}`}
+                  >
+                    <div className={styles.cardInner}>
+                      <img
+                        src={CARD_BACK_IMAGE}
+                        alt="Mặt sau lá bài Ma Sói"
+                        className={styles.cardBackImg}
+                        loading="eager"
+                      />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            /* Nhóm nhỏ/vừa: grid đầy đủ hoặc grid gọn tối đa 8 lá. */
-            <div className={styles.gridRitual}>
-              {hiddenCardCount > 0 && (
-                <div className={styles.compactDeckBadge}>
-                  {totalCards} lá trong bộ · chọn 1 trong 8 lá đang hiện
-                </div>
-              )}
-              <div className={`${styles.cardsGrid} ${isCompactGrid ? styles.compactGrid : ''} ${stage === 'chosen' ? styles.isChoosing : ''}`}>
-                {cardList.map((_, idx) => {
-                  const isSelected = selectedIndex === idx;
-                  const isDismissed = selectedIndex !== null && !isSelected;
-
-                  return (
-                    <button
-                      type="button"
-                      key={idx}
-                      className={`
-                        ${styles.cardSlot}
-                        ${styles.cardSlotEntrance}
-                        ${isSelected ? styles.selectedOrigin : ''}
-                        ${isDismissed ? styles.cardDismiss : ''}
-                      `}
-                      style={{
-                        animationDelay: `${Math.min(idx * 0.1, 0.55)}s`,
-                        transitionDelay: isDismissed ? `${(idx % 4) * 0.035}s` : '0s'
-                      }}
-                      onClick={(event) => handleSelectCard(idx, event.currentTarget)}
-                      aria-label={`Chọn lá bài số ${idx + 1}`}
-                    >
-                      <div className={styles.cardInner}>
-                        <img
-                          src={CARD_BACK_IMAGE}
-                          alt="Mặt sau lá bài Ma Sói"
-                          className={styles.cardBackImg}
-                          loading="eager"
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )
+          </div>
         )}
 
         {/* Cùng một lá bài bay từ vị trí click về tâm rồi mới lật, không thay layout giữa chừng. */}

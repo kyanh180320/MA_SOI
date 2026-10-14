@@ -277,7 +277,6 @@ export default function RoomPage() {
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH CHO QUẢN TRÒ XEM TRƯỚC KHI VÀO /play */}
       {showCeremonyBeforePlay && game && (
         <CardSelectionRitual
-          playerCount={playerMembers.length}
           myRole={game.players[0]?.role || 'wolf'}
           roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
           onComplete={() => {
@@ -290,7 +289,6 @@ export default function RoomPage() {
       {/* XEM THỬ HIỆU ỨNG RÚT BÀI BẤT KỲ LÚC NÀO */}
       {testRitualOpen && (
         <CardSelectionRitual
-          playerCount={Math.max(4, playerMembers.length)}
           myRole="wolf"
           roleInfo={ROLE_DETAILS['wolf']}
           onComplete={() => setTestRitualOpen(false)}

@@ -386,7 +386,6 @@ export default function PlayPage() {
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH */}
       {showRitual && game && (
         <CardSelectionRitual
-          playerCount={game.players.length}
           myRole={game.players[0]?.role || 'wolf'}
           roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
           onComplete={() => setShowRitual(false)}

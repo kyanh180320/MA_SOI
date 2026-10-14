@@ -434,7 +434,6 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH KHI QUẢN TRÒ BẮT ĐẦU VÁN */}
       {showRitual && myPlayer && roleInfo && (
         <CardSelectionRitual
-          playerCount={game.players.length}
           myRole={myPlayer.role}
           roleInfo={roleInfo}
           onComplete={handleRitualComplete}
