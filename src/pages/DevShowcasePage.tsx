@@ -45,7 +45,7 @@ export const DevShowcasePage: React.FC = () => {
           color: 'var(--text-dim)',
           fontFamily: 'var(--font-body)'
         }}>
-          Bộ Design Tokens & Components Tactile 3D (Pure CSS)
+          Bộ Design Tokens & Components Tactile 3D (Artwork + CSS)
         </p>
       </header>
 

@@ -4,38 +4,41 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 52px;
-  min-width: 52px;
-  padding: 0 var(--s-5);
-  border: 0;
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
+  min-height: 56px;
+  min-width: 56px;
+  padding: 0 var(--s-4);
+  border: 14px solid transparent;
+  border-image-slice: 30% 13% fill;
+  border-image-width: 14px 20px;
+  border-image-outset: 2px;
+  border-image-repeat: stretch;
+  border-radius: 0;
+  background-color: var(--bg-1);
+  font-family: var(--font-title);
   font-weight: 700;
   font-size: 16px;
   line-height: 1;
-  letter-spacing: 0.02em;
-  color: #2A1A00;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.045em;
+  color: var(--gold-100);
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.9);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  transition: transform 0.09s ease, box-shadow 0.09s ease, filter 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.09s ease, filter 0.15s ease, opacity 0.15s ease;
   text-decoration: none;
+  isolation: isolate;
 }
 
-/* Lớp bóng loáng nửa trên (Gloss) */
+/* Ánh kim nhẹ; phần khung và chất liệu chính đến từ skin WebP 9-slice. */
 .btn::before {
   content: "";
   position: absolute;
-  left: 3px;
-  right: 3px;
-  top: 3px;
-  height: 46%;
-  border-radius: calc(var(--radius-md) - 3px) calc(var(--radius-md) - 3px) 50% 50% / calc(var(--radius-md) - 3px) calc(var(--radius-md) - 3px) 14px 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+  inset: -8px -12px 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent);
   pointer-events: none;
+  z-index: -1;
 }
 
 .btn:focus-visible {
@@ -45,34 +48,21 @@
 
 /* 1. PRIMARY: Vàng trăng kim (Chỉ duy nhất 1 nút chính trên mỗi màn hình) */
 .primary {
-  background: linear-gradient(180deg, var(--gold-100) 0%, var(--gold-300) 45%, var(--gold-500) 100%);
-  color: #2A1A00;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
-  box-shadow:
-    0 4px 0 var(--gold-900),
-    var(--shadow-soft),
-    inset 0 2px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+  border-image-source: url('/assets/ui/button-gold.webp');
+  background-color: #5d3d20;
+  color: #fff1c8;
 }
 
 .primary:active {
-  transform: translateY(3px);
-  box-shadow:
-    0 1px 0 var(--gold-900),
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  transform: translateY(3px) scale(0.99);
+  filter: brightness(0.86);
 }
 
 /* 2. SECONDARY: Xanh navy tối viền vàng */
 .secondary {
-  color: var(--gold-300);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
-  box-shadow:
-    0 4px 0 var(--bg-0),
-    var(--shadow-soft),
-    inset 0 0 0 2px var(--gold-700),
-    inset 0 3px 0 rgba(255, 255, 255, 0.12);
+  border-image-source: url('/assets/ui/button-stone.webp');
+  background-color: #20232b;
+  color: var(--gold-100);
 }
 
 .secondary::before {
@@ -80,38 +70,28 @@
 }
 
 .secondary:active {
-  transform: translateY(3px);
-  box-shadow:
-    0 1px 0 var(--bg-0),
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 2px var(--gold-700);
+  transform: translateY(3px) scale(0.99);
+  filter: brightness(0.82);
 }
 
 /* 3. DANGER: Đỏ thẫm nguy hiểm (Sói, Loại, Xóa) */
 .danger {
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(180deg, var(--red-300), var(--red-500));
-  box-shadow:
-    0 4px 0 var(--red-800),
-    var(--shadow-soft),
-    inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+  border-image-source: url('/assets/ui/button-ruby.webp');
+  background-color: var(--red-800);
+  color: #fff0d0;
 }
 
 .danger:active {
-  transform: translateY(3px);
-  box-shadow:
-    0 1px 0 var(--red-800),
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(3px) scale(0.99);
+  filter: brightness(0.82);
 }
 
 /* 4. GHOST: Trong suốt */
 .ghost {
+  border: 0;
+  border-image-source: none;
   background: transparent;
   color: var(--text-dim);
-  box-shadow: none;
   text-shadow: none;
 }
 
@@ -132,18 +112,25 @@
 .icon {
   width: 52px;
   height: 52px;
+  min-width: 52px;
+  min-height: 52px;
   padding: 0;
+  border: 2px solid var(--gold-700);
+  border-image-source: none;
   border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #454b5a, #171a22 72%);
+  box-shadow:
+    0 4px 0 #090b10,
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .icon::before {
-  border-radius: 50%;
+  display: none;
 }
 
 /* VÔ HIỆU HÓA */
 .btn:disabled, .disabled {
-  filter: grayscale(0.9) brightness(0.6);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  filter: grayscale(0.9) brightness(0.55);
   transform: none !important;
   cursor: not-allowed;
   pointer-events: none;
@@ -153,8 +140,8 @@
 .pulse::after {
   content: "";
   position: absolute;
-  inset: -4px;
-  border-radius: inherit;
+  inset: -10px -14px;
+  clip-path: polygon(4% 0, 96% 0, 100% 22%, 100% 78%, 96% 100%, 4% 100%, 0 78%, 0 22%);
   box-shadow: 0 0 18px 4px rgba(232, 199, 102, 0.7);
   opacity: 0;
   animation: pulseAnimation 1.8s ease-in-out infinite;
