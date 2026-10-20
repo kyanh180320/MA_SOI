@@ -87,9 +87,11 @@ export interface LiveNightActions {
 }
 
 export interface AppUser {
+  /** Danh tính ổn định của người chơi, không đổi khi dùng trình duyệt khác. */
   uid: string;
   displayName: string;
   email: string;
+  usernameKey?: string;
   role?: "admin" | "user";
   avatar?: string;
   photoURL?: string;

@@ -74,7 +74,7 @@ export default function RoomPage() {
       if (isHost) {
         closeRoom(roomId).catch(() => {});
       } else {
-        leaveRoom(roomId).catch(() => {});
+        leaveRoom(roomId, user?.uid).catch(() => {});
       }
     };
 
@@ -84,7 +84,7 @@ export default function RoomPage() {
       if (isHost) {
         closeRoom(roomId).catch(() => {});
       } else {
-        leaveRoom(roomId).catch(() => {});
+        leaveRoom(roomId, user?.uid).catch(() => {});
       }
     };
 
@@ -95,7 +95,7 @@ export default function RoomPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isHost, roomId]);
+  }, [isHost, roomId, user?.uid]);
 
   if (loading) {
     return (
@@ -142,7 +142,7 @@ export default function RoomPage() {
 
     isLeavingRef.current = true;
     if (game?.roomId === roomId) setGame(null);
-    await leaveRoom(roomId);
+    await leaveRoom(roomId, user?.uid);
     navigate('/');
   };
 

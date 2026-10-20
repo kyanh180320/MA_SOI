@@ -5,6 +5,7 @@ import { subscribeRooms, createRoom, joinRoom, closeRoom, getPlayerMembers } fro
 import type { GameRoom } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
+import { prepareAvatarImage } from '../services/avatarImage';
 import styles from './HomePage.module.css';
 
 const PRESET_AVATARS = [
@@ -27,9 +28,11 @@ export default function HomePage() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAvatar, setEditAvatar] = useState('');
+  const [editAvatarBlob, setEditAvatarBlob] = useState<Blob | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadedAvatarPreviewRef = useRef<string | null>(null);
 
   // State cho Danh Sách Phòng Online & Tạo Phòng
   const [rooms, setRooms] = useState<GameRoom[]>([]);
@@ -76,55 +79,43 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [user]);
 
+  useEffect(() => () => {
+    if (uploadedAvatarPreviewRef.current) URL.revokeObjectURL(uploadedAvatarPreviewRef.current);
+  }, []);
+
+  const clearUploadedAvatarPreview = () => {
+    if (uploadedAvatarPreviewRef.current) {
+      URL.revokeObjectURL(uploadedAvatarPreviewRef.current);
+      uploadedAvatarPreviewRef.current = null;
+    }
+  };
+
   const openProfile = () => {
     if (!user) return;
     setEditName(user.displayName || '');
     setEditAvatar(user.avatar || user.photoURL || '');
+    setEditAvatarBlob(undefined);
+    clearUploadedAvatarPreview();
     setFeedback(null);
     setIsProfileOpen(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setFeedback({ type: 'error', message: 'Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.' });
-      return;
+    try {
+      const blob = await prepareAvatarImage(file);
+      clearUploadedAvatarPreview();
+      const previewUrl = URL.createObjectURL(blob);
+      uploadedAvatarPreviewRef.current = previewUrl;
+      setEditAvatar(previewUrl);
+      setEditAvatarBlob(blob);
+      setFeedback(null);
+    } catch (error) {
+      setFeedback({ type: 'error', message: (error as Error).message });
+    } finally {
+      e.target.value = '';
     }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 250;
-        let width = img.width;
-        let height = img.height;
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height = Math.round((height * MAX_SIZE) / width);
-            width = MAX_SIZE;
-          }
-        } else {
-          if (height > MAX_SIZE) {
-            width = Math.round((width * MAX_SIZE) / height);
-            height = MAX_SIZE;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setEditAvatar(dataUrl);
-          setFeedback(null);
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -137,7 +128,7 @@ export default function HomePage() {
     setIsSaving(true);
     setFeedback(null);
     try {
-      await updateProfileData(editName.trim(), editAvatar);
+      await updateProfileData(editName.trim(), editAvatar, editAvatarBlob);
       setFeedback({ type: 'success', message: 'Đã cập nhật hồ sơ thành công!' });
       setTimeout(() => {
         setIsProfileOpen(false);
@@ -222,62 +213,42 @@ export default function HomePage() {
               <span className={styles.userNameLabel}>{user.displayName}</span>
             </div>
 
-            <button 
+            <button
               className={styles.topLogoutBtn}
-              onClick={logoutUser}
-              title="Đăng xuất"
+              onClick={() => void logoutUser().then(() => navigate('/login'))}
+              title="Chuyển sang người chơi khác"
             >
-              Đăng xuất
+              Đổi người
             </button>
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* NÚT 1: PLAY OFFLINE (NÚT VÀNG 3D VỚI RUBY BROOCH TRÊN CÙNG) */}
-        {/* ======================================================== */}
-        <button
-          className={styles.btnHotspotPlayOffline}
-          onClick={() => navigate('/setup')}
-          aria-label="Play Offline (Tạo Ván Chơi)"
-          title="Chơi Offline (Tạo Ván Tại Chỗ)"
-        >
-          <div className={styles.goldBtnShine} />
-        </button>
+        <div className={styles.homeActions}>
+          <button
+            className={`${styles.homeActionButton} ${styles.primaryAction}`}
+            onClick={() => user ? setIsLobbyOpen(true) : navigate('/login')}
+          >
+            <span className={styles.actionTitle}>CHƠI NGAY</span>
+            <span className={styles.actionSubtitle}>
+              {user ? `${rooms.length} phòng đang mở` : 'Tạo hồ sơ trong vài giây'}
+            </span>
+          </button>
 
-        {/* ======================================================== */}
-        {/* NÚT 2: SIGN IN WITH GOOGLE HOẶC SẢNH ONLINE */}
-        {/* ======================================================== */}
-        <button
-          className={styles.btnHotspotSecondary}
-          onClick={() => {
-            if (user) {
-              setIsLobbyOpen(true);
-            } else {
-              navigate('/login');
-            }
-          }}
-          aria-label={user ? "Sảnh Phòng Online" : "Sign In With Google"}
-          title={user ? "Vào Sảnh Chờ Phòng Online" : "Đăng Nhập Bằng Google / Tài Khoản"}
-        >
-          {user && (
-            <div className={styles.onlineLobbyOverlay}>
-              <span className={styles.onlineLobbyTitle}>🏰 VÀO SẢNH ONLINE</span>
-              <span className={styles.onlineLobbySubtitle}>
-                {rooms.length} phòng đang chờ • Bấm để vào
-              </span>
-            </div>
-          )}
-        </button>
+          <button
+            className={`${styles.homeActionButton} ${styles.secondaryAction}`}
+            onClick={() => navigate('/setup')}
+          >
+            <span className={styles.actionTitle}>TẠO VÁN TẠI CHỖ</span>
+            <span className={styles.actionSubtitle}>Một máy • Quản trò điều khiển</span>
+          </button>
 
-        {/* ======================================================== */}
-        {/* NÚT 3: ADMIN (LINK ĐIỀU HƯỚNG DƯỚI ĐÁY TỪ ART GỐC) */}
-        {/* ======================================================== */}
-        <button
-          className={styles.btnHotspotAdmin}
-          onClick={() => setIsAdminOpen(true)}
-          aria-label="Admin and Menu"
-          title="Mở Bảng Điều Khiển Hệ Thống & Quản Trị"
-        />
+          <button
+            className={styles.utilityAction}
+            onClick={() => setIsAdminOpen(true)}
+          >
+            <span aria-hidden="true">✦</span> TÙY CHỌN <span aria-hidden="true">✦</span>
+          </button>
+        </div>
       </div>
 
       {/* ======================================================== */}
@@ -433,7 +404,7 @@ export default function HomePage() {
                 navigate('/login');
               }}
             >
-              🔐 ĐĂNG NHẬP GOOGLE / TÀI KHOẢN
+              👤 TẠO / KHÔI PHỤC HỒ SƠ NGƯỜI CHƠI
             </button>
           )}
         </div>
@@ -595,7 +566,11 @@ export default function HomePage() {
               {PRESET_AVATARS.map((p, idx) => (
                 <div
                   key={idx}
-                  onClick={() => setEditAvatar(p.url)}
+                  onClick={() => {
+                    clearUploadedAvatarPreview();
+                    setEditAvatarBlob(undefined);
+                    setEditAvatar(p.url);
+                  }}
                   style={{
                     cursor: 'pointer',
                     padding: '4px',

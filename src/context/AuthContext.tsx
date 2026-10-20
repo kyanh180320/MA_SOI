@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { auth } from "../services/firebase";
-import { getUserProfile, loginWithGoogle, loginWithEmail, registerWithEmail, logout, updateUserProfile } from "../services/authService";
+import {
+  getUserProfile,
+  loginWithUsername,
+  logout,
+  updateUserProfile,
+  uploadUserAvatar,
+  type UsernameMode,
+} from "../services/authService";
 import type { AppUser } from "../game/types";
 
 interface AuthContextType {
@@ -9,10 +16,13 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   role: "admin" | "user" | "guest";
   loading: boolean;
-  loginGoogle: () => Promise<void>;
-  loginEmail: (email: string, pass: string) => Promise<void>;
-  registerEmail: (email: string, pass: string) => Promise<void>;
-  updateProfileData: (displayName: string, avatarUrl: string) => Promise<void>;
+  loginUsername: (
+    displayName: string,
+    avatarUrl: string,
+    mode: UsernameMode,
+    avatarBlob?: Blob,
+  ) => Promise<void>;
+  updateProfileData: (displayName: string, avatarUrl: string, avatarBlob?: Blob) => Promise<void>;
   logoutUser: () => Promise<void>;
 }
 
@@ -31,12 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const profile = await getUserProfile(fbUser);
           setUser(profile);
         } catch {
-          setUser({
-            uid: fbUser.uid,
-            displayName: fbUser.displayName || "Quản trò",
-            email: fbUser.email || "",
-            role: "user"
-          });
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -47,40 +52,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const loginGoogle = async () => {
+  const loginUsername = async (
+    displayName: string,
+    avatarUrl: string,
+    mode: UsernameMode,
+    avatarBlob?: Blob,
+  ) => {
     setLoading(true);
     try {
-      const profile = await loginWithGoogle();
+      let profile = await loginWithUsername(displayName, avatarUrl, mode);
+      if (avatarBlob && mode === 'create') {
+        try {
+          const uploadedAvatarUrl = await uploadUserAvatar(avatarBlob);
+          profile = await updateUserProfile(profile.displayName, uploadedAvatarUrl);
+        } catch (error) {
+          // Không chặn người chơi vào game nếu Storage tạm lỗi; avatar preset đã
+          // được lưu trong transaction và có thể đổi lại sau.
+          console.warn('Không thể tải avatar tùy chọn, giữ avatar mặc định:', error);
+        }
+      }
       setUser(profile);
     } finally {
       setLoading(false);
     }
   };
 
-  const loginEmail = async (email: string, pass: string) => {
+  const updateProfileData = async (displayName: string, avatarUrl: string, avatarBlob?: Blob) => {
     setLoading(true);
     try {
-      const profile = await loginWithEmail(email, pass);
-      setUser(profile);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const registerEmail = async (email: string, pass: string) => {
-    setLoading(true);
-    try {
-      const profile = await registerWithEmail(email, pass);
-      setUser(profile);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateProfileData = async (displayName: string, avatarUrl: string) => {
-    setLoading(true);
-    try {
-      const updated = await updateUserProfile(displayName, avatarUrl);
+      const nextAvatarUrl = avatarBlob ? await uploadUserAvatar(avatarBlob) : avatarUrl;
+      const updated = await updateUserProfile(displayName, nextAvatarUrl);
       setUser(updated);
     } finally {
       setLoading(false);
@@ -107,9 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         firebaseUser,
         role,
         loading,
-        loginGoogle,
-        loginEmail,
-        registerEmail,
+        loginUsername,
         updateProfileData,
         logoutUser
       }}

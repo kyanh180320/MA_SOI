@@ -29,6 +29,7 @@ export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
 export async function createRoom(roomName: string, maxPlayers: number = 20, user?: AppUser | null): Promise<string> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error("Bạn cần đăng nhập để tạo phòng.");
+  const playerUid = user?.uid || currentUser.uid;
 
   // Tạo mã phòng 6 chữ số ngẫu nhiên
   const roomId = `${Math.floor(100000 + Math.random() * 900000)}`;
@@ -38,7 +39,7 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
   const hostDisplayName = user?.displayName || currentUser.displayName || "Quản trò";
 
   const hostMember: RoomMember = {
-    uid: currentUser.uid,
+    uid: playerUid,
     displayName: hostDisplayName,
     avatar: hostAvatar,
     isHost: true,
@@ -48,7 +49,7 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
   const newRoom: GameRoom = {
     id: roomId,
     name: roomName.trim() || `Phòng của ${hostDisplayName}`,
-    hostUid: currentUser.uid,
+    hostUid: playerUid,
     hostName: hostDisplayName,
     hostAvatar: hostAvatar,
     maxPlayers: Math.min(20, Math.max(4, maxPlayers)),
@@ -128,6 +129,7 @@ export function subscribeRoom(roomId: string, callback: (room: GameRoom | null) 
 export async function joinRoom(roomId: string, user?: AppUser | null): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error("Bạn cần đăng nhập để tham gia phòng.");
+  const playerUid = user?.uid || currentUser.uid;
 
   const roomRef = doc(db, "rooms", roomId);
 
@@ -139,7 +141,7 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
 
     const room = snap.data() as GameRoom;
     const currentMembers = room.members || [];
-    const isAlreadyMember = currentMembers.some(m => m.uid === currentUser.uid);
+    const isAlreadyMember = currentMembers.some(m => m.uid === playerUid);
 
     if (isAlreadyMember) {
       return;
@@ -150,7 +152,7 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
     }
 
     const newMember: RoomMember = {
-      uid: currentUser.uid,
+      uid: playerUid,
       displayName: user?.displayName || currentUser.displayName || "Người chơi",
       avatar: sanitizeRoomAvatar(user?.avatar || user?.photoURL || currentUser.photoURL || ""),
       isHost: false,
@@ -163,9 +165,10 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
   });
 }
 
-export async function leaveRoom(roomId: string): Promise<void> {
+export async function leaveRoom(roomId: string, stablePlayerUid?: string): Promise<void> {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
+  const playerUid = stablePlayerUid || currentUser.uid;
 
   const roomRef = doc(db, "rooms", roomId);
 
@@ -176,12 +179,12 @@ export async function leaveRoom(roomId: string): Promise<void> {
     const room = snap.data() as GameRoom;
     const currentMembers = room.members || [];
 
-    if (room.hostUid === currentUser.uid) {
+    if (room.hostUid === playerUid) {
       // Chủ phòng rời đi: XOÁ PHÒNG HOÀN TOÀN, toàn bộ người chơi khác sẽ tự động bị kích ra ngoài
       transaction.delete(roomRef);
     } else {
       // Người chơi thông thường rời đi: loại bỏ người đó khỏi danh sách phòng
-      const remainingMembers = currentMembers.filter(m => m.uid !== currentUser.uid);
+      const remainingMembers = currentMembers.filter(m => m.uid !== playerUid);
       // Nếu không còn ai hoặc chủ phòng không còn trong phòng, xoá phòng luôn
       if (remainingMembers.length === 0 || !remainingMembers.some(m => m.uid === room.hostUid)) {
         transaction.delete(roomRef);

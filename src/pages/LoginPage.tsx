@@ -1,209 +1,241 @@
-import React, { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { validateUsername } from '../game/username';
+import { lookupUsername, type UsernameLookup } from '../services/authService';
+import { prepareAvatarImage } from '../services/avatarImage';
+import styles from './LoginPage.module.css';
+
+const PRESET_AVATARS = [
+  { label: 'Ma Sói', url: '/assets/icons/icon_wolf_paw_fire_balanced.webp' },
+  { label: 'Dân Làng', url: '/assets/icons/icon_sun.webp' },
+  { label: 'Tiên Tri', url: '/assets/icons/icon_eye_balanced.webp' },
+  { label: 'Phù Thủy', url: '/assets/icons/icon_potion_heal_balanced.webp' },
+  { label: 'Bảo Vệ', url: '/assets/icons/icon_shield_balanced.webp' },
+  { label: 'Thợ Săn', url: '/assets/icons/icon_swords_alt_balanced.webp' },
+];
+
+type LookupState =
+  | { kind: 'idle' }
+  | { kind: 'checking' }
+  | { kind: 'available' }
+  | { kind: 'existing'; profile: UsernameLookup }
+  | { kind: 'error'; message: string };
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginGoogle, loginEmail, registerEmail } = useAuth();
-
-  const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user, loginUsername } = useAuth();
+  const [username, setUsername] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState(PRESET_AVATARS[0].url);
+  const [avatarBlob, setAvatarBlob] = useState<Blob | undefined>();
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [lookupState, setLookupState] = useState<LookupState>({ kind: 'idle' });
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGoogleLogin = async () => {
+  useEffect(() => {
+    if (user && !submitting) navigate('/', { replace: true });
+  }, [navigate, submitting, user]);
+
+  useEffect(() => () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
+
+  useEffect(() => {
+    const validationError = validateUsername(username);
+    if (validationError) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void lookupUsername(username)
+        .then(profile => {
+          if (cancelled) return;
+          setLookupState(profile.exists
+            ? { kind: 'existing', profile }
+            : { kind: 'available' });
+        })
+        .catch((reason: unknown) => {
+          if (cancelled) return;
+          const firebaseCode = (reason as { code?: string }).code;
+          setLookupState({
+            kind: 'error',
+            message: firebaseCode === 'auth/operation-not-allowed' || firebaseCode === 'auth/admin-restricted-operation'
+              ? 'Firebase Anonymous Auth chưa được bật cho dự án.'
+              : 'Chưa thể kiểm tra username. Hãy thử lại.',
+          });
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [username]);
+
+  const handleAvatarFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
     setError(null);
-    setLoading(true);
     try {
-      await loginGoogle();
-      navigate('/');
-    } catch (err: unknown) {
-      const errorObj = err as { code?: string; message?: string };
-      if (errorObj.code === 'auth/unauthorized-domain') {
-        const currentDomain = window.location.hostname;
-        setError(`Tên miền "${currentDomain}" chưa có trong Firebase Authorized domains! Hãy vào Firebase Console > Authentication > Settings > Authorized domains và thêm: ${currentDomain}`);
-      } else {
-        setError(errorObj.message || 'Đăng nhập Google thất bại');
-      }
+      const blob = await prepareAvatarImage(file);
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+      setAvatarBlob(blob);
+      setAvatarPreview(URL.createObjectURL(blob));
+    } catch (reason) {
+      setError((reason as Error).message);
     } finally {
-      setLoading(false);
+      event.target.value = '';
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ Email và Mật khẩu');
-      return;
-    }
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (lookupState.kind !== 'available' && lookupState.kind !== 'existing') return;
+    setSubmitting(true);
     setError(null);
-    setLoading(true);
     try {
-      if (isRegister) {
-        await registerEmail(email, password);
-      } else {
-        await loginEmail(email, password);
-      }
-      navigate('/');
-    } catch (err: unknown) {
-      const errorObj = err as { code?: string; message?: string };
-      if (errorObj.code === 'auth/invalid-credential' || errorObj.code === 'auth/wrong-password') {
-        setError('Email hoặc mật khẩu không chính xác');
-      } else if (errorObj.code === 'auth/email-already-in-use') {
-        setError('Email này đã được sử dụng');
-      } else if (errorObj.code === 'auth/weak-password') {
-        setError('Mật khẩu quá yếu (cần tối thiểu 6 ký tự)');
-      } else {
-        setError(errorObj.message || 'Xác thực thất bại, vui lòng thử lại');
+      await loginUsername(
+        username,
+        selectedAvatar,
+        lookupState.kind === 'existing' ? 'resume' : 'create',
+        lookupState.kind === 'available' ? avatarBlob : undefined,
+      );
+      navigate('/', { replace: true });
+    } catch (reason: unknown) {
+      const firebaseCode = (reason as { code?: string }).code;
+      setError(firebaseCode === 'auth/operation-not-allowed' || firebaseCode === 'auth/admin-restricted-operation'
+        ? 'Cần bật phương thức Anonymous trong Firebase Authentication trước khi chơi.'
+        : (reason as Error).message || 'Không thể tạo hồ sơ lúc này.');
+      if ((reason as { code?: string }).code === 'username-taken') {
+        setLookupState({ kind: 'checking' });
+        void lookupUsername(username).then(profile => {
+          setLookupState(profile.exists ? { kind: 'existing', profile } : { kind: 'available' });
+        });
       }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  const isExisting = lookupState.kind === 'existing';
+  const canSubmit = lookupState.kind === 'available' || isExisting;
+  const previewAvatar = isExisting
+    ? lookupState.profile.avatar
+    : avatarPreview || selectedAvatar;
 
   return (
-    <div className="container" style={{ maxWidth: '420px', paddingTop: '30px' }}>
-      <button 
-        className="btn-secondary" 
-        style={{ width: 'auto', padding: '6px 12px', fontSize: '13px', marginBottom: '20px' }}
-        onClick={() => navigate('/')}
-      >
-        ← Về Trang Chủ
-      </button>
-
-      <div className="card" style={{ textAlign: 'center', padding: '28px 22px' }}>
-        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🐺</div>
-        <h2 style={{ margin: '0 0 8px 0', fontFamily: 'Cinzel', color: 'var(--primary)' }}>
-          {isRegister ? 'Đăng Ký Tài Khoản' : 'Đăng Nhập Quản Trò'}
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px', lineHeight: 1.5 }}>
-          Đăng nhập để đồng bộ lịch sử ván chơi, tùy chỉnh hồ sơ và quản lý danh sách người chơi mẫu.
-        </p>
-
-        {error && (
-          <div style={{
-            background: 'rgba(229, 57, 53, 0.15)',
-            border: '1px solid var(--error)',
-            color: 'var(--error)',
-            padding: '10px 14px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            marginBottom: '20px',
-            textAlign: 'left'
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Nút đăng nhập Google */}
-        <button
-          type="button"
-          className="btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            background: '#ffffff',
-            color: '#333333',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            marginBottom: '20px'
-          }}
-          disabled={loading}
-          onClick={handleGoogleLogin}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          {loading ? 'Đang kết nối...' : 'Tiếp tục với Google (1-Click)'}
+    <main className={styles.page}>
+      <section className={styles.panel} aria-labelledby="player-profile-title">
+        <button className={styles.backButton} type="button" onClick={() => navigate('/')}>
+          ← Trang chủ
         </button>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          margin: '20px 0',
-          color: 'var(--text-muted)',
-          fontSize: '12px'
-        }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-          <span>hoặc dùng Email</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+        <div className={styles.heading}>
+          <img src="/assets/home_emblem.webp" alt="" className={styles.emblem} />
+          <div>
+            <p className={styles.eyebrow}>HỒ SƠ NGƯỜI CHƠI</p>
+            <h1 id="player-profile-title">Sẵn sàng vào làng?</h1>
+            <p>Chỉ cần một username. Không email, không mật khẩu.</p>
+          </div>
         </div>
 
-        {/* Form Email / Password */}
-        <form onSubmit={handleEmailAuth}>
-          <div style={{ textAlign: 'left', marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-              Email:
-            </label>
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <label className={styles.fieldLabel} htmlFor="username">Username</label>
+          <div className={styles.nameFieldWrap}>
             <input
-              type="email"
-              required
-              placeholder="tenban@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'var(--secondary)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: 'var(--text)',
-                outline: 'none',
-                fontSize: '14px'
+              id="username"
+              className={styles.nameField}
+              value={username}
+              onChange={event => {
+                const nextUsername = event.target.value;
+                const validationError = validateUsername(nextUsername);
+                setUsername(nextUsername);
+                setLookupState(validationError
+                  ? nextUsername.trim()
+                    ? { kind: 'error', message: validationError }
+                    : { kind: 'idle' }
+                  : { kind: 'checking' });
+                setError(null);
               }}
+              autoComplete="username"
+              autoCapitalize="words"
+              maxLength={24}
+              placeholder="Ví dụ: Kỳ Anh"
+              autoFocus
             />
+            {lookupState.kind === 'checking' && <span className={styles.spinner} aria-label="Đang kiểm tra" />}
           </div>
 
-          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-              Mật khẩu:
-            </label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: 'var(--secondary)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: 'var(--text)',
-                outline: 'none',
-                fontSize: '14px'
-              }}
-            />
+          <div className={`${styles.nameStatus} ${styles[lookupState.kind]}`} aria-live="polite">
+            {lookupState.kind === 'idle' && 'Nhập từ 2–24 ký tự để bắt đầu.'}
+            {lookupState.kind === 'checking' && 'Đang kiểm tra username…'}
+            {lookupState.kind === 'available' && '✓ Tên này còn trống — bạn sẽ tạo hồ sơ mới.'}
+            {lookupState.kind === 'existing' && `✓ Đã tìm thấy ${lookupState.profile.displayName || username}.`}
+            {lookupState.kind === 'error' && lookupState.message}
           </div>
 
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={loading}
-            style={{ fontWeight: 'bold' }}
-          >
-            {loading ? 'Đang xử lý...' : (isRegister ? 'Tạo Tài Khoản Mới' : 'Đăng Nhập')}
+          <div className={styles.avatarHero}>
+            <div className={styles.avatarRing}>
+              {previewAvatar
+                ? <img src={previewAvatar} alt="Ảnh đại diện" />
+                : <span>{username.trim().charAt(0).toUpperCase() || '?'}</span>}
+            </div>
+            <div>
+              <strong>{isExisting ? 'Hồ sơ của bạn' : 'Chọn đại diện'}</strong>
+              <p>{isExisting ? 'Avatar và thành tích cũ sẽ được giữ nguyên.' : 'Bạn có thể đổi lại bất cứ lúc nào.'}</p>
+            </div>
+          </div>
+
+          {!isExisting && (
+            <div className={styles.avatarSection}>
+              <div className={styles.avatarGrid}>
+                {PRESET_AVATARS.map(avatar => (
+                  <button
+                    key={avatar.url}
+                    type="button"
+                    className={`${styles.avatarOption} ${!avatarBlob && selectedAvatar === avatar.url ? styles.selected : ''}`}
+                    onClick={() => {
+                      setSelectedAvatar(avatar.url);
+                      setAvatarBlob(undefined);
+                      setAvatarPreview('');
+                    }}
+                    aria-label={`Chọn avatar ${avatar.label}`}
+                    aria-pressed={!avatarBlob && selectedAvatar === avatar.url}
+                  >
+                    <img src={avatar.url} alt="" />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`${styles.avatarOption} ${styles.uploadOption} ${avatarBlob ? styles.selected : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="Tải ảnh đại diện lên"
+                >
+                  {avatarPreview ? <img src={avatarPreview} alt="" /> : <span>＋</span>}
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleAvatarFile}
+              />
+              <button className={styles.uploadTextButton} type="button" onClick={() => fileInputRef.current?.click()}>
+                Tải ảnh của bạn lên
+              </button>
+            </div>
+          )}
+
+          {error && <div className={styles.submitError} role="alert">{error}</div>}
+
+          <button className={styles.submitButton} type="submit" disabled={!canSubmit || submitting}>
+            <span>{submitting ? 'ĐANG VÀO LÀNG…' : isExisting ? 'TIẾP TỤC HỒ SƠ NÀY' : 'TẠO HỒ SƠ & CHƠI NGAY'}</span>
+            {!submitting && <small>{isExisting ? 'Không cần mật khẩu' : 'Chỉ mất vài giây'}</small>}
           </button>
-
-          <div style={{ marginTop: '16px' }}>
-            <button
-              type="button"
-              style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '13px' }}
-              onClick={() => { setIsRegister(!isRegister); setError(null); }}
-            >
-              {isRegister ? 'Đã có tài khoản? Bấm để Đăng nhập' : 'Chưa có tài khoản? Bấm để Đăng ký nhanh'}
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
