@@ -1,18 +1,64 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCloudGames, getLocalGames } from '../services/gameRepository';
+import { deleteGameHistory, getCloudGames, getLocalGames } from '../services/gameRepository';
 import { useAuth } from '../context/AuthContext';
 import type { Game, Player, Role } from '../game/types';
+import { canDeleteGameHistory } from '../game/historyAccess';
+import { Button } from '../components/ui';
+import { useDialog } from '../components/dialog';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showAlert, showConfirm } = useDialog();
   const [games, setGames] = useState<Game[]>(getLocalGames());
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
+  const canDeleteHistory = canDeleteGameHistory(user);
 
   useEffect(() => {
-    getCloudGames(user?.uid).then(setGames);
-  }, [user]);
+    let isActive = true;
+    void getCloudGames().then(cloudGames => {
+      if (!isActive) return;
+      setGames(cloudGames);
+      setIsLoading(false);
+    });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const handleDeleteGame = async (game: Game) => {
+    if (!canDeleteHistory || deletingGameId) return;
+    const confirmed = await showConfirm({
+      title: 'Xóa ván đấu này?',
+      message: 'Ván đấu sẽ bị xóa khỏi lịch sử chung và kết quả của nó cũng bị loại khỏi bảng xếp hạng. Hành động này không thể hoàn tác.',
+      tone: 'danger',
+      confirmLabel: 'Xóa ván đấu',
+      cancelLabel: 'Giữ lại',
+    });
+    if (!confirmed) return;
+
+    const previousGames = games;
+    const wasSelected = selectedGame?.id === game.id;
+    setDeletingGameId(game.id);
+    setGames(current => current.filter(item => item.id !== game.id));
+    if (wasSelected) setSelectedGame(null);
+    try {
+      await deleteGameHistory(game.id, user);
+    } catch (error) {
+      setGames(previousGames);
+      if (wasSelected) setSelectedGame(game);
+      await showAlert({
+        title: 'Không thể xóa ván đấu',
+        message: (error as Error).message || 'Vui lòng kiểm tra kết nối rồi thử lại.',
+        tone: 'danger',
+      });
+    } finally {
+      setDeletingGameId(null);
+    }
+  };
 
   const formatDate = (ts: number) => {
     return new Date(ts).toLocaleString('vi-VN');
@@ -47,7 +93,19 @@ export default function HistoryPage() {
         <button className="btn-secondary" style={{ padding: '8px 16px', marginBottom: '16px', width: 'auto' }} onClick={() => setSelectedGame(null)}>
           ← Danh sách lịch sử
         </button>
-        <h2>Chi tiết ván chơi</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+          <h2>Chi tiết ván chơi</h2>
+          {canDeleteHistory && (
+            <Button
+              variant="danger"
+              disabled={deletingGameId === selectedGame.id}
+              onClick={() => void handleDeleteGame(selectedGame)}
+              style={{ minHeight: '44px', width: 'auto' }}
+            >
+              {deletingGameId === selectedGame.id ? 'Đang xóa…' : '🗑️ Xóa ván'}
+            </Button>
+          )}
+        </div>
         <div className="card">
           <p><strong>Thời gian tạo:</strong> {formatDate(selectedGame.createdAt)}</p>
           <p>
@@ -221,21 +279,53 @@ export default function HistoryPage() {
       </div>
 
       {games.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#888', marginTop: '40px' }}>Chưa có ván chơi nào được lưu.</p>
+        <p style={{ textAlign: 'center', color: '#888', marginTop: '40px' }}>
+          {isLoading ? 'Đang tải lịch sử chung…' : 'Chưa có ván chơi nào được lưu.'}
+        </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {games.map(game => (
             <div 
               key={game.id} 
               className="card" 
-              style={{ cursor: 'pointer', borderLeft: `4px solid ${game.winner === 'wolf' ? 'var(--error)' : 'var(--success)'}` }}
+              style={{
+                cursor: 'pointer',
+                position: 'relative',
+                paddingRight: canDeleteHistory ? '112px' : undefined,
+                borderLeft: `4px solid ${game.winner === 'wolf' ? 'var(--error)' : 'var(--success)'}`,
+              }}
               onClick={() => setSelectedGame(game)}
             >
               <h3>{formatDate(game.createdAt)}</h3>
               <p>Số người: {game.players.length}</p>
               <p>Phe thắng: <strong className={game.winner === 'wolf' ? 'error' : 'success'}>{game.winner === 'wolf' ? 'SÓI 🐺' : 'DÂN LÀNG 👨'}</strong></p>
+              {canDeleteHistory && (
+                <Button
+                  variant="danger"
+                  disabled={deletingGameId === game.id}
+                  onClick={event => {
+                    event.stopPropagation();
+                    void handleDeleteGame(game);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    minHeight: '44px',
+                    width: 'auto',
+                    padding: '0 12px',
+                  }}
+                >
+                  {deletingGameId === game.id ? '…' : '🗑️ Xóa'}
+                </Button>
+              )}
             </div>
           ))}
+          {games.length >= 100 && (
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+              Đang hiển thị 100 ván gần nhất để giữ tốc độ tải nhanh.
+            </p>
+          )}
         </div>
       )}
     </div>

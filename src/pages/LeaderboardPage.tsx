@@ -43,27 +43,26 @@ export default function LeaderboardPage() {
   const localSummaries = createLocalLeaderboardSummaries(getLocalGames());
   const [entries, setEntries] = useState<LeaderboardEntry[]>(() => buildLeaderboard(localSummaries));
   const [gameCount, setGameCount] = useState(localSummaries.length);
-  const [source, setSource] = useState<DataSource>(user ? 'cloud' : 'local');
-  const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
+  const [source, setSource] = useState<DataSource>('local');
+  const [isLoading, setIsLoading] = useState(true);
   const [isLimited, setIsLimited] = useState(false);
-  const isLoading = Boolean(userId) && loadedForUserId !== userId;
 
   useEffect(() => {
     let isActive = true;
 
-    void getLeaderboardData(userId).then(result => {
+    void getLeaderboardData().then(result => {
       if (!isActive) return;
       setEntries(buildLeaderboard(result.summaries));
       setGameCount(result.summaries.length);
       setSource(result.source);
       setIsLimited(result.limited);
-      setLoadedForUserId(userId ?? null);
+      setIsLoading(false);
     });
 
     return () => {
       isActive = false;
     };
-  }, [userId]);
+  }, []);
 
   const topTen = entries.slice(0, LEADERBOARD_SIZE);
   const topThree = topTen.slice(0, 3);
@@ -162,9 +161,6 @@ export default function LeaderboardPage() {
 
         {isLimited && (
           <p className={styles.limitNote}>BXH đang tính trên 500 ván gần nhất để giữ tốc độ tải nhanh trên điện thoại.</p>
-        )}
-        {!user && (
-          <p className={styles.limitNote}>Đăng nhập để xem và đồng bộ bảng xếp hạng chung của cả nhóm.</p>
         )}
       </section>
     </main>

@@ -54,7 +54,7 @@ function toAppUser(playerId: string, data: Record<string, unknown>): AppUser {
   };
 }
 
-async function ensureFirebaseSession(): Promise<FirebaseUser> {
+export async function ensureFirebaseSession(): Promise<FirebaseUser> {
   if (auth.currentUser) return auth.currentUser;
   const credential = await signInAnonymously(auth);
   return credential.user;
