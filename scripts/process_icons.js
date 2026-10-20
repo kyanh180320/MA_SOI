@@ -17,14 +17,59 @@ const ICONS_WITH_ADJACENT_SPRITE_PIXELS = new Set([
   'icon_wolf_paw_fire',
 ]);
 
-// Các huy hiệu bất đối xứng cần căn theo trọng tâm thị giác, không chỉ bounding box.
-const ICON_VISUAL_PLACEMENTS = {
-  icon_eye: { size: 155, left: 4, top: 2 },
-  icon_potion_heal: { size: 156, left: 1, top: 2 },
-  icon_shield: { size: 155, left: 4, top: 2 },
-  icon_swords_alt: { size: 155, left: 1, top: 4 },
-  icon_wolf_paw_fire: { size: 155, left: 4, top: 2 },
+// Giữ vòng huy hiệu ở tâm; chỉ cân lại artwork bên trong các thiết kế bất đối xứng.
+const ICON_INNER_OFFSETS = {
+  icon_eye: { x: 2.5, y: 0 },
+  icon_potion_heal: { x: -2, y: 0 },
+  icon_shield: { x: 3, y: 0 },
+  icon_swords_alt: { x: -2, y: 3 },
+  icon_wolf_paw_fire: { x: 3, y: 0 },
 };
+
+async function shiftInnerArtwork(iconBuffer, offset) {
+  const { data, info } = await sharp(iconBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const output = Buffer.alloc(data.length);
+  const centerX = (info.width - 1) / 2;
+  const centerY = (info.height - 1) / 2;
+  const fullShiftRadius = 52;
+  const fixedRimRadius = 70;
+
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      const distance = Math.hypot(x - centerX, y - centerY);
+      const transition = Math.max(0, Math.min(1,
+        (fixedRimRadius - distance) / (fixedRimRadius - fullShiftRadius),
+      ));
+      const weight = transition * transition * (3 - 2 * transition);
+      const sourceX = Math.max(0, Math.min(info.width - 1, x - offset.x * weight));
+      const sourceY = Math.max(0, Math.min(info.height - 1, y - offset.y * weight));
+      const x0 = Math.floor(sourceX);
+      const y0 = Math.floor(sourceY);
+      const x1 = Math.min(info.width - 1, x0 + 1);
+      const y1 = Math.min(info.height - 1, y0 + 1);
+      const mixX = sourceX - x0;
+      const mixY = sourceY - y0;
+      const outputIndex = (y * info.width + x) * 4;
+
+      for (let channel = 0; channel < 4; channel++) {
+        const topLeft = data[(y0 * info.width + x0) * 4 + channel];
+        const topRight = data[(y0 * info.width + x1) * 4 + channel];
+        const bottomLeft = data[(y1 * info.width + x0) * 4 + channel];
+        const bottomRight = data[(y1 * info.width + x1) * 4 + channel];
+        const top = topLeft + (topRight - topLeft) * mixX;
+        const bottom = bottomLeft + (bottomRight - bottomLeft) * mixX;
+        output[outputIndex + channel] = Math.round(top + (bottom - top) * mixY);
+      }
+    }
+  }
+
+  return sharp(output, {
+    raw: { width: info.width, height: info.height, channels: 4 },
+  }).png().toBuffer();
+}
 
 function findLargestOpaqueBounds(data, width, height) {
   const visited = new Uint8Array(width * height);
@@ -149,26 +194,9 @@ async function processIcons() {
           .png()
           .toBuffer();
 
-        const placement = ICON_VISUAL_PLACEMENTS[name];
-        const finalIcon = placement
-          ? await sharp({
-              create: {
-                width: 160,
-                height: 160,
-                channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 },
-              },
-            })
-              .composite([{
-                input: await sharp(normalizedIcon)
-                  .resize(placement.size, placement.size)
-                  .png()
-                  .toBuffer(),
-                left: placement.left,
-                top: placement.top,
-              }])
-              .png()
-              .toBuffer()
+        const innerOffset = ICON_INNER_OFFSETS[name];
+        const finalIcon = innerOffset
+          ? await shiftInnerArtwork(normalizedIcon, innerOffset)
           : normalizedIcon;
 
         await sharp(finalIcon)
