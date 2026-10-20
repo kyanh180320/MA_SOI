@@ -9,6 +9,7 @@ import styles from './LeaderboardPage.module.css';
 type DataSource = 'cloud' | 'local' | 'local-fallback';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+const LEADERBOARD_SIZE = 10;
 
 function winRate(entry: LeaderboardEntry): number {
   return entry.gamesPlayed > 0 ? Math.round((entry.wins / entry.gamesPlayed) * 100) : 0;
@@ -64,8 +65,9 @@ export default function LeaderboardPage() {
     };
   }, [userId]);
 
-  const topThree = entries.slice(0, 3);
-  const remaining = entries.slice(3);
+  const topTen = entries.slice(0, LEADERBOARD_SIZE);
+  const topThree = topTen.slice(0, 3);
+  const remaining = topTen.slice(3);
   const currentPlayerKey = userId ? `uid:${userId}` : null;
 
   return (
@@ -78,7 +80,7 @@ export default function LeaderboardPage() {
           </button>
           <div>
             <p className={styles.eyebrow}>ĐẠI SẢNH VINH DANH</p>
-            <h1>BẢNG XẾP HẠNG</h1>
+            <h1>TOP 10 CAO THỦ</h1>
           </div>
           <div className={styles.trophy} aria-hidden="true">🏆</div>
         </header>
@@ -126,7 +128,7 @@ export default function LeaderboardPage() {
             </div>
 
             {remaining.length > 0 && (
-              <section className={styles.rankingList} aria-label="Bảng xếp hạng đầy đủ">
+              <section className={styles.rankingList} aria-label="Bảng xếp hạng từ hạng 4 đến hạng 10">
                 <div className={styles.listHeader}>
                   <span>HẠNG</span>
                   <span>NGƯỜI CHƠI</span>
@@ -152,8 +154,8 @@ export default function LeaderboardPage() {
             )}
 
             <section className={styles.legend}>
-              <div><span>🏘️</span><strong>Thắng phe Dân</strong><b>{entries.reduce((sum, entry) => sum + entry.villagerWins, 0)}</b></div>
-              <div><span>🐺</span><strong>Thắng phe Sói</strong><b>{entries.reduce((sum, entry) => sum + entry.wolfWins, 0)}</b></div>
+              <div><span>🏘️</span><strong>Thắng phe Dân</strong><b>{topTen.reduce((sum, entry) => sum + entry.villagerWins, 0)}</b></div>
+              <div><span>🐺</span><strong>Thắng phe Sói</strong><b>{topTen.reduce((sum, entry) => sum + entry.wolfWins, 0)}</b></div>
             </section>
           </>
         )}
