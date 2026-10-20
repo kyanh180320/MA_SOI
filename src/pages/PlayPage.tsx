@@ -24,6 +24,7 @@ export default function PlayPage() {
   const { game, updateGame, applyRemoteGame, undo, canUndo, setGame } = useGame();
   const [showRoles, setShowRoles] = useState(true);
   const [showRitual, setShowRitual] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -74,17 +75,20 @@ export default function PlayPage() {
   const alivePlayers = game.players.filter(p => p.alive);
   const currentRound = game.rounds[game.rounds.length - 1];
 
-  const handleExit = async () => {
-    if (window.confirm("Bạn muốn thoát ván này? Dữ liệu sẽ KHÔNG được lưu vào lịch sử.")) {
-      if (game.roomId) {
-        try {
-          await closeRoom(game.roomId);
-        } catch (e) {
-          console.error("Lỗi khi đóng phòng online:", e);
-        }
-      }
-      setGame(null);
-      navigate('/setup');
+  const handleExit = () => {
+    if (isExiting || !window.confirm("Bạn muốn thoát ván này? Dữ liệu sẽ KHÔNG được lưu vào lịch sử.")) return;
+
+    const exitingRoomId = game.roomId;
+    setIsExiting(true);
+    setGame(null);
+    navigate('/', { replace: true });
+
+    // Thoát UI ngay; Firestore tự xếp hàng delete khi mạng yếu nên không chặn
+    // Quản trò trên màn chơi trong lúc chờ request mạng hoàn tất.
+    if (exitingRoomId) {
+      void closeRoom(exitingRoomId).catch((error: unknown) => {
+        console.error(`Lỗi khi đóng phòng online ${exitingRoomId}:`, error);
+      });
     }
   };
 
@@ -351,9 +355,10 @@ export default function PlayPage() {
         <Button
           variant="ghost"
           onClick={handleExit}
+          disabled={isExiting}
           style={{ minHeight: '40px', padding: '0 var(--s-2)', fontSize: '13px', color: 'var(--red-300)' }}
         >
-          ✕ Thoát
+          {isExiting ? 'Đang thoát...' : '✕ Thoát'}
         </Button>
         <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
           {canUndo && (

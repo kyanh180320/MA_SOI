@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
+import { canManageGameSetup } from '../game/setup';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
 import { syncRoomGame, getPlayerMembers } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
@@ -85,7 +86,8 @@ export default function SetupPage() {
   const roomPlayers = getPlayerMembers(fromRoom?.members);
 
   const { setGame, applyRemoteGame } = useGame();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const canManageSetup = canManageGameSetup(fromRoom?.hostUid, user?.uid, authLoading);
 
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
     if (roomPlayers.length > 0) {
@@ -130,6 +132,8 @@ export default function SetupPage() {
   const [presetList, setPresetList] = useState<PresetName[]>([]);
   const [newPresetName, setNewPresetName] = useState('');
   const [isAddingPreset, setIsAddingPreset] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   // Căn chỉnh phân vai ban đầu
   useEffect(() => {
@@ -197,44 +201,51 @@ export default function SetupPage() {
   const isValid = totalRoles === playerCount && totalWolves > 0 && totalWolves < playerCount;
 
   const handleStart = async () => {
-    if (!isValid) return;
-
-    const players = names.map((name, i) => {
-      const matchedMember = roomPlayers.find(m => m.displayName.trim() === name.trim()) || roomPlayers[i];
-      return {
-        id: matchedMember?.uid || `p_${Date.now()}_${i}`,
-        name: name.trim() || `Người chơi ${i + 1}`,
-        avatar: avatars[i] || matchedMember?.avatar || "",
-      };
-    });
-
-    const assignedPlayers = assignRoles(players, distribution);
-
-    const newGame: Game = {
-      id: `game_${Date.now()}`,
-      createdAt: Date.now(),
-      players: assignedPlayers,
-      rounds: [{ number: 1, nightDeaths: [] }],
-      phase: "night",
-      witchItems: { saveLeft: RULES.witch.saveCount, poisonLeft: RULES.witch.poisonCount },
-      roomId: fromRoom?.id
-    };
-
-    if (fromRoom?.id) {
-      try {
-        await syncRoomGame(fromRoom.id, newGame);
-        applyRemoteGame(newGame);
-      } catch (err: unknown) {
-        console.error("Không thể đồng bộ game lên phòng:", err);
-        alert("Lỗi đồng bộ phòng online: " + ((err as Error).message || String(err)));
-        // Vẫn giữ game local; GameContext sẽ thử đồng bộ lại khi có thể.
-        setGame(newGame);
-      }
-    } else {
-      setGame(newGame);
+    if (!isValid || isStartingGame) return;
+    if (!canManageSetup) {
+      setStartError('Chỉ Quản trò của phòng mới có thể cấu hình và bắt đầu ván.');
+      return;
     }
 
-    navigate('/play');
+    setIsStartingGame(true);
+    setStartError(null);
+
+    try {
+      const players = names.map((name, i) => {
+        const matchedMember = roomPlayers.find(m => m.displayName.trim() === name.trim()) || roomPlayers[i];
+        return {
+          id: matchedMember?.uid || `p_${Date.now()}_${i}`,
+          name: name.trim() || `Người chơi ${i + 1}`,
+          avatar: avatars[i] || matchedMember?.avatar || "",
+        };
+      });
+
+      const assignedPlayers = assignRoles(players, distribution);
+
+      const newGame: Game = {
+        id: `game_${Date.now()}`,
+        createdAt: Date.now(),
+        players: assignedPlayers,
+        rounds: [{ number: 1, nightDeaths: [] }],
+        phase: "night",
+        witchItems: { saveLeft: RULES.witch.saveCount, poisonLeft: RULES.witch.poisonCount },
+        roomId: fromRoom?.id
+      };
+
+      if (fromRoom?.id) {
+        await syncRoomGame(fromRoom.id, newGame);
+        applyRemoteGame(newGame);
+      } else {
+        setGame(newGame);
+      }
+
+      navigate('/play', { replace: true });
+    } catch (err: unknown) {
+      console.error(`Không thể bắt đầu ván${fromRoom?.id ? ` trong phòng ${fromRoom.id}` : ''}:`, err);
+      setStartError('Không thể bắt đầu ván lúc này. Hãy kiểm tra kết nối rồi thử lại.');
+    } finally {
+      setIsStartingGame(false);
+    }
   };
 
   const handleRoleChange = (role: Role, delta: number) => {
@@ -449,6 +460,12 @@ export default function SetupPage() {
                 : `⚠️ CHƯA KHỚP SỐ LƯỢNG (${totalRoles}/${playerCount} VAI)`}
             </div>
 
+            {(startError || (fromRoom && !authLoading && !canManageSetup)) && (
+              <div className={`${styles.rolesStatusBanner} ${styles.statusInvalid}`} role="alert">
+                {startError || 'Chỉ Quản trò của phòng mới có thể cấu hình và bắt đầu ván.'}
+              </div>
+            )}
+
             {/* Lưới 2 cột: Mỗi ô gồm icon, tên dòng riêng, dưới là stepper */}
             <div className={styles.rolesGrid}>
               {ROLE_ITEMS.map((role) => (
@@ -511,11 +528,15 @@ export default function SetupPage() {
             type="button"
             className={styles.gothicRubyBtn}
             onClick={handleStart}
-            disabled={!isValid}
-            title={isValid ? "Chia bài bí mật và bắt đầu ván đấu" : "Vui lòng phân đủ số vai trước khi bắt đầu"}
+            disabled={!isValid || isStartingGame || !canManageSetup}
+            title={!canManageSetup
+              ? "Chỉ Quản trò của phòng mới có thể bắt đầu ván"
+              : isValid
+                ? "Chia bài bí mật và bắt đầu ván đấu"
+                : "Vui lòng phân đủ số vai trước khi bắt đầu"}
           >
             <SvgRubyBroochTop className={styles.rubyBroochTop} />
-            CHIA BÀI & BẮT ĐẦU
+            {isStartingGame ? 'ĐANG BẮT ĐẦU...' : 'CHIA BÀI & BẮT ĐẦU'}
           </button>
         </div>
       </div>
