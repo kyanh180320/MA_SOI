@@ -354,6 +354,16 @@ export default function HomePage() {
         title="⚙️ HỆ THỐNG & ĐIỀU HƯỚNG"
       >
         <div className={styles.adminMenuContainer}>
+          <button
+            className={styles.adminMenuBtn}
+            onClick={() => {
+              setIsAdminOpen(false);
+              navigate('/leaderboard');
+            }}
+          >
+            🏆 BẢNG XẾP HẠNG
+          </button>
+
           <button 
             className={styles.adminMenuBtn}
             onClick={() => {

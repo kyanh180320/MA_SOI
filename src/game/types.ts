@@ -1,5 +1,6 @@
 export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "witch" | "guard" | "hunter";
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
+export type WinningTeam = "wolf" | "villager";
 
 export interface Player {
   id: string;
@@ -34,8 +35,35 @@ export interface Game {
   rounds: Round[];
   phase: Phase;
   witchItems: { saveLeft: number; poisonLeft: number };
-  winner?: "wolf" | "villager";
+  winner?: WinningTeam;
   roomId?: string;
+}
+
+/** Bản ghi nhỏ, bất biến theo gameId, dùng làm nguồn dữ liệu cho bảng xếp hạng. */
+export interface LeaderboardGameSummary {
+  gameId: string;
+  createdAt: number;
+  winner: WinningTeam;
+  players: LeaderboardGamePlayer[];
+}
+
+export interface LeaderboardGamePlayer {
+  playerKey: string;
+  displayName: string;
+  avatar?: string;
+  team: WinningTeam;
+  won: boolean;
+}
+
+export interface LeaderboardEntry {
+  playerKey: string;
+  displayName: string;
+  avatar?: string;
+  wins: number;
+  gamesPlayed: number;
+  villagerWins: number;
+  wolfWins: number;
+  lastPlayedAt: number;
 }
 
 /**

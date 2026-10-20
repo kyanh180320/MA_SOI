@@ -25,6 +25,7 @@ export default function PlayPage() {
   const [showRoles, setShowRoles] = useState(true);
   const [showRitual, setShowRitual] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [isSavingGame, setIsSavingGame] = useState(false);
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -93,14 +94,18 @@ export default function PlayPage() {
   };
 
   const handleEndGame = () => {
+    if (isSavingGame) return;
     if (window.confirm("Bạn có chắc chắn muốn kết thúc và lưu ván này không?")) {
+      setIsSavingGame(true);
       if (game.roomId) {
-        closeRoom(game.roomId).catch(console.error);
+        void closeRoom(game.roomId).catch((error: unknown) => {
+          console.error(`Lỗi khi đóng phòng online ${game.roomId}:`, error);
+        });
       }
-      saveGame(game).finally(() => {
-        setGame(null);
-        navigate('/history');
-      });
+      // saveGame lưu local đồng bộ trước khi chờ Firestore, nên màn BXH phản hồi ngay cả khi mạng yếu.
+      void saveGame(game);
+      setGame(null);
+      navigate('/leaderboard');
     }
   };
 
@@ -689,10 +694,17 @@ export default function PlayPage() {
             PHE {game.winner === 'wolf' ? 'MA SÓI 🐺' : 'DÂN LÀNG 👨'} THẮNG
           </div>
           <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: 0 }}>
-            Ván đấu đã khép lại. Nhấn bên dưới để lưu dữ liệu vào lịch sử và về trang chủ.
+            Ván đấu đã khép lại. Lưu kết quả để cập nhật bảng xếp hạng của những người thuộc phe thắng.
           </p>
-          <Button variant="primary" pulse fullWidth onClick={handleEndGame} style={{ marginTop: 'var(--s-2)' }}>
-            LƯU VÁN & VỀ TRANG CHỦ
+          <Button
+            variant="primary"
+            pulse
+            fullWidth
+            disabled={isSavingGame}
+            onClick={handleEndGame}
+            style={{ marginTop: 'var(--s-2)' }}
+          >
+            {isSavingGame ? 'ĐANG LƯU KẾT QUẢ...' : 'LƯU VÁN & XEM BẢNG XẾP HẠNG'}
           </Button>
         </Panel>
       ) : (

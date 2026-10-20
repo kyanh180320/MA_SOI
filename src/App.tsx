@@ -13,6 +13,7 @@ import './index.css';
 const DevShowcasePage = import.meta.env.DEV
   ? React.lazy(() => import('./pages/DevShowcasePage'))
   : null;
+const LeaderboardPage = React.lazy(() => import('./pages/LeaderboardPage'));
 
 function App() {
   return (
@@ -25,6 +26,14 @@ function App() {
             <Route path="/setup" element={<SetupPage />} />
             <Route path="/play" element={<PlayPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route
+              path="/leaderboard"
+              element={
+                <Suspense fallback={<div style={{ padding: 20, textAlign: 'center', color: 'var(--text-dim)' }}>Đang mở bảng xếp hạng...</div>}>
+                  <LeaderboardPage />
+                </Suspense>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             {import.meta.env.DEV && DevShowcasePage && (
               <Route
