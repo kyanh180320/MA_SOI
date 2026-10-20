@@ -552,12 +552,27 @@
   min-width: 0;
 }
 
-.roleMedallionIcon {
-  width: 30px;
-  height: 30px;
+.roleMedallionViewport {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  object-fit: contain;
+  overflow: hidden;
+  display: block;
   flex-shrink: 0;
+  background: #1b1720;
+}
+
+.roleMedallionIcon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  transform-origin: center;
+}
+
+/* Một số asset được cắt từ sprite sheet còn dính pixel của ô kế bên. */
+.roleMedallionIconCropped {
+  transform: scale(1.32);
 }
 
 .roleNameText {

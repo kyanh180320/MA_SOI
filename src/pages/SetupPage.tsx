@@ -68,14 +68,14 @@ function SvgAvatarSilhouette() {
   );
 }
 
-const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
-  { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
-  { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
-  { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm' },
+const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string; cropIcon?: boolean }[] = [
+  { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm', cropIcon: true },
+  { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết', cropIcon: true },
+  { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm', cropIcon: true },
   { id: 'witch', name: 'PHÙ THỦY', icon: '/assets/icons/icon_potion_heal.webp', desc: 'Có 1 bình cứu & 1 bình độc' },
   { id: 'guard', name: 'BẢO VỆ', icon: '/assets/icons/icon_shield.webp', desc: 'Bảo vệ 1 người mỗi đêm' },
   { id: 'hunter', name: 'THỢ SĂN', icon: '/assets/icons/icon_swords_alt.webp', desc: 'Kéo theo 1 người khi chết' },
-  { id: 'wolf_demon', name: 'SÓI QUỶ', icon: '/assets/icons/icon_wolf_paw_fire.webp', desc: 'Cắn tối đa 2 người' },
+  { id: 'wolf_demon', name: 'SÓI QUỶ', icon: '/assets/icons/icon_wolf_paw_fire.webp', desc: 'Cắn tối đa 2 người', cropIcon: true },
 ];
 
 export default function SetupPage() {
@@ -471,11 +471,13 @@ export default function SetupPage() {
               {ROLE_ITEMS.map((role) => (
                 <div key={role.id} className={styles.roleCardCell} title={role.desc}>
                   <div className={styles.roleHeaderRow}>
-                    <img
-                      src={role.icon}
-                      alt={role.name}
-                      className={styles.roleMedallionIcon}
-                    />
+                    <span className={styles.roleMedallionViewport} aria-hidden="true">
+                      <img
+                        src={role.icon}
+                        alt=""
+                        className={`${styles.roleMedallionIcon} ${role.cropIcon ? styles.roleMedallionIconCropped : ''}`}
+                      />
+                    </span>
                     <span className={styles.roleNameText}>{role.name}</span>
                   </div>
 
