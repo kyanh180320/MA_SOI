@@ -567,12 +567,6 @@
   height: 100%;
   display: block;
   object-fit: contain;
-  transform-origin: center;
-}
-
-/* Một số asset được cắt từ sprite sheet còn dính pixel của ô kế bên. */
-.roleMedallionIconCropped {
-  transform: scale(1.32);
 }
 
 .roleNameText {

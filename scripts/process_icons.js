@@ -10,6 +10,65 @@ const ICON_NAMES = [
   ['icon_swords_alt', 'icon_hourglass', 'icon_gear']
 ];
 
+const ICONS_WITH_ADJACENT_SPRITE_PIXELS = new Set([
+  'icon_sun',
+  'icon_eye',
+  'icon_wolf_paw',
+  'icon_wolf_paw_fire',
+]);
+
+function findLargestOpaqueBounds(data, width, height) {
+  const visited = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let largest = null;
+
+  for (let start = 0; start < width * height; start++) {
+    if (visited[start] || data[start * 4 + 3] <= 20) continue;
+
+    let head = 0;
+    let tail = 0;
+    let size = 0;
+    let minX = width;
+    let maxX = 0;
+    let minY = height;
+    let maxY = 0;
+    visited[start] = 1;
+    queue[tail++] = start;
+
+    while (head < tail) {
+      const pixel = queue[head++];
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
+      size++;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+
+      const neighbors = [pixel - 1, pixel + 1, pixel - width, pixel + width];
+      for (const neighbor of neighbors) {
+        const neighborX = neighbor % width;
+        if (
+          neighbor < 0 ||
+          neighbor >= width * height ||
+          Math.abs(neighborX - x) > 1 ||
+          visited[neighbor] ||
+          data[neighbor * 4 + 3] <= 20
+        ) continue;
+
+        visited[neighbor] = 1;
+        queue[tail++] = neighbor;
+      }
+    }
+
+    if (!largest || size > largest.size) {
+      largest = { size, minX, maxX, minY, maxY };
+    }
+  }
+
+  return largest;
+}
+
 async function processIcons() {
   const src = 'design/reference/icon.png';
   const outDir = 'public/assets/icons';
@@ -48,18 +107,24 @@ async function processIcons() {
 
       // Extract bounding box inside cell
       const cell = sharp(cleanBuffer).extract({ left, top, width: colWidth, height: rowHeight });
-      const cellMeta = await cell.metadata();
       const { data: cellData } = await cell.raw().toBuffer({ resolveWithObject: true });
 
       let minX = colWidth, maxX = 0, minY = rowHeight, maxY = 0;
-      for (let y = 0; y < rowHeight; y++) {
-        for (let x = 0; x < colWidth; x++) {
-          const a = cellData[(y * colWidth + x) * 4 + 3];
-          if (a > 20) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+      if (ICONS_WITH_ADJACENT_SPRITE_PIXELS.has(name)) {
+        const bounds = findLargestOpaqueBounds(cellData, colWidth, rowHeight);
+        if (bounds) {
+          ({ minX, maxX, minY, maxY } = bounds);
+        }
+      } else {
+        for (let y = 0; y < rowHeight; y++) {
+          for (let x = 0; x < colWidth; x++) {
+            const a = cellData[(y * colWidth + x) * 4 + 3];
+            if (a > 20) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
           }
         }
       }

@@ -68,14 +68,14 @@ function SvgAvatarSilhouette() {
   );
 }
 
-const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string; cropIcon?: boolean }[] = [
-  { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm', cropIcon: true },
-  { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết', cropIcon: true },
-  { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm', cropIcon: true },
+const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
+  { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
+  { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
+  { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye.webp', desc: 'Soi phe 1 người mỗi đêm' },
   { id: 'witch', name: 'PHÙ THỦY', icon: '/assets/icons/icon_potion_heal.webp', desc: 'Có 1 bình cứu & 1 bình độc' },
   { id: 'guard', name: 'BẢO VỆ', icon: '/assets/icons/icon_shield.webp', desc: 'Bảo vệ 1 người mỗi đêm' },
   { id: 'hunter', name: 'THỢ SĂN', icon: '/assets/icons/icon_swords_alt.webp', desc: 'Kéo theo 1 người khi chết' },
-  { id: 'wolf_demon', name: 'SÓI QUỶ', icon: '/assets/icons/icon_wolf_paw_fire.webp', desc: 'Cắn tối đa 2 người', cropIcon: true },
+  { id: 'wolf_demon', name: 'SÓI QUỶ', icon: '/assets/icons/icon_wolf_paw_fire.webp', desc: 'Cắn tối đa 2 người' },
 ];
 
 export default function SetupPage() {
@@ -475,7 +475,7 @@ export default function SetupPage() {
                       <img
                         src={role.icon}
                         alt=""
-                        className={`${styles.roleMedallionIcon} ${role.cropIcon ? styles.roleMedallionIconCropped : ''}`}
+                        className={styles.roleMedallionIcon}
                       />
                     </span>
                     <span className={styles.roleNameText}>{role.name}</span>
