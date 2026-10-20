@@ -17,6 +17,15 @@ const ICONS_WITH_ADJACENT_SPRITE_PIXELS = new Set([
   'icon_wolf_paw_fire',
 ]);
 
+// Các huy hiệu bất đối xứng cần căn theo trọng tâm thị giác, không chỉ bounding box.
+const ICON_VISUAL_PLACEMENTS = {
+  icon_eye: { size: 155, left: 5, top: 2 },
+  icon_potion_heal: { size: 156, left: 0, top: 2 },
+  icon_shield: { size: 155, left: 5, top: 2 },
+  icon_swords_alt: { size: 155, left: 0, top: 5 },
+  icon_wolf_paw_fire: { size: 155, left: 5, top: 2 },
+};
+
 function findLargestOpaqueBounds(data, width, height) {
   const visited = new Uint8Array(width * height);
   const queue = new Int32Array(width * height);
@@ -134,9 +143,35 @@ async function processIcons() {
         const cropH = maxY - minY + 1;
         const outFile = path.join(outDir, `${name}.webp`);
 
-        await sharp(cleanBuffer)
+        const normalizedIcon = await sharp(cleanBuffer)
           .extract({ left: left + minX, top: top + minY, width: cropW, height: cropH })
           .resize(160, 160, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer();
+
+        const placement = ICON_VISUAL_PLACEMENTS[name];
+        const finalIcon = placement
+          ? await sharp({
+              create: {
+                width: 160,
+                height: 160,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+              },
+            })
+              .composite([{
+                input: await sharp(normalizedIcon)
+                  .resize(placement.size, placement.size)
+                  .png()
+                  .toBuffer(),
+                left: placement.left,
+                top: placement.top,
+              }])
+              .png()
+              .toBuffer()
+          : normalizedIcon;
+
+        await sharp(finalIcon)
           .webp({ quality: 85 })
           .toFile(outFile);
 
