@@ -14,7 +14,7 @@ import {
   PlayerTile,
   Toast
 } from '../components/ui';
-import { NightPhaseController } from '../components/game';
+import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { ROLE_MEDALLION_ICONS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { CardSelectionRitual } from '../components/CardSelectionRitual';
 import { ROLE_DETAILS } from '../components/PlayerLiveView';
@@ -748,6 +748,8 @@ export default function PlayPage() {
                   style={{ marginBottom: 'var(--s-3)' }}
                 />
               )}
+
+              <DiscussionTimer gameId={game.id} roundNumber={currentRound.number} />
               
               <h3 style={{ fontFamily: 'var(--font-title)', color: 'var(--gold-300)', marginTop: 'var(--s-4)', marginBottom: 'var(--s-2)' }}>
                 ⚖️ BỎ PHIẾU LOẠI (TREO CỔ)
