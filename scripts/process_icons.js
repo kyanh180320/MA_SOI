@@ -19,11 +19,11 @@ const ICONS_WITH_ADJACENT_SPRITE_PIXELS = new Set([
 
 // Các huy hiệu bất đối xứng cần căn theo trọng tâm thị giác, không chỉ bounding box.
 const ICON_VISUAL_PLACEMENTS = {
-  icon_eye: { size: 155, left: 5, top: 2 },
-  icon_potion_heal: { size: 156, left: 0, top: 2 },
-  icon_shield: { size: 155, left: 5, top: 2 },
-  icon_swords_alt: { size: 155, left: 0, top: 5 },
-  icon_wolf_paw_fire: { size: 155, left: 5, top: 2 },
+  icon_eye: { size: 155, left: 4, top: 2 },
+  icon_potion_heal: { size: 156, left: 1, top: 2 },
+  icon_shield: { size: 155, left: 4, top: 2 },
+  icon_swords_alt: { size: 155, left: 1, top: 4 },
+  icon_wolf_paw_fire: { size: 155, left: 4, top: 2 },
 };
 
 function findLargestOpaqueBounds(data, width, height) {
