@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { subscribeRooms, createRoom, joinRoom, closeRoom, getPlayerMembers } from '../services/roomService';
 import type { GameRoom } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
+import { useDialog } from '../components/dialog';
 import styles from './HomePage.module.css';
 
 const PRESET_AVATARS = [
@@ -20,6 +21,7 @@ const PRESET_AVATARS = [
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, logoutUser, updateProfileData } = useAuth();
+  const { showAlert, showConfirm } = useDialog();
 
   // State cho Modal Sửa Hồ Sơ
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -44,13 +46,24 @@ export default function HomePage() {
 
   // Xoá phòng dành cho người tạo phòng (chủ phòng)
   const handleDeleteMyRoom = async (roomId: string, roomName: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xoá phòng "${roomName}" (#${roomId}) không? Toàn bộ người chơi sẽ bị kích ra ngoài.`)) {
+    const confirmed = await showConfirm({
+      title: 'Xóa phòng chơi?',
+      message: `Phòng “${roomName}” (#${roomId}) sẽ bị xóa và toàn bộ người chơi sẽ được đưa ra ngoài. Hành động này không thể hoàn tác.`,
+      tone: 'danger',
+      confirmLabel: 'Xóa phòng',
+      cancelLabel: 'Giữ phòng',
+    });
+    if (!confirmed) {
       return;
     }
     try {
       await closeRoom(roomId);
     } catch (err: unknown) {
-      alert((err as Error).message || 'Không thể xoá phòng.');
+      await showAlert({
+        title: 'Không thể xóa phòng',
+        message: (err as Error).message || 'Không thể xóa phòng lúc này. Vui lòng thử lại.',
+        tone: 'danger',
+      });
     }
   };
 
@@ -173,7 +186,11 @@ export default function HomePage() {
       navigate(`/room/${roomId}`);
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || 'Không thể vào phòng.');
+      await showAlert({
+        title: 'Không thể vào phòng',
+        message: error.message || 'Không thể vào phòng lúc này. Vui lòng thử lại.',
+        tone: 'danger',
+      });
     } finally {
       setJoiningRoomId(null);
     }

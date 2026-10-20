@@ -18,10 +18,12 @@ import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { ROLE_MEDALLION_ICONS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { CardSelectionRitual } from '../components/CardSelectionRitual';
 import { ROLE_DETAILS } from '../components/PlayerLiveView';
+import { useDialog } from '../components/dialog';
 
 export default function PlayPage() {
   const navigate = useNavigate();
   const { game, updateGame, applyRemoteGame, undo, canUndo, setGame } = useGame();
+  const { showConfirm } = useDialog();
   const [showRoles, setShowRoles] = useState(true);
   const [showRitual, setShowRitual] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -76,11 +78,22 @@ export default function PlayPage() {
   const alivePlayers = game.players.filter(p => p.alive);
   const currentRound = game.rounds[game.rounds.length - 1];
 
-  const handleExit = () => {
-    if (isExiting || !window.confirm("Bạn muốn thoát ván này? Dữ liệu sẽ KHÔNG được lưu vào lịch sử.")) return;
+  const handleExit = async () => {
+    if (isExiting) return;
+    setIsExiting(true);
+    const confirmed = await showConfirm({
+      title: 'Thoát ván không lưu?',
+      message: 'Toàn bộ tiến trình của ván hiện tại sẽ không được lưu vào lịch sử. Bạn có chắc chắn muốn thoát?',
+      tone: 'danger',
+      confirmLabel: 'Thoát không lưu',
+      cancelLabel: 'Tiếp tục chơi',
+    });
+    if (!confirmed) {
+      setIsExiting(false);
+      return;
+    }
 
     const exitingRoomId = game.roomId;
-    setIsExiting(true);
     setGame(null);
     navigate('/', { replace: true });
 
@@ -93,20 +106,30 @@ export default function PlayPage() {
     }
   };
 
-  const handleEndGame = () => {
+  const handleEndGame = async () => {
     if (isSavingGame) return;
-    if (window.confirm("Bạn có chắc chắn muốn kết thúc và lưu ván này không?")) {
-      setIsSavingGame(true);
-      if (game.roomId) {
-        void closeRoom(game.roomId).catch((error: unknown) => {
-          console.error(`Lỗi khi đóng phòng online ${game.roomId}:`, error);
-        });
-      }
-      // saveGame lưu local đồng bộ trước khi chờ Firestore, nên màn BXH phản hồi ngay cả khi mạng yếu.
-      void saveGame(game);
-      setGame(null);
-      navigate('/leaderboard');
+    setIsSavingGame(true);
+    const confirmed = await showConfirm({
+      title: 'Lưu và kết thúc ván?',
+      message: 'Kết quả phe thắng sẽ được lưu vào lịch sử và cập nhật bảng xếp hạng.',
+      tone: 'warning',
+      confirmLabel: 'Lưu kết quả',
+      cancelLabel: 'Quay lại',
+    });
+    if (!confirmed) {
+      setIsSavingGame(false);
+      return;
     }
+
+    if (game.roomId) {
+      void closeRoom(game.roomId).catch((error: unknown) => {
+        console.error(`Lỗi khi đóng phòng online ${game.roomId}:`, error);
+      });
+    }
+    // saveGame lưu local đồng bộ trước khi chờ Firestore, nên màn BXH phản hồi ngay cả khi mạng yếu.
+    void saveGame(game);
+    setGame(null);
+    navigate('/leaderboard');
   };
 
   const getRoleLabel = (role: Role) => {

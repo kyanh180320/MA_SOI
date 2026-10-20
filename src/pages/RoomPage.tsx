@@ -18,12 +18,14 @@ import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView, ROLE_DETAILS } from '../components/PlayerLiveView';
 import { CardSelectionRitual } from '../components/CardSelectionRitual';
+import { useDialog } from '../components/dialog';
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { game, setGame, applyRemoteGame } = useGame();
+  const { showAlert, showConfirm } = useDialog();
 
   const [room, setRoom] = useState<GameRoom | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,13 @@ export default function RoomPage() {
       if (!roomData) {
         if (!isLeavingRef.current) {
           isLeavingRef.current = true;
-          alert('Chủ phòng (Quản trò) đã rời đi. Phòng chơi đã bị giải tán và tất cả người chơi được đưa về Trang Chủ.');
+          void showAlert({
+            title: 'Phòng đã giải tán',
+            message: 'Chủ phòng (Quản trò) đã rời đi. Tất cả người chơi sẽ được đưa về Trang Chủ.',
+            tone: 'warning',
+            confirmLabel: 'Về Trang Chủ',
+          }).then(() => navigate('/'));
+          return;
         }
         navigate('/');
       } else {
@@ -55,7 +63,7 @@ export default function RoomPage() {
     });
 
     return () => unsubscribe();
-  }, [roomId, navigate]);
+  }, [roomId, navigate, showAlert]);
 
   // Tự động dọn dẹp hoặc xoá phòng khi tắt tab / reload hoặc bấm phím Back
   useEffect(() => {
@@ -123,22 +131,36 @@ export default function RoomPage() {
       ? 'Bạn là Chủ phòng (Quản trò). Khi bạn rời đi, phòng chơi này sẽ bị XOÁ HOÀN TOÀN và tất cả người chơi khác sẽ bị đẩy ra ngoài. Bạn có chắc chắn muốn rời?'
       : 'Bạn có chắc chắn muốn rời phòng không?';
 
-    if (window.confirm(confirmMsg)) {
-      isLeavingRef.current = true;
-      if (game?.roomId === roomId) setGame(null);
-      await leaveRoom(roomId);
-      navigate('/');
-    }
+    const confirmed = await showConfirm({
+      title: isHost ? 'Rời và xóa phòng?' : 'Rời phòng chơi?',
+      message: confirmMsg,
+      tone: isHost ? 'danger' : 'warning',
+      confirmLabel: 'Rời phòng',
+      cancelLabel: 'Ở lại',
+    });
+    if (!confirmed) return;
+
+    isLeavingRef.current = true;
+    if (game?.roomId === roomId) setGame(null);
+    await leaveRoom(roomId);
+    navigate('/');
   };
 
   const handleClose = async () => {
     if (!roomId) return;
-    if (window.confirm('Bạn có chắc muốn giải tán phòng chơi này không? Toàn bộ người chơi sẽ bị kích ra ngoài.')) {
-      isLeavingRef.current = true;
-      if (game?.roomId === roomId) setGame(null);
-      await closeRoom(roomId);
-      navigate('/');
-    }
+    const confirmed = await showConfirm({
+      title: 'Giải tán phòng chơi?',
+      message: 'Phòng sẽ bị xóa hoàn toàn và toàn bộ người chơi sẽ được đưa ra ngoài. Hành động này không thể hoàn tác.',
+      tone: 'danger',
+      confirmLabel: 'Giải tán phòng',
+      cancelLabel: 'Giữ phòng',
+    });
+    if (!confirmed) return;
+
+    isLeavingRef.current = true;
+    if (game?.roomId === roomId) setGame(null);
+    await closeRoom(roomId);
+    navigate('/');
   };
 
   const handleStartSetup = () => {
@@ -158,7 +180,11 @@ export default function RoomPage() {
     try {
       await addBotToRoom(roomId);
     } catch (err: unknown) {
-      alert((err as Error).message);
+      await showAlert({
+        title: 'Không thể thêm Bot',
+        message: (err as Error).message || 'Không thể thêm Bot lúc này.',
+        tone: 'danger',
+      });
     } finally {
       setIsAddingBot(false);
     }
@@ -171,7 +197,11 @@ export default function RoomPage() {
       const target = Math.max(RULES.minPlayers, playerMembers.length + 1);
       await addBotsUntil(roomId, target);
     } catch (err: unknown) {
-      alert((err as Error).message);
+      await showAlert({
+        title: 'Không thể thêm Bot',
+        message: (err as Error).message || 'Không thể thêm đủ Bot lúc này.',
+        tone: 'danger',
+      });
     } finally {
       setIsAddingBot(false);
     }
@@ -182,7 +212,11 @@ export default function RoomPage() {
     try {
       await removeBotFromRoom(roomId, botUid);
     } catch (err: unknown) {
-      alert((err as Error).message);
+      await showAlert({
+        title: 'Không thể xóa Bot',
+        message: (err as Error).message || 'Không thể xóa Bot lúc này.',
+        tone: 'danger',
+      });
     }
   };
 
@@ -190,7 +224,12 @@ export default function RoomPage() {
   const handleQuickStart = async () => {
     if (!roomId || isStartingGame) return;
     if (playerMembers.length < RULES.minPlayers) {
-      alert(`Cần ít nhất ${RULES.minPlayers} người chơi (không tính Quản trò) để bắt đầu ván. Vui lòng bấm '+1 Bot' hoặc đợi thêm người chơi.`);
+      await showAlert({
+        title: 'Chưa đủ người chơi',
+        message: `Cần ít nhất ${RULES.minPlayers} người chơi, không tính Quản trò, để bắt đầu ván. Hãy thêm Bot hoặc đợi thêm người chơi.`,
+        tone: 'warning',
+        confirmLabel: 'Đã hiểu',
+      });
       return;
     }
 
@@ -221,7 +260,11 @@ export default function RoomPage() {
       setShowCeremonyBeforePlay(true);
     } catch (err: unknown) {
       console.error("Lỗi bắt đầu ván nhanh:", err);
-      alert("Lỗi khi bắt đầu ván: " + ((err as Error).message || String(err)));
+      await showAlert({
+        title: 'Không thể bắt đầu ván',
+        message: (err as Error).message || String(err),
+        tone: 'danger',
+      });
     } finally {
       setIsStartingGame(false);
     }

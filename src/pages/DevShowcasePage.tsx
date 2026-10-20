@@ -13,8 +13,10 @@ import {
 import { PlayerLiveView } from '../components/PlayerLiveView';
 import type { Phase, Role } from '../game/types';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
+import { useDialog } from '../components/dialog';
 
 export const DevShowcasePage: React.FC = () => {
+  const { showAlert } = useDialog();
   const [modalOpen, setModalOpen] = useState(false);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [selectedShowcaseRole, setSelectedShowcaseRole] = useState<Role>('wolf');
@@ -623,7 +625,11 @@ export const DevShowcasePage: React.FC = () => {
               displayName: 'Kỳ Anh',
               email: 'user@example.com'
             }}
-            onLeave={() => alert('Thử nghiệm: Người chơi bấm Rời phòng')}
+            onLeave={() => void showAlert({
+              title: 'Thử nghiệm giao diện',
+              message: 'Người chơi vừa bấm Rời phòng trong bản xem trước.',
+              tone: 'info',
+            })}
           />
         </div>
       </Panel>

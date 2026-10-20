@@ -13,6 +13,7 @@ import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { CardSelectionRitual } from './CardSelectionRitual';
 import { getActiveNightRoleSteps, getNightStep } from '../game/night';
+import { useDialog } from './dialog';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -102,6 +103,7 @@ export const PHASE_STEPS = [
 ];
 
 export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLeave }) => {
+  const { showAlert } = useDialog();
   const game = room.gameData;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -286,7 +288,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       setSelectedWolfTargets([]);
     } catch (e) {
       console.error("Lỗi xác nhận cắn người:", e);
-      alert("Lỗi kết nối phòng khi xác nhận cắn người!");
+      await showAlert({
+        title: 'Mất kết nối với phòng',
+        message: 'Không thể xác nhận mục tiêu cắn. Lựa chọn của bạn chưa được gửi, vui lòng thử lại.',
+        tone: 'danger',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -781,7 +787,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       disabled={isPrevProtected}
                       onClick={() => {
                         if (isPrevProtected) {
-                          alert("Không thể bảo vệ cùng một người 2 đêm liên tiếp!");
+                          void showAlert({
+                            title: 'Mục tiêu không hợp lệ',
+                            message: 'Bảo Vệ không thể bảo vệ cùng một người trong hai đêm liên tiếp.',
+                            tone: 'warning',
+                          });
                           return;
                         }
                         setSelectedGuardTarget(prev => prev === p.id ? null : p.id);
@@ -936,7 +946,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                           disabled={isSelf}
                           onClick={() => {
                             if (isSelf) {
-                              alert("Phù thủy không thể tự ném bình độc giết chính mình!");
+                              void showAlert({
+                                title: 'Không thể dùng bình độc',
+                                message: 'Phù Thủy không thể dùng bình độc lên chính mình.',
+                                tone: 'warning',
+                              });
                               return;
                             }
                             setSelectedWitchPoison(prev => prev === p.id ? null : p.id);
