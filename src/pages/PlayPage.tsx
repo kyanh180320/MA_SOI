@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
-import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
 import type { Role, Player } from '../game/types';
@@ -199,19 +199,19 @@ export default function PlayPage() {
     }
   };
 
-  const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
+  const configuredNightRoleSteps = getConfiguredNightRoleSteps(game.players);
   const nightStep = getNightStep(currentRound, game.players);
   const currentNightRoleItem = nightStep !== 'done' && nightStep !== 'wait'
     ? NIGHT_ROLE_PROGRESS_ITEMS[nightStep]
     : null;
   const nightStepIndex = nightStep === 'done'
-    ? activeNightRoleSteps.length
-    : activeNightRoleSteps.indexOf(nightStep as (typeof activeNightRoleSteps)[number]);
+    ? configuredNightRoleSteps.length
+    : configuredNightRoleSteps.indexOf(nightStep as (typeof configuredNightRoleSteps)[number]);
   const nightProgressPercent = nightStep === 'done'
     ? 100
-    : activeNightRoleSteps.length <= 1
+    : configuredNightRoleSteps.length <= 1
       ? 0
-      : Math.max(0, (nightStepIndex / (activeNightRoleSteps.length - 1)) * 100);
+      : Math.max(0, (nightStepIndex / (configuredNightRoleSteps.length - 1)) * 100);
 
   const handleGuardProtect = (targetId: string | null) => {
     updateGame(g => {
@@ -571,7 +571,7 @@ export default function PlayPage() {
           </Badge>
         </div>
 
-        {/* Stepper bar: chỉ hiển thị những vai trò ban đêm thực sự còn sống */}
+        {/* Stepper cố định theo cấu hình đầu ván để không làm lộ role đã chết */}
         {game.phase === 'night' ? (
           <div style={{
             display: 'flex',
@@ -598,7 +598,7 @@ export default function PlayPage() {
               }} />
             </div>
 
-            {activeNightRoleSteps.map((stepId, idx) => {
+            {configuredNightRoleSteps.map((stepId, idx) => {
               const step = NIGHT_ROLE_PROGRESS_ITEMS[stepId];
               const isPassed = idx < nightStepIndex || nightStep === 'done';
               const isActive = idx === nightStepIndex && nightStep !== 'done';

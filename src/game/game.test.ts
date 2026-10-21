@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getRoleDistribution, assignRoles } from './roles';
-import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep, getWolfPackSelection } from './night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
 import { applyLiveNightActions, sanitizeGameForSync } from './onlineSync';
@@ -266,6 +266,20 @@ describe('night', () => {
       expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
       expect(getNightStep(round, players)).toBe('wolf');
       expect(getNightStep({ ...round, wolfTargets: ['v1'] }, players)).toBe('done');
+    });
+
+    it('keeps configured role icons after those roles die', () => {
+      const players = [
+        player('w1', 'wolf'),
+        player('g1', 'guard', false),
+        player('s1', 'seer', false),
+        player('wt1', 'witch', false),
+        player('h1', 'hunter', false),
+        player('v1', 'villager'),
+      ];
+
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
+      expect(getConfiguredNightRoleSteps(players)).toEqual(['guard', 'wolf', 'seer', 'witch', 'hunter']);
     });
 
     it('treats demon wolf as the wolf night step', () => {

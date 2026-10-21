@@ -13,7 +13,7 @@ import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { CardSelectionRitual } from './CardSelectionRitual';
-import { getActiveNightRoleSteps, getNightStep, getWolfPackSelection } from '../game/night';
+import { getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from '../game/night';
 import { useDialog } from './dialog';
 
 interface PlayerLiveViewProps {
@@ -140,7 +140,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const currentPhase = game.phase;
 
   // Xác định bước vai trò ban đêm hiện tại
-  const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
+  const configuredNightRoleSteps = getConfiguredNightRoleSteps(game.players);
   const nightStep = getNightStep(currentRound, game.players);
   const currentNightRoleItem = nightStep !== 'done' && nightStep !== 'wait'
     ? NIGHT_ROLE_PROGRESS_ITEMS[nightStep]
@@ -181,8 +181,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   // Tính tiến độ thanh tiến trình
   const nightStepIndex = nightStep === 'done'
-    ? activeNightRoleSteps.length
-    : activeNightRoleSteps.indexOf(nightStep as (typeof activeNightRoleSteps)[number]);
+    ? configuredNightRoleSteps.length
+    : configuredNightRoleSteps.indexOf(nightStep as (typeof configuredNightRoleSteps)[number]);
 
   const currentPhaseIndex = PHASE_STEPS.findIndex(s => s.id === currentPhase);
   const phaseProgressPercent = currentPhaseIndex >= 0 
@@ -191,9 +191,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const nightProgressPercent = nightStep === 'done'
     ? 100
-    : activeNightRoleSteps.length <= 1
+    : configuredNightRoleSteps.length <= 1
       ? 0
-      : Math.max(0, (nightStepIndex / (activeNightRoleSteps.length - 1)) * 100);
+      : Math.max(0, (nightStepIndex / (configuredNightRoleSteps.length - 1)) * 100);
 
   // Nạn nhân đêm qua (nếu ở phase ban ngày)
   const nightVictims = currentRound?.nightDeaths?.map(id => {
@@ -569,7 +569,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
           </div>
         </div>
 
-        {/* STEPPER TIẾN ĐỘ: chỉ hiện đúng các vai có hành động và còn sống */}
+        {/* Danh sách icon cố định theo cấu hình đầu ván; role chết chỉ mất quyền thao tác */}
         {currentPhase === 'night' ? (
           <div className={styles.stepper}>
             <div className={styles.stepLine}>
@@ -579,7 +579,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               />
             </div>
 
-            {activeNightRoleSteps.map((stepId, idx) => {
+            {configuredNightRoleSteps.map((stepId, idx) => {
               const step = NIGHT_ROLE_PROGRESS_ITEMS[stepId];
               const isPassed = idx < nightStepIndex || nightStep === 'done';
               const isActive = idx === nightStepIndex && nightStep !== 'done';

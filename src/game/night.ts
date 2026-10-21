@@ -59,6 +59,19 @@ export function getActiveNightRoleSteps(players: Player[]): NightRoleStep[] {
 }
 
 /**
+ * Danh sách icon cố định theo cấu hình đầu ván. Trạng thái sống/chết không được
+ * làm mất icon vì điều đó sẽ vô tình tiết lộ role của người vừa bị loại.
+ */
+export function getConfiguredNightRoleSteps(players: Player[]): NightRoleStep[] {
+  return NIGHT_ROLE_ORDER.filter(step => {
+    if (step === 'wolf') {
+      return players.some(player => isWolfTeam(player.role));
+    }
+    return players.some(player => player.role === step);
+  });
+}
+
+/**
  * Tìm lượt ban đêm kế tiếp. Những role không có trong ván hoặc đã chết được bỏ qua.
  */
 export function getNightStep(currentRound: Round | undefined, players: Player[]): NightStep {
