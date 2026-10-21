@@ -241,7 +241,9 @@ export default function SetupPage() {
         };
       });
 
-      const assignedPlayers = assignRoles(players, distribution);
+      const assignedPlayers = assignRoles(players, distribution, {
+        previousPlayers: fromRoom?.gameData?.players,
+      });
 
       const newGame: Game = {
         id: `game_${Date.now()}`,

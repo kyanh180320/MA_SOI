@@ -30,7 +30,9 @@ export function createRematchGame(previousGame: Game, now = Date.now()): Game {
     name: player.name,
     avatar: player.avatar,
   }));
-  const assignedPlayers = assignRoles(players, getPreviousRoleDistribution(previousGame));
+  const assignedPlayers = assignRoles(players, getPreviousRoleDistribution(previousGame), {
+    previousPlayers: previousGame.players,
+  });
 
   return {
     id: `game_${now}`,

@@ -160,6 +160,38 @@ describe('roles', () => {
       const distribution = { wolf: 2, wolf_demon: 0, seer: 0, witch: 0, guard: 0, hunter: 0, villager: 0 };
       expect(() => assignRoles(players, distribution)).toThrowError();
     });
+
+    it('minimizes repeated roles from the previous game', () => {
+      const previousPlayers: Player[] = [
+        { id: 'p1', name: 'A', role: 'wolf', alive: true },
+        { id: 'p2', name: 'B', role: 'seer', alive: true },
+        { id: 'p3', name: 'C', role: 'villager', alive: true },
+        { id: 'p4', name: 'D', role: 'villager', alive: true },
+      ];
+      const players = previousPlayers.map(({ id, name }) => ({ id, name }));
+      const distribution = { wolf: 1, wolf_demon: 0, seer: 1, witch: 0, guard: 0, hunter: 0, villager: 2 };
+
+      const assigned = assignRoles(players, distribution, { previousPlayers, random: () => 0 });
+
+      expect(assigned.filter((player, index) => player.role === previousPlayers[index].role)).toHaveLength(0);
+    });
+
+    it('returns the mathematical minimum when repeats are unavoidable', () => {
+      const previousPlayers: Player[] = [
+        { id: 'p1', name: 'A', role: 'wolf', alive: true },
+        { id: 'p2', name: 'B', role: 'villager', alive: true },
+        { id: 'p3', name: 'C', role: 'villager', alive: true },
+        { id: 'p4', name: 'D', role: 'villager', alive: true },
+        { id: 'p5', name: 'E', role: 'villager', alive: true },
+      ];
+      const players = previousPlayers.map(({ id, name }) => ({ id, name }));
+      const distribution = { wolf: 1, wolf_demon: 0, seer: 0, witch: 0, guard: 0, hunter: 0, villager: 4 };
+
+      const assigned = assignRoles(players, distribution, { previousPlayers, random: () => 0.5 });
+      const repeatCount = assigned.filter((player, index) => player.role === previousPlayers[index].role).length;
+
+      expect(repeatCount).toBe(3);
+    });
   });
 });
 

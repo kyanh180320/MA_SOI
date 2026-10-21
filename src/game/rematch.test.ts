@@ -53,5 +53,6 @@ describe('createRematchGame', () => {
     expect(rematch.players.map(player => player.id)).toEqual(endedGame.players.map(player => player.id));
     expect(rematch.players.every(player => player.alive)).toBe(true);
     expect(countRoles(rematch)).toEqual(countRoles(endedGame));
+    expect(rematch.players.filter((player, index) => player.role === endedGame.players[index].role)).toHaveLength(0);
   });
 });

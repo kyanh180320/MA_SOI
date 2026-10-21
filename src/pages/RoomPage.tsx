@@ -213,7 +213,9 @@ export default function RoomPage() {
         avatar: m.avatar || ""
       }));
 
-      const assignedPlayers = assignRoles(players, distribution);
+      const assignedPlayers = assignRoles(players, distribution, {
+        previousPlayers: room.gameData?.players,
+      });
       const newGame: Game = {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),

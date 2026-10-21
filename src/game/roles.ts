@@ -1,6 +1,11 @@
 import type { Role, Player } from "./types";
 import { RULES } from "./config";
 
+export interface AssignRolesOptions {
+  previousPlayers?: ReadonlyArray<Pick<Player, "id" | "role">>;
+  random?: () => number;
+}
+
 export function getRoleDistribution(n: number, options?: { randomize?: boolean }): Record<Role, number> {
   if (n < RULES.minPlayers || n > RULES.maxPlayers) {
     throw new Error(`Số lượng người chơi phải từ ${RULES.minPlayers} đến ${RULES.maxPlayers}`);
@@ -78,8 +83,79 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   };
 }
 
-// Fisher-Yates shuffle algorithm
-export function assignRoles(players: Omit<Player, "role" | "alive">[], distribution: Record<Role, number>): Player[] {
+function shuffleRoles(roles: Role[], random: () => number): Role[] {
+  const shuffled = [...roles];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
+ * Tìm cách chia có số người trùng đúng vai ván trước thấp nhất. Khi có nhiều
+ * phương án cùng tối ưu, chọn ngẫu nhiên để người chơi không đoán được quy luật.
+ */
+function assignRolesWithMinimumRepeats(
+  players: Omit<Player, "role" | "alive">[],
+  roles: Role[],
+  previousRoles: ReadonlyMap<string, Role>,
+  random: () => number,
+): Role[] {
+  const roleTypes = [...new Set(roles)];
+  const initialCounts = roleTypes.map(role => roles.filter(candidate => candidate === role).length);
+  const memo = new Map<string, number>();
+
+  const getMinimumRepeats = (playerIndex: number, counts: number[]): number => {
+    if (playerIndex >= players.length) return 0;
+    const key = `${playerIndex}|${counts.join(',')}`;
+    const cached = memo.get(key);
+    if (cached !== undefined) return cached;
+
+    let minimum = Number.POSITIVE_INFINITY;
+    for (let roleIndex = 0; roleIndex < roleTypes.length; roleIndex++) {
+      if (counts[roleIndex] === 0) continue;
+      const nextCounts = [...counts];
+      nextCounts[roleIndex] -= 1;
+      const repeated = previousRoles.get(players[playerIndex].id) === roleTypes[roleIndex] ? 1 : 0;
+      minimum = Math.min(minimum, repeated + getMinimumRepeats(playerIndex + 1, nextCounts));
+    }
+
+    memo.set(key, minimum);
+    return minimum;
+  };
+
+  const assignedRoles: Role[] = [];
+  const remainingCounts = [...initialCounts];
+
+  for (let playerIndex = 0; playerIndex < players.length; playerIndex++) {
+    const currentMinimum = getMinimumRepeats(playerIndex, remainingCounts);
+    const optimalRoleIndexes: number[] = [];
+
+    for (let roleIndex = 0; roleIndex < roleTypes.length; roleIndex++) {
+      if (remainingCounts[roleIndex] === 0) continue;
+      const nextCounts = [...remainingCounts];
+      nextCounts[roleIndex] -= 1;
+      const repeated = previousRoles.get(players[playerIndex].id) === roleTypes[roleIndex] ? 1 : 0;
+      if (repeated + getMinimumRepeats(playerIndex + 1, nextCounts) === currentMinimum) {
+        optimalRoleIndexes.push(roleIndex);
+      }
+    }
+
+    const selectedIndex = optimalRoleIndexes[Math.floor(random() * optimalRoleIndexes.length)];
+    assignedRoles.push(roleTypes[selectedIndex]);
+    remainingCounts[selectedIndex] -= 1;
+  }
+
+  return assignedRoles;
+}
+
+// Fisher-Yates cho ván đầu; tối ưu số lần trùng vai nếu có dữ liệu ván trước.
+export function assignRoles(
+  players: Omit<Player, "role" | "alive">[],
+  distribution: Record<Role, number>,
+  options?: AssignRolesOptions,
+): Player[] {
   const rolesArray: Role[] = [];
   for (const [role, count] of Object.entries(distribution)) {
     for (let i = 0; i < count; i++) {
@@ -91,18 +167,15 @@ export function assignRoles(players: Omit<Player, "role" | "alive">[], distribut
     throw new Error("Số lượng vai không khớp với số lượng người chơi");
   }
 
-  // Khởi tạo clone để không làm thay đổi mảng gốc
-  const shuffledRoles = [...rolesArray];
-
-  // Shuffle (Fisher-Yates)
-  for (let i = shuffledRoles.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledRoles[i], shuffledRoles[j]] = [shuffledRoles[j], shuffledRoles[i]];
-  }
+  const random = options?.random ?? Math.random;
+  const previousRoles = new Map(options?.previousPlayers?.map(player => [player.id, player.role]));
+  const rolesToAssign = previousRoles.size > 0
+    ? assignRolesWithMinimumRepeats(players, rolesArray, previousRoles, random)
+    : shuffleRoles(rolesArray, random);
 
   return players.map((p, index) => ({
     ...p,
-    role: shuffledRoles[index],
+    role: rolesToAssign[index],
     alive: true,
   }));
 }
