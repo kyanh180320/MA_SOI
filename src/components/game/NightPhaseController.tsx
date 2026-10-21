@@ -11,6 +11,11 @@ import {
 } from '../ui';
 import { ROLE_CARD_IMAGES } from '../../constants/assets';
 import { useDialog } from '../dialog';
+import {
+  createDetectiveCheck,
+  getDetectiveTargetLimit,
+  isDetectiveLockedForRound,
+} from '../../game/detective';
 
 export interface NightPhaseControllerProps {
   game: Game;
@@ -22,6 +27,7 @@ export interface NightPhaseControllerProps {
   onGuardProtect: (targetId: string | null) => void;
   onWolfTargets: (targetIds: string[]) => void;
   onSeerCheck: (targetId: string | null) => void;
+  onDetectiveCheck: (detectiveId: string, targetIds: string[], locked?: boolean) => void;
   onWitchAction: (saveTargetId: string | null, poisonTargetId: string | null) => void;
   onHunterTarget: (hunterId: string, targetId: string | null) => void;
   onSkipDeadRole: (step: NightRoleStep) => void;
@@ -48,6 +54,11 @@ const DEAD_ROLE_COPY: Record<NightRoleStep, {
     callInstruction: '“Tiên Tri thức dậy và chọn người muốn soi.”',
     accent: 'var(--gold-100)',
   },
+  detective: {
+    label: 'THÁM TỬ',
+    callInstruction: '“Thám Tử thức dậy và chọn ba người muốn điều tra.”',
+    accent: 'var(--gold-300)',
+  },
   witch: {
     label: 'PHÙ THỦY',
     callInstruction: '“Phù Thủy thức dậy và quyết định có dùng bình hay không.”',
@@ -70,6 +81,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   onGuardProtect,
   onWolfTargets,
   onSeerCheck,
+  onDetectiveCheck,
   onWitchAction,
   onHunterTarget,
   onSkipDeadRole,
@@ -81,6 +93,8 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   const [wolfSelectionWarning, setWolfSelectionWarning] = useState<string | null>(null);
   const [selectedSeerTarget, setSelectedSeerTarget] = useState<string | null>(null);
   const [seerResultModal, setSeerResultModal] = useState<{ targetId: string; name: string; isWolf: boolean } | null>(null);
+  const [selectedDetectiveTargets, setSelectedDetectiveTargets] = useState<string[]>([]);
+  const [detectiveResult, setDetectiveResult] = useState<boolean | null>(null);
   const [witchSaveSelection, setWitchSaveSelection] = useState<string | null>(null);
   const [witchPoisonSelection, setWitchPoisonSelection] = useState<string | null>(null);
   const [selectedHunterChoice, setSelectedHunterChoice] = useState<{ hunterId: string; targetId: string } | null>(null);
@@ -603,7 +617,154 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 4. LƯỢT PHÙ THỦY
+  // 4. LƯỢT THÁM TỬ
+  if (nightStep === 'detective') {
+    const aliveDetectives = alivePlayers.filter(player => player.role === 'detective');
+    const currentDetective = aliveDetectives.find(
+      detective => currentRound.detectiveChecks?.[detective.id] === undefined,
+    );
+
+    if (!currentDetective) {
+      return (
+        <Panel>
+          <Toast variant="info" message="Đang chờ đồng bộ kết quả của Thám Tử…" />
+        </Panel>
+      );
+    }
+
+    const isLocked = isDetectiveLockedForRound(game, currentDetective.id);
+    const targetLimit = getDetectiveTargetLimit(game.players, currentDetective.id);
+    const eligiblePlayers = alivePlayers.filter(player => player.id !== currentDetective.id);
+    const result = createDetectiveCheck(game.players, currentDetective.id, selectedDetectiveTargets);
+
+    const toggleDetectiveTarget = (targetId: string) => {
+      setDetectiveResult(null);
+      setSelectedDetectiveTargets(current => {
+        if (current.includes(targetId)) return current.filter(id => id !== targetId);
+        if (current.length >= targetLimit) return current;
+        return [...current, targetId];
+      });
+    };
+
+    return (
+      <Panel>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img
+            src={ROLE_CARD_IMAGES.detective}
+            alt="Thám Tử"
+            style={{
+              width: '46px',
+              height: '69px',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              border: '1.5px solid var(--gold-400)',
+              objectFit: 'cover',
+            }}
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--gold-100)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px',
+            }}>
+              🔎 {currentDetective.name} điều tra nhóm nào?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              Kết quả chỉ cho biết trong nhóm có ít nhất một Sói hay không
+            </span>
+          </div>
+        </div>
+
+        {isLocked ? (
+          <>
+            <Toast
+              variant="info"
+              message="Vòng trước Thám Tử đã soi đủ 3 người và không gặp Sói, nên năng lực bị khóa trong vòng này."
+              style={{ marginBottom: 'var(--s-3)' }}
+            />
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => onDetectiveCheck(currentDetective.id, [], true)}
+            >
+              XÁC NHẬN THÁM TỬ BỊ KHÓA — TIẾP TỤC ➔
+            </Button>
+          </>
+        ) : (
+          <>
+            <p style={{ margin: '0 0 var(--s-3)', fontSize: '13px', color: 'var(--text)' }}>
+              Chọn <strong>{targetLimit} người</strong> để điều tra ({selectedDetectiveTargets.length}/{targetLimit}).
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+              {eligiblePlayers.map(player => {
+                const isSelected = selectedDetectiveTargets.includes(player.id);
+                return (
+                  <PlayerTile
+                    key={player.id}
+                    name={player.name}
+                    avatarUrl={player.avatar}
+                    role={showRoles ? getRoleLabel(player.role) : undefined}
+                    badgeLabel={isSelected ? `🔎 #${selectedDetectiveTargets.indexOf(player.id) + 1}` : undefined}
+                    badgeVariant="gold"
+                    isSelected={isSelected}
+                    disabled={!isSelected && selectedDetectiveTargets.length >= targetLimit}
+                    onClick={() => toggleDetectiveTarget(player.id)}
+                  />
+                );
+              })}
+            </div>
+            <Button
+              variant="primary"
+              pulse={selectedDetectiveTargets.length === targetLimit}
+              fullWidth
+              disabled={targetLimit === 0 || selectedDetectiveTargets.length !== targetLimit}
+              style={{ marginTop: 'var(--s-4)' }}
+              onClick={() => setDetectiveResult(result.hasWolf)}
+            >
+              XEM KẾT QUẢ ĐIỀU TRA
+            </Button>
+          </>
+        )}
+
+        <Modal
+          isOpen={detectiveResult !== null}
+          onClose={() => setDetectiveResult(null)}
+          title="KẾT QUẢ CỦA THÁM TỬ"
+          footer={detectiveResult !== null ? (
+            <Button
+              variant="primary"
+              pulse
+              fullWidth
+              onClick={() => {
+                onDetectiveCheck(currentDetective.id, selectedDetectiveTargets);
+                setDetectiveResult(null);
+                setSelectedDetectiveTargets([]);
+              }}
+            >
+              XÁC NHẬN & TIẾP TỤC ➔
+            </Button>
+          ) : undefined}
+        >
+          {detectiveResult !== null && (
+            <div style={{ textAlign: 'center', padding: 'var(--s-4) 0' }}>
+              <div style={{
+                fontSize: '28px',
+                fontFamily: 'var(--font-title)',
+                fontWeight: 800,
+                color: detectiveResult ? 'var(--red-300)' : 'var(--green-400)',
+                letterSpacing: '0.06em',
+              }}>
+                {detectiveResult ? '🐺 CÓ SÓI' : '✓ KHÔNG CÓ SÓI'}
+              </div>
+            </div>
+          )}
+        </Modal>
+      </Panel>
+    );
+  }
+
+  // 5. LƯỢT PHÙ THỦY
   if (nightStep === 'witch') {
     const wolfTargetsList = currentRound.wolfTargets 
       ? currentRound.wolfTargets.filter(id => id && id !== 'none') 
@@ -762,7 +923,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 5. LƯỢT THỢ SĂN
+  // 6. LƯỢT THỢ SĂN
   if (nightStep === 'hunter') {
     const aliveHunters = alivePlayers.filter(player => player.role === 'hunter');
     const currentHunter = aliveHunters.find(hunter => currentRound.hunterTargets?.[hunter.id] === undefined);
@@ -869,7 +1030,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 6. KẾT THÚC ĐÊM
+  // 7. KẾT THÚC ĐÊM
   if (nightStep === 'done') {
     return (
       <Panel style={{ textAlign: 'center' }}>

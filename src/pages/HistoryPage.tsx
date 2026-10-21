@@ -69,6 +69,7 @@ export default function HistoryPage() {
       case 'wolf': return 'Sói thường';
       case 'wolf_demon': return 'Sói quỷ';
       case 'seer': return 'Tiên tri';
+      case 'detective': return 'Thám tử';
       case 'witch': return 'Phù thủy';
       case 'guard': return 'Bảo vệ';
       case 'hunter': return 'Thợ săn';

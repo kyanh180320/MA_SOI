@@ -97,6 +97,10 @@ export function getNightStep(
     if (step === 'guard' && currentRound.guardProtectTarget === undefined) return step;
     if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
     if (step === 'seer' && currentRound.seerCheck === undefined) return step;
+    if (step === 'detective') {
+      const aliveDetectives = players.filter(player => player.alive && player.role === 'detective');
+      if (aliveDetectives.some(detective => currentRound.detectiveChecks?.[detective.id] === undefined)) return step;
+    }
     if (step === 'witch' && currentRound.witchSaved === undefined && currentRound.witchSavedTarget === undefined) return step;
     if (step === 'hunter') {
       const aliveHunters = players.filter(player => player.alive && player.role === 'hunter');
@@ -143,6 +147,14 @@ export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game
   if (lr.seerCheck === undefined && rr.seerCheck !== undefined) {
     next.seerCheck = rr.seerCheck;
     changed = true;
+  }
+
+  if (rr.detectiveChecks) {
+    const mergedDetectiveChecks = { ...(lr.detectiveChecks ?? {}), ...rr.detectiveChecks };
+    if (JSON.stringify(mergedDetectiveChecks) !== JSON.stringify(lr.detectiveChecks ?? {})) {
+      next.detectiveChecks = mergedDetectiveChecks;
+      changed = true;
+    }
   }
 
   const localWitchDone = lr.witchSaved !== undefined || lr.witchSavedTarget !== undefined;

@@ -11,6 +11,7 @@ import {
   closeRoom,
   startRoomRematch,
   submitDeadRoleSkipAction,
+  submitDetectiveAction,
   submitGuardAction,
   submitHunterAction,
   submitSeerAction,
@@ -31,6 +32,7 @@ import {
 import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { useDialog } from '../components/dialog';
+import { createDetectiveCheck } from '../game/detective';
 
 export default function PlayPage() {
   const navigate = useNavigate();
@@ -216,6 +218,7 @@ export default function PlayPage() {
       case 'wolf': return '🐺 Sói';
       case 'wolf_demon': return '😈 Sói quỷ';
       case 'seer': return '👁 Tiên tri';
+      case 'detective': return '🔎 Thám tử';
       case 'witch': return '🧪 Phù thủy';
       case 'guard': return '🛡 Bảo vệ';
       case 'hunter': return '🏹 Thợ săn';
@@ -306,6 +309,31 @@ export default function PlayPage() {
       syncModeratorNightAction(
         'kết quả của Tiên Tri',
         submitSeerAction(game.roomId, game.id, currentRound.number, seerCheck),
+      );
+    }
+  };
+
+  const handleDetectiveCheck = (detectiveId: string, targetIds: string[], locked = false) => {
+    const detectiveCheck = locked
+      ? { targets: [], hasWolf: false, locked: true }
+      : createDetectiveCheck(game.players, detectiveId, targetIds);
+
+    updateGameLocally(g => {
+      const rounds = [...g.rounds];
+      const round = rounds[rounds.length - 1];
+      rounds[rounds.length - 1] = {
+        ...round,
+        detectiveChecks: {
+          ...(round.detectiveChecks ?? {}),
+          [detectiveId]: detectiveCheck,
+        },
+      };
+      return { ...g, rounds };
+    });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'kết quả của Thám Tử',
+        submitDetectiveAction(game.roomId, game.id, currentRound.number, detectiveId, detectiveCheck),
       );
     }
   };
@@ -947,6 +975,7 @@ export default function PlayPage() {
               onGuardProtect={handleGuardProtect}
               onWolfTargets={handleWolfTargets}
               onSeerCheck={handleSeerCheck}
+              onDetectiveCheck={handleDetectiveCheck}
               onWitchAction={handleWitchAction}
               onHunterTarget={handleHunterTarget}
               onSkipDeadRole={handleSkipDeadRole}

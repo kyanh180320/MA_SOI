@@ -4,6 +4,7 @@ export const DEFAULT_NIGHT_ROLE_ORDER: readonly NightRoleStep[] = [
   'guard',
   'wolf',
   'seer',
+  'detective',
   'witch',
   'hunter',
 ];

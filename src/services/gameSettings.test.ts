@@ -1,24 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
   loadNightRoleOrder,
+  loadGameRoleSettings,
+  GAME_ROLE_SETTINGS_STORAGE_KEY,
   NIGHT_ROLE_ORDER_STORAGE_KEY,
   saveNightRoleOrder,
+  saveGameRoleSettings,
 } from './gameSettings';
 
 function createStorage(initialValue: string | null = null) {
-  let value = initialValue;
+  const values = new Map<string, string>();
+  if (initialValue !== null) values.set(NIGHT_ROLE_ORDER_STORAGE_KEY, initialValue);
   return {
-    getItem: (key: string) => key === NIGHT_ROLE_ORDER_STORAGE_KEY ? value : null,
-    setItem: (key: string, nextValue: string) => {
-      if (key === NIGHT_ROLE_ORDER_STORAGE_KEY) value = nextValue;
-    },
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, nextValue: string) => values.set(key, nextValue),
   };
 }
 
 describe('game settings', () => {
   it('saves and reloads the moderator night role order', () => {
     const storage = createStorage();
-    const customOrder = ['wolf', 'seer', 'hunter', 'guard', 'witch'] as const;
+    const customOrder = ['wolf', 'seer', 'detective', 'hunter', 'guard', 'witch'] as const;
 
     saveNightRoleOrder(customOrder, storage);
 
@@ -27,7 +29,17 @@ describe('game settings', () => {
 
   it('uses the default order when stored JSON is invalid', () => {
     expect(loadNightRoleOrder(createStorage('{broken'))).toEqual([
-      'guard', 'wolf', 'seer', 'witch', 'hunter',
+      'guard', 'wolf', 'seer', 'detective', 'witch', 'hunter',
     ]);
+  });
+
+  it('saves the detective lock rule independently from the call order', () => {
+    const storage = createStorage();
+    const settings = { detective: { lockNextRoundAfterClearCheck: false } };
+
+    saveGameRoleSettings(settings, storage);
+
+    expect(storage.getItem(GAME_ROLE_SETTINGS_STORAGE_KEY)).not.toBeNull();
+    expect(loadGameRoleSettings(storage)).toEqual(settings);
   });
 });

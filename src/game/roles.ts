@@ -15,14 +15,16 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   if (!options?.randomize) {
     const wolves = n <= 5 ? 1 : Math.max(2, Math.floor(n / 3));
     const seer = 1;
+    const detective = 0;
     const witch = n >= 7 ? 1 : 0;
     const guard = n >= 9 ? 1 : 0;
-    const villager = n - wolves - seer - witch - guard;
+    const villager = n - wolves - seer - detective - witch - guard;
 
     return {
       wolf: wolves,
       wolf_demon: 0,
       seer,
+      detective,
       witch,
       guard,
       hunter: 0,
@@ -43,7 +45,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
 
   const totalWolves = wolfDemonCount + normalWolfCount;
 
-  // 2. Phân bổ phe Dân đặc biệt (Tiên tri, Phù thủy, Bảo vệ, Thợ săn)
+  // 2. Phân bổ phe Dân đặc biệt (Tiên tri, Thám tử, Phù thủy, Bảo vệ, Thợ săn)
   // Số lượng vai đặc biệt được chọn tùy theo số người và sự hiện diện của Sói quỷ
   let specialCount = 1;
   if (n >= 7 && n <= 8) specialCount = wolfDemonCount > 0 ? 3 : 2;
@@ -56,7 +58,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   specialCount = Math.min(specialCount, maxSpecialAllowed);
 
   // Xáo trộn danh sách vai đặc biệt để chọn ra subset (sẽ có role bị thiếu để game đa dạng)
-  const specialPool: (Role)[] = ["seer", "witch", "guard", "hunter"];
+  const specialPool: Role[] = ["seer", "detective", "witch", "guard", "hunter"];
   // Shuffle pool
   for (let i = specialPool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -66,16 +68,18 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   const selectedSpecials = new Set(specialPool.slice(0, specialCount));
 
   const seer = selectedSpecials.has("seer") ? 1 : 0;
+  const detective = selectedSpecials.has("detective") ? 1 : 0;
   const witch = selectedSpecials.has("witch") ? 1 : 0;
   const guard = selectedSpecials.has("guard") ? 1 : 0;
   const hunter = selectedSpecials.has("hunter") ? 1 : 0;
 
-  const villager = n - totalWolves - seer - witch - guard - hunter;
+  const villager = n - totalWolves - seer - detective - witch - guard - hunter;
 
   return {
     wolf: normalWolfCount,
     wolf_demon: wolfDemonCount,
     seer,
+    detective,
     witch,
     guard,
     hunter,

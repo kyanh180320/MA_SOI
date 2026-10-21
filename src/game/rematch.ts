@@ -1,6 +1,7 @@
 import { RULES } from './config';
 import { assignRoles } from './roles';
 import { normalizeNightRoleOrder } from './nightRoleOrder';
+import { normalizeGameRoleSettings } from './roleSettings';
 import type { Game, Role } from './types';
 
 function getPreviousRoleDistribution(game: Game): Record<Role, number> {
@@ -9,6 +10,7 @@ function getPreviousRoleDistribution(game: Game): Record<Role, number> {
     wolf_demon: 0,
     villager: 0,
     seer: 0,
+    detective: 0,
     witch: 0,
     guard: 0,
     hunter: 0,
@@ -39,6 +41,7 @@ export function createRematchGame(previousGame: Game, now = Date.now()): Game {
     id: `game_${now}`,
     createdAt: now,
     nightRoleOrder: normalizeNightRoleOrder(previousGame.nightRoleOrder),
+    roleSettings: normalizeGameRoleSettings(previousGame.roleSettings),
     players: assignedPlayers,
     rounds: [{ number: 1, nightDeaths: [] }],
     phase: 'night',

@@ -8,6 +8,7 @@ const customFourPlayerRoles: RoleDistribution = {
   wolf_demon: 0,
   villager: 1,
   seer: 0,
+  detective: 0,
   witch: 0,
   guard: 1,
   hunter: 1,
@@ -42,6 +43,7 @@ describe('room setup configuration', () => {
       wolf_demon: 0,
       villager: 0,
       seer: 0,
+      detective: 0,
       witch: 0,
       guard: 0,
       hunter: 0,
@@ -60,5 +62,22 @@ describe('room setup configuration', () => {
 
   it('keeps old rooms without setupConfig backward compatible', () => {
     expect(getValidRoomSetupDistribution(undefined, 4)).toBeNull();
+  });
+
+  it('treats a missing detective field in an old saved room as zero', () => {
+    const oldDistribution = {
+      wolf: 1,
+      wolf_demon: 0,
+      villager: 2,
+      seer: 1,
+      witch: 0,
+      guard: 0,
+      hunter: 0,
+    } as RoleDistribution;
+
+    expect(getValidRoomSetupDistribution(createConfig({ distribution: oldDistribution }), 4)).toEqual({
+      ...oldDistribution,
+      detective: 0,
+    });
   });
 });

@@ -3,6 +3,7 @@ import type { GameRoom, AppUser, Role, Player } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
 import {
   submitGuardAction,
+  submitDetectiveAction,
   submitHunterAction,
   submitSeerAction,
   submitWitchAction,
@@ -15,6 +16,11 @@ import styles from './PlayerLiveView.module.css';
 import { LazyCardSelectionRitual } from './LazyCardSelectionRitual';
 import { getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from '../game/night';
 import { useDialog } from './dialog';
+import {
+  createDetectiveCheck,
+  getDetectiveTargetLimit,
+  isDetectiveLockedForRound,
+} from '../game/detective';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -53,6 +59,14 @@ export const ROLE_DETAILS: Record<Role, {
     color: "var(--purple-400)",
     description: "Mỗi đêm thức dậy chỉ định 1 người chơi để soi danh tính bí mật, biết được người đó thuộc Phe Ma Sói hay Phe Dân Làng.",
     actionHint: "🌙 Ban đêm: Thức dậy khi Quản trò gọi để soi thân phận 1 người."
+  },
+  detective: {
+    name: "THÁM TỬ",
+    team: "Phe Dân Làng",
+    icon: "🔎",
+    color: "var(--gold-300)",
+    description: "Mỗi đêm điều tra một nhóm 3 người và chỉ biết trong nhóm đó có ít nhất một Ma Sói hay không. Nếu soi đủ 3 người mà không gặp Sói, năng lực có thể bị khóa ở vòng kế tiếp tùy luật ván.",
+    actionHint: "🌙 Ban đêm: Chọn 3 người, nhận kết quả CÓ SÓI hoặc KHÔNG CÓ SÓI."
   },
   witch: {
     name: "PHÙ THỦY",
@@ -108,6 +122,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const [selectedSeerTarget, setSelectedSeerTarget] = useState<string | null>(null);
   const [seerResultModal, setSeerResultModal] = useState<{ target: Player; isWolf: boolean } | null>(null);
+  const [selectedDetectiveTargets, setSelectedDetectiveTargets] = useState<string[]>([]);
+  const [detectiveResultModal, setDetectiveResultModal] = useState<boolean | null>(null);
 
   const [witchSaveActive, setWitchSaveActive] = useState(false);
   const [selectedWitchPoison, setSelectedWitchPoison] = useState<string | null>(null);
@@ -393,6 +409,41 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       setSelectedSeerTarget(null);
     } catch (e) {
       console.error("Lỗi lưu kết quả tiên tri:", e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // XỬ LÝ LOGIC CỦA THÁM TỬ
+  // -------------------------------------------------------------
+  const myDetectiveCheck = currentRound?.detectiveChecks?.[myPlayer.id];
+  const detectiveTargetLimit = getDetectiveTargetLimit(game.players, myPlayer.id);
+  const isDetectiveLocked = myPlayer.role === 'detective'
+    && isDetectiveLockedForRound(game, myPlayer.id);
+
+  const handleTriggerDetectiveInspect = () => {
+    if (selectedDetectiveTargets.length !== detectiveTargetLimit) return;
+    const check = createDetectiveCheck(game.players, myPlayer.id, selectedDetectiveTargets);
+    setDetectiveResultModal(check.hasWolf);
+  };
+
+  const handleFinishDetectiveCheck = async (locked = false) => {
+    const check = locked
+      ? { targets: [], hasWolf: false, locked: true }
+      : createDetectiveCheck(game.players, myPlayer.id, selectedDetectiveTargets);
+    setIsSubmitting(true);
+    try {
+      await submitDetectiveAction(room.id, game.id, roundNumber, myPlayer.id, check);
+      setDetectiveResultModal(null);
+      setSelectedDetectiveTargets([]);
+    } catch (error) {
+      console.error('Lỗi lưu kết quả Thám Tử:', error);
+      await showAlert({
+        title: 'Chưa lưu được kết quả',
+        message: 'Kết quả điều tra chưa được gửi. Hãy kiểm tra kết nối và thử lại.',
+        tone: 'danger',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -948,7 +999,69 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* D. THAO TÁC CỦA PHÙ THỦY */}
+          {/* D. THAO TÁC CỦA THÁM TỬ */}
+          {nightStep === 'detective' && myPlayer.role === 'detective' && myDetectiveCheck === undefined && (
+            <div className={`${styles.actionPanel} ${styles.actionPanelSeer}`}>
+              <div className={styles.actionHeader}>
+                <h3 className={styles.actionTitle} style={{ color: 'var(--gold-300)' }}>
+                  🔎 THÁM TỬ ĐIỀU TRA
+                </h3>
+                <Badge variant="gold">Thám Tử</Badge>
+              </div>
+
+              {isDetectiveLocked ? (
+                <>
+                  <div className={styles.wolfAlertDisagreement}>
+                    🔒 Vòng trước bạn đã soi đủ 3 người và không gặp Sói. Năng lực bị khóa trong vòng này.
+                  </div>
+                  <Button
+                    variant="secondary"
+                    disabled={isSubmitting}
+                    onClick={() => handleFinishDetectiveCheck(true)}
+                  >
+                    XÁC NHẬN BỎ LƯỢT ĐIỀU TRA
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
+                    Chọn <strong>{detectiveTargetLimit} người</strong>. Kết quả chỉ cho biết trong nhóm có Sói hay không ({selectedDetectiveTargets.length}/{detectiveTargetLimit}).
+                  </p>
+                  <div className={styles.targetSelectionGrid}>
+                    {alivePlayers.filter(player => player.id !== myPlayer.id).map(player => {
+                      const isSelected = selectedDetectiveTargets.includes(player.id);
+                      return (
+                        <PlayerTile
+                          key={player.id}
+                          name={player.name}
+                          avatarUrl={player.avatar}
+                          badgeLabel={isSelected ? `🔎 #${selectedDetectiveTargets.indexOf(player.id) + 1}` : undefined}
+                          badgeVariant="gold"
+                          isSelected={isSelected}
+                          disabled={!isSelected && selectedDetectiveTargets.length >= detectiveTargetLimit}
+                          onClick={() => setSelectedDetectiveTargets(current => {
+                            if (current.includes(player.id)) return current.filter(id => id !== player.id);
+                            if (current.length >= detectiveTargetLimit) return current;
+                            return [...current, player.id];
+                          })}
+                        />
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="primary"
+                    pulse={selectedDetectiveTargets.length === detectiveTargetLimit}
+                    disabled={detectiveTargetLimit === 0 || selectedDetectiveTargets.length !== detectiveTargetLimit || isSubmitting}
+                    onClick={handleTriggerDetectiveInspect}
+                  >
+                    XEM KẾT QUẢ ĐIỀU TRA
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* E. THAO TÁC CỦA PHÙ THỦY */}
           {nightStep === 'witch' && myPlayer.role === 'witch' && (
             <div className={`${styles.actionPanel} ${styles.actionPanelWitch}`}>
               <div className={styles.actionHeader}>
@@ -1064,7 +1177,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* E. THAO TÁC CỦA THỢ SĂN */}
+          {/* F. THAO TÁC CỦA THỢ SĂN */}
           {nightStep === 'hunter' && myPlayer.role === 'hunter' && (
             <div className={styles.actionPanel}>
               <div className={styles.actionHeader}>
@@ -1131,10 +1244,11 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* F. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
+          {/* G. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
           {((nightStep === 'guard' && myPlayer.role !== 'guard') ||
             (nightStep === 'wolf' && !isWolfTeam(myPlayer.role)) ||
             (nightStep === 'seer' && myPlayer.role !== 'seer') ||
+            (nightStep === 'detective' && (myPlayer.role !== 'detective' || myDetectiveCheck !== undefined)) ||
             (nightStep === 'witch' && myPlayer.role !== 'witch') ||
             (nightStep === 'hunter' && myPlayer.role !== 'hunter') ||
             nightStep === 'done') && (
@@ -1150,6 +1264,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   {nightStep === 'guard' && '🛡️ BẢO VỆ'}
                   {nightStep === 'wolf' && '🐺 BẦY MA SÓI'}
                   {nightStep === 'seer' && '🔮 TIÊN TRI'}
+                  {nightStep === 'detective' && '🔎 THÁM TỬ'}
                   {nightStep === 'witch' && '🧪 PHÙ THỦY'}
                   {nightStep === 'hunter' && '🏹 THỢ SĂN'}
                   {nightStep === 'done' && '✨ CHỜ BÌNH MINH'}
@@ -1265,6 +1380,36 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 ? '⚠️ Cẩn thận! Người này là Ma Sói đang trà trộn trong dân làng.' 
                 : '✨ Người này thuộc Phe Dân Làng hiền lành và an toàn.'}
             </p>
+          </div>
+        </Modal>
+      )}
+
+      {detectiveResultModal !== null && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDetectiveResultModal(null)}
+          title="🔎 KẾT QUẢ CỦA THÁM TỬ"
+          footer={
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={isSubmitting}
+              onClick={() => handleFinishDetectiveCheck(false)}
+            >
+              ✓ ĐÃ RÕ — HOÀN TẤT ĐIỀU TRA
+            </Button>
+          }
+        >
+          <div style={{ textAlign: 'center', padding: 'var(--s-5) 0' }}>
+            <div style={{
+              fontSize: '30px',
+              fontFamily: 'var(--font-title)',
+              fontWeight: 800,
+              color: detectiveResultModal ? 'var(--red-300)' : 'var(--green-400)',
+              letterSpacing: '0.06em',
+            }}>
+              {detectiveResultModal ? '🐺 CÓ SÓI' : '✓ KHÔNG CÓ SÓI'}
+            </div>
           </div>
         </Modal>
       )}

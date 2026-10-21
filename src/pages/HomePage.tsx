@@ -2,14 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { subscribeRooms, createRoom, joinRoom, closeRoom, getPlayerMembers } from '../services/roomService';
-import type { GameRoom, NightRoleStep } from '../game/types';
+import type { GameRoleSettings, GameRoom, NightRoleStep } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
 import { prepareAvatarImage } from '../services/avatarImage';
 import { canEnterRoom } from '../game/roomAccess';
 import { isCleanupManager } from '../game/adminAccess';
 import { DEFAULT_NIGHT_ROLE_ORDER, moveNightRoleStep } from '../game/nightRoleOrder';
-import { loadNightRoleOrder, saveNightRoleOrder } from '../services/gameSettings';
+import {
+  loadGameRoleSettings,
+  loadNightRoleOrder,
+  saveGameRoleSettings,
+  saveNightRoleOrder,
+} from '../services/gameSettings';
 import { NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './HomePage.module.css';
 
@@ -55,12 +60,17 @@ export default function HomePage() {
   const [savedNightRoleOrder, setSavedNightRoleOrder] = useState<NightRoleStep[]>(loadNightRoleOrder);
   const [nightRoleOrderDraft, setNightRoleOrderDraft] = useState<NightRoleStep[]>(loadNightRoleOrder);
   const [roleOrderFeedback, setRoleOrderFeedback] = useState<string | null>(null);
+  const [savedRoleSettings, setSavedRoleSettings] = useState<GameRoleSettings>(loadGameRoleSettings);
+  const [roleSettingsDraft, setRoleSettingsDraft] = useState<GameRoleSettings>(loadGameRoleSettings);
+  const [roleSettingsFeedback, setRoleSettingsFeedback] = useState<string | null>(null);
 
   const canCleanUpRooms = isCleanupManager(user);
 
   const openOptions = () => {
     setNightRoleOrderDraft(savedNightRoleOrder);
+    setRoleSettingsDraft(savedRoleSettings);
     setRoleOrderFeedback(null);
+    setRoleSettingsFeedback(null);
     setIsAdminOpen(true);
   };
 
@@ -77,6 +87,17 @@ export default function HomePage() {
       setRoleOrderFeedback('Đã lưu. Các ván bắt đầu từ bây giờ sẽ gọi vai theo thứ tự này.');
     } catch {
       setRoleOrderFeedback('Không thể lưu cài đặt trên thiết bị này. Vui lòng thử lại.');
+    }
+  };
+
+  const handleSaveRoleSettings = () => {
+    try {
+      const savedSettings = saveGameRoleSettings(roleSettingsDraft);
+      setSavedRoleSettings(savedSettings);
+      setRoleSettingsDraft(savedSettings);
+      setRoleSettingsFeedback('Đã lưu luật riêng của Thám Tử cho các ván mới.');
+    } catch {
+      setRoleSettingsFeedback('Không thể lưu cài đặt trên thiết bị này. Vui lòng thử lại.');
     }
   };
 
@@ -459,6 +480,56 @@ export default function HomePage() {
               onClick={handleSaveNightRoleOrder}
             >
               💾 LƯU THỨ TỰ GỌI VAI
+            </button>
+          </section>
+
+          <section className={styles.roleSettingsPanel} aria-labelledby="detective-settings-title">
+            <div className={styles.roleSettingsTitleRow}>
+              <img src="/assets/icons/icon_detective_balanced.webp" alt="" width="44" height="44" />
+              <div>
+                <h3 id="detective-settings-title">CẤU HÌNH ROLE: THÁM TỬ</h3>
+                <p>Luật khóa năng lực ở vòng kế tiếp sau một lần điều tra không tìm thấy Sói.</p>
+              </div>
+            </div>
+
+            <div className={styles.roleSettingRow}>
+              <div>
+                <strong>Khóa sau khi soi sạch 3 người</strong>
+                <span>Bật: không có Sói thì nghỉ vòng sau. Tắt: được soi ở mọi vòng.</span>
+              </div>
+              <div className={styles.booleanControl} aria-label="Khóa phép Thám Tử ở vòng sau">
+                <button
+                  type="button"
+                  className={roleSettingsDraft.detective.lockNextRoundAfterClearCheck ? styles.booleanActive : ''}
+                  onClick={() => {
+                    setRoleSettingsDraft({ detective: { lockNextRoundAfterClearCheck: true } });
+                    setRoleSettingsFeedback(null);
+                  }}
+                >
+                  BẬT
+                </button>
+                <button
+                  type="button"
+                  className={!roleSettingsDraft.detective.lockNextRoundAfterClearCheck ? styles.booleanActive : ''}
+                  onClick={() => {
+                    setRoleSettingsDraft({ detective: { lockNextRoundAfterClearCheck: false } });
+                    setRoleSettingsFeedback(null);
+                  }}
+                >
+                  TẮT
+                </button>
+              </div>
+            </div>
+
+            {roleSettingsFeedback && (
+              <p className={styles.roleOrderFeedback} role="status">{roleSettingsFeedback}</p>
+            )}
+            <button
+              type="button"
+              className={styles.roleOrderSave}
+              onClick={handleSaveRoleSettings}
+            >
+              💾 LƯU CẤU HÌNH THÁM TỬ
             </button>
           </section>
 

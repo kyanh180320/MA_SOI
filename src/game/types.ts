@@ -1,4 +1,4 @@
-export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "witch" | "guard" | "hunter";
+export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "detective" | "witch" | "guard" | "hunter";
 export type RoleDistribution = Record<Role, number>;
 export type NightRoleStep = Exclude<Role, "villager" | "wolf_demon">;
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
@@ -19,6 +19,7 @@ export interface Round {
   wolfTargets?: string[];              // Danh sách mục tiêu sói cắn (hỗ trợ sói quỷ cắn 2 người)
   wolfVotes?: Record<string, string[]>; // Id từng con sói -> mục tiêu đang vote cắn
   seerCheck?: { target: string; isWolf: boolean };
+  detectiveChecks?: Record<string, DetectiveCheck>; // Id Thám tử -> kết quả soi nhóm trong vòng
   witchSaved?: boolean;                // Cứu nạn nhân (boolean)
   witchSavedTarget?: string;           // Id người cụ thể được cứu nếu có nhiều người bị cắn
   witchPoisonTarget?: string;          // Id người bị đầu độc
@@ -33,11 +34,26 @@ export interface Round {
   };
 }
 
+export interface DetectiveCheck {
+  targets: string[];
+  hasWolf: boolean;
+  /** Vòng bị khóa vẫn cần một thao tác xác nhận để thanh gọi vai không tự nhảy. */
+  locked?: boolean;
+}
+
+export interface GameRoleSettings {
+  detective: {
+    lockNextRoundAfterClearCheck: boolean;
+  };
+}
+
 export interface Game {
   id: string;
   createdAt: number;
   /** Optional để ván cũ chưa có cấu hình vẫn dùng thứ tự gọi mặc định. */
   nightRoleOrder?: NightRoleStep[];
+  /** Optional để ván cũ tự dùng luật mặc định. */
+  roleSettings?: GameRoleSettings;
   players: Player[];
   rounds: Round[];
   phase: Phase;
@@ -87,6 +103,7 @@ export interface LiveNightActions {
   wolfTargets?: string[];
   wolfVotes?: Record<string, string[]>;
   seerCheck?: { target: string; isWolf: boolean };
+  detectiveChecks?: Record<string, DetectiveCheck>;
   witchSaved?: boolean;
   witchSavedTarget?: string;
   witchPoisonTarget?: string;

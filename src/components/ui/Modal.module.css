@@ -28,6 +28,22 @@
   flex-direction: column;
   gap: var(--s-4);
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 162, 74, 0.7) rgba(5, 8, 20, 0.45);
+}
+
+.modalWindow::-webkit-scrollbar {
+  width: 7px;
+}
+
+.modalWindow::-webkit-scrollbar-track {
+  background: rgba(5, 8, 20, 0.45);
+  border-radius: 999px;
+}
+
+.modalWindow::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--gold-300), var(--gold-700));
 }
 
 .header {

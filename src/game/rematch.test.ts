@@ -8,7 +8,8 @@ const endedGame: Game = {
   roomId: '123456',
   phase: 'ended',
   winner: 'villager',
-  nightRoleOrder: ['wolf', 'seer', 'hunter', 'guard', 'witch'],
+  nightRoleOrder: ['wolf', 'seer', 'detective', 'hunter', 'guard', 'witch'],
+  roleSettings: { detective: { lockNextRoundAfterClearCheck: false } },
   players: [
     { id: 'p1', name: 'A', avatar: 'a.webp', role: 'wolf', alive: false },
     { id: 'p2', name: 'B', avatar: 'b.webp', role: 'seer', alive: true },
@@ -34,6 +35,7 @@ function countRoles(game: Game): Record<Role, number> {
     wolf_demon: 0,
     villager: 0,
     seer: 0,
+    detective: 0,
     witch: 0,
     guard: 0,
     hunter: 0,
@@ -48,6 +50,7 @@ describe('createRematchGame', () => {
     expect(rematch.roomId).toBe(endedGame.roomId);
     expect(rematch.createdAt).toBe(200);
     expect(rematch.nightRoleOrder).toEqual(endedGame.nightRoleOrder);
+    expect(rematch.roleSettings).toEqual(endedGame.roleSettings);
     expect(rematch.phase).toBe('night');
     expect(rematch.winner).toBeUndefined();
     expect(rematch.rounds).toEqual([{ number: 1, nightDeaths: [] }]);

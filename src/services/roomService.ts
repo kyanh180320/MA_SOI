@@ -13,7 +13,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep, RoomSetupConfig } from "../game/types";
+import type { DetectiveCheck, GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep, RoomSetupConfig } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
 import { isValidRoleDistribution } from "../game/roomSetup";
 import {
@@ -496,6 +496,18 @@ export function submitSeerAction(
 ): Promise<void> {
   return updateLiveNightFields(roomId, gameId, roundNumber, [
     { path: ["liveNightActions", "seerCheck"], value: seerCheck },
+  ]);
+}
+
+export function submitDetectiveAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  detectiveId: string,
+  check: DetectiveCheck,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "detectiveChecks", detectiveId], value: check },
   ]);
 }
 

@@ -54,6 +54,9 @@ export function applyLiveNightActions(game: Game, live?: LiveNightActions): Game
       ? { wolfVotes: { ...(currentRound.wolfVotes || {}), ...live.wolfVotes } }
       : {}),
     ...(live.seerCheck !== undefined ? { seerCheck: live.seerCheck } : {}),
+    ...(live.detectiveChecks !== undefined
+      ? { detectiveChecks: { ...(currentRound.detectiveChecks || {}), ...live.detectiveChecks } }
+      : {}),
     ...(live.witchSaved !== undefined ? { witchSaved: live.witchSaved } : {}),
     ...(live.witchSavedTarget !== undefined ? { witchSavedTarget: live.witchSavedTarget } : {}),
     ...(live.witchPoisonTarget !== undefined ? { witchPoisonTarget: live.witchPoisonTarget } : {}),

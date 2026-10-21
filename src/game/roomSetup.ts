@@ -5,6 +5,7 @@ const ALL_ROLES: Role[] = [
   'wolf_demon',
   'villager',
   'seer',
+  'detective',
   'witch',
   'guard',
   'hunter',
@@ -18,7 +19,7 @@ export function isValidRoleDistribution(
 
   let totalRoles = 0;
   for (const role of ALL_ROLES) {
-    const count = distribution?.[role];
+    const count = distribution?.[role] ?? 0;
     if (!Number.isInteger(count) || count < 0) return false;
     totalRoles += count;
   }
@@ -36,6 +37,16 @@ export function getValidRoomSetupDistribution(
   actualPlayerCount: number,
 ): RoleDistribution | null {
   if (!config || config.playerCount !== actualPlayerCount) return null;
-  if (!isValidRoleDistribution(config.distribution, actualPlayerCount)) return null;
-  return { ...config.distribution };
+  const normalizedDistribution: RoleDistribution = {
+    wolf: config.distribution.wolf ?? 0,
+    wolf_demon: config.distribution.wolf_demon ?? 0,
+    villager: config.distribution.villager ?? 0,
+    seer: config.distribution.seer ?? 0,
+    detective: config.distribution.detective ?? 0,
+    witch: config.distribution.witch ?? 0,
+    guard: config.distribution.guard ?? 0,
+    hunter: config.distribution.hunter ?? 0,
+  };
+  if (!isValidRoleDistribution(normalizedDistribution, actualPlayerCount)) return null;
+  return normalizedDistribution;
 }

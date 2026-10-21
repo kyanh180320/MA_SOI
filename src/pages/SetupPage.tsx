@@ -7,7 +7,7 @@ import { getRoleDistribution, assignRoles } from '../game/roles';
 import { getValidRoomSetupDistribution } from '../game/roomSetup';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
-import { loadNightRoleOrder } from '../services/gameSettings';
+import { loadGameRoleSettings, loadNightRoleOrder } from '../services/gameSettings';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
 import { syncRoomGame, getPlayerMembers, subscribeRoom, saveRoomSetupConfig } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
@@ -76,6 +76,7 @@ const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
   { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
   { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
   { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye_balanced.webp', desc: 'Soi phe 1 người mỗi đêm' },
+  { id: 'detective', name: 'THÁM TỬ', icon: '/assets/icons/icon_detective_balanced.webp', desc: 'Soi nhóm 3 người mỗi đêm' },
   { id: 'witch', name: 'PHÙ THỦY', icon: '/assets/icons/icon_potion_heal_balanced.webp', desc: 'Có 1 bình cứu & 1 bình độc' },
   { id: 'guard', name: 'BẢO VỆ', icon: '/assets/icons/icon_shield_balanced.webp', desc: 'Bảo vệ 1 người mỗi đêm' },
   { id: 'hunter', name: 'THỢ SĂN', icon: '/assets/icons/icon_swords_alt_balanced.webp', desc: 'Kéo theo 1 người khi chết' },
@@ -242,6 +243,7 @@ export default function SetupPage() {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),
         nightRoleOrder: loadNightRoleOrder(),
+        roleSettings: loadGameRoleSettings(),
         players: assignedPlayers,
         rounds: [{ number: 1, nightDeaths: [] }],
         phase: "night",
@@ -286,6 +288,7 @@ export default function SetupPage() {
       wolf: 0,
       wolf_demon: 0,
       seer: 0,
+      detective: 0,
       witch: 0,
       guard: 0,
       hunter: 0,

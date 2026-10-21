@@ -393,6 +393,101 @@
   line-height: 1.4;
 }
 
+.roleSettingsPanel {
+  padding: var(--s-3);
+  border: 1px solid rgba(201, 162, 74, 0.45);
+  border-radius: var(--radius-md);
+  background: rgba(9, 13, 32, 0.86);
+}
+
+.roleSettingsTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--s-3);
+}
+
+.roleSettingsTitleRow img {
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.roleSettingsTitleRow h3 {
+  margin: 0 0 3px;
+  color: var(--gold-200);
+  font-size: 14px;
+}
+
+.roleSettingsTitleRow p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.roleSettingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid rgba(222, 193, 126, 0.22);
+  border-radius: 9px;
+  background: rgba(20, 26, 60, 0.62);
+}
+
+.roleSettingRow strong,
+.roleSettingRow span {
+  display: block;
+}
+
+.roleSettingRow strong {
+  color: var(--gold-100);
+  font-size: 12px;
+}
+
+.roleSettingRow span {
+  margin-top: 3px;
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.booleanControl {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.booleanControl button {
+  min-width: 48px;
+  min-height: 44px;
+  border: 1px solid rgba(201, 162, 74, 0.4);
+  border-radius: 8px;
+  color: var(--text-dim);
+  background: rgba(4, 7, 20, 0.75);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.booleanControl .booleanActive {
+  border-color: var(--gold-300);
+  color: #211302;
+  background: linear-gradient(180deg, #f2d98f, #b9872e);
+}
+
+@media (max-width: 380px) {
+  .roleSettingRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .booleanControl button {
+    flex: 1;
+  }
+}
+
 .optionsDivider {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(201, 162, 74, 0.5), transparent);
