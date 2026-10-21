@@ -1,4 +1,5 @@
 export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "witch" | "guard" | "hunter";
+export type RoleDistribution = Record<Role, number>;
 export type NightRoleStep = Exclude<Role, "villager" | "wolf_demon">;
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
 export type WinningTeam = "wolf" | "villager";
@@ -117,6 +118,13 @@ export interface RoomMember {
   joinedAt: number;
 }
 
+/** Cấu hình vai đang chờ Quản trò bắt đầu, tách khỏi dữ liệu của ván đã chạy. */
+export interface RoomSetupConfig {
+  playerCount: number;
+  distribution: RoleDistribution;
+  updatedAt: number;
+}
+
 export interface GameRoom {
   id: string;
   name: string;
@@ -129,6 +137,8 @@ export interface GameRoom {
   createdAt: number;
   gameId?: string;
   gameData?: Game;
+  /** Optional để các phòng cũ chưa có cấu hình vẫn tự cân bằng như trước. */
+  setupConfig?: RoomSetupConfig;
   liveNightActions?: LiveNightActions;
   /** Trạng thái cục bộ từ Firestore metadata, không được ghi lên server. */
   syncState?: "synced" | "syncing" | "offline";

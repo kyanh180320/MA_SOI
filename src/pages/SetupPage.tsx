@@ -3,10 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
+import { getValidRoomSetupDistribution } from '../game/roomSetup';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
-import { syncRoomGame, getPlayerMembers, subscribeRoom } from '../services/roomService';
+import { syncRoomGame, getPlayerMembers, subscribeRoom, saveRoomSetupConfig } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
@@ -85,6 +86,10 @@ export default function SetupPage() {
   const fromRoom = location.state?.fromRoom as GameRoom | undefined;
   // Chủ phòng là Quản trò nên không nằm trong danh sách người chơi
   const roomPlayers = getPlayerMembers(fromRoom?.members);
+  const initialPlayerCount = roomPlayers.length > 0
+    ? Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, roomPlayers.length))
+    : RULES.minPlayers;
+  const isOnlineSetup = Boolean(fromRoom?.id);
 
   const { setGame, replaceRemoteGame } = useGame();
   const { user, loading: authLoading } = useAuth();
@@ -111,10 +116,7 @@ export default function SetupPage() {
   }, [fromRoom?.id, navigate, setGame, showAlert]);
 
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
-    if (roomPlayers.length > 0) {
-      return String(Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, roomPlayers.length)));
-    }
-    return String(RULES.minPlayers);
+    return String(initialPlayerCount);
   });
   const playerCount = parseInt(playerCountInput) || RULES.minPlayers;
 
@@ -138,15 +140,10 @@ export default function SetupPage() {
     return Array(RULES.minPlayers).fill("");
   });
 
-  const [distribution, setDistribution] = useState<Record<Role, number>>({
-    wolf: 0,
-    wolf_demon: 0,
-    seer: 0,
-    witch: 0,
-    guard: 0,
-    hunter: 0,
-    villager: 0
-  });
+  const [distribution, setDistribution] = useState<Record<Role, number>>(() => (
+    getValidRoomSetupDistribution(fromRoom?.setupConfig, initialPlayerCount)
+      ?? getRoleDistribution(initialPlayerCount, { randomize: true })
+  ));
 
   // State quản lý danh sách tên mẫu (Presets)
   const [showPresetModal, setShowPresetModal] = useState(false);
@@ -154,14 +151,8 @@ export default function SetupPage() {
   const [newPresetName, setNewPresetName] = useState('');
   const [isAddingPreset, setIsAddingPreset] = useState(false);
   const [isStartingGame, setIsStartingGame] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
-
-  // Căn chỉnh phân vai ban đầu
-  useEffect(() => {
-    if (playerCount >= RULES.minPlayers && playerCount <= RULES.maxPlayers) {
-      setDistribution(getRoleDistribution(playerCount, { randomize: true }));
-    }
-  }, []);
 
   // Cập nhật mảng tên & avatar theo số lượng người
   useEffect(() => {
@@ -297,8 +288,46 @@ export default function SetupPage() {
   };
 
   const changePlayerCount = (delta: number) => {
+    if (isOnlineSetup) return;
     const nextCount = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, playerCount + delta));
     setPlayerCountInput(String(nextCount));
+  };
+
+  const handleBack = async () => {
+    if (!fromRoom?.id) {
+      navigate('/');
+      return;
+    }
+    if (!isValid || !user?.uid || isSavingConfig) {
+      if (!isValid) {
+        await showAlert({
+          title: 'Cấu hình vai trò chưa hợp lệ',
+          message: `Hãy phân đủ ${playerCount} vai và giữ ít nhất một người ở mỗi phe trước khi quay lại phòng chờ.`,
+          tone: 'warning',
+          confirmLabel: 'Đã hiểu',
+        });
+      }
+      return;
+    }
+
+    setIsSavingConfig(true);
+    try {
+      await saveRoomSetupConfig(fromRoom.id, user.uid, {
+        playerCount,
+        distribution,
+        updatedAt: Date.now(),
+      });
+      navigate(`/room/${fromRoom.id}`);
+    } catch (err: unknown) {
+      await showAlert({
+        title: 'Chưa lưu được cấu hình',
+        message: (err as Error).message || 'Hãy kiểm tra kết nối rồi thử lại.',
+        tone: 'danger',
+        confirmLabel: 'Đã hiểu',
+      });
+    } finally {
+      setIsSavingConfig(false);
+    }
   };
 
   return (
@@ -324,7 +353,7 @@ export default function SetupPage() {
               type="button"
               className={styles.stepperBevelBtn}
               onClick={() => changePlayerCount(-1)}
-              disabled={playerCount <= RULES.minPlayers}
+              disabled={isOnlineSetup || playerCount <= RULES.minPlayers}
               aria-label="Giảm số người"
               title="Giảm số người chơi"
             >
@@ -346,7 +375,7 @@ export default function SetupPage() {
               type="button"
               className={`${styles.stepperBevelBtn} ${styles.stepperBtnPlus}`}
               onClick={() => changePlayerCount(1)}
-              disabled={playerCount >= RULES.maxPlayers}
+              disabled={isOnlineSetup || playerCount >= RULES.maxPlayers}
               aria-label="Tăng số người"
               title="Tăng số người chơi"
             >
@@ -363,6 +392,7 @@ export default function SetupPage() {
               max={RULES.maxPlayers}
               value={playerCount}
               onChange={e => setPlayerCountInput(e.target.value)}
+              disabled={isOnlineSetup}
               className={styles.gothicSlider}
             />
             <div className={styles.sliderMetaLabels}>
@@ -537,16 +567,11 @@ export default function SetupPage() {
           <button
             type="button"
             className={styles.gothicStoneBtn}
-            onClick={() => {
-              if (fromRoom?.id) {
-                navigate(`/room/${fromRoom.id}`);
-              } else {
-                navigate('/');
-              }
-            }}
+            onClick={handleBack}
+            disabled={isSavingConfig}
             title={fromRoom ? "Quay lại phòng chờ" : "Quay lại màn Home"}
           >
-            ← QUAY LẠI
+            {isSavingConfig ? 'ĐANG LƯU...' : '← QUAY LẠI'}
           </button>
 
           <button

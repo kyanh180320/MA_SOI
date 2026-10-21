@@ -14,10 +14,10 @@ import {
 } from '../services/roomService';
 import type { GameRoom, Game } from '../game/types';
 import { getRoleDistribution, assignRoles } from '../game/roles';
+import { getValidRoomSetupDistribution } from '../game/roomSetup';
 import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
-import { PlayerLiveView, ROLE_DETAILS } from '../components/PlayerLiveView';
-import { LazyCardSelectionRitual } from '../components/LazyCardSelectionRitual';
+import { PlayerLiveView } from '../components/PlayerLiveView';
 import { useDialog } from '../components/dialog';
 
 export default function RoomPage() {
@@ -34,8 +34,6 @@ export default function RoomPage() {
   const [isStartingGame, setIsStartingGame] = useState(false);
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
   const isLeavingRef = useRef(false);
-  const [showCeremonyBeforePlay, setShowCeremonyBeforePlay] = useState(false);
-  const [testRitualOpen, setTestRitualOpen] = useState(false);
 
   const isHost = Boolean(user && room && room.hostUid === user.uid);
 
@@ -191,7 +189,7 @@ export default function RoomPage() {
     }
   };
 
-  // Khởi động ván chơi nhanh trực tiếp từ phòng (tự động phân bổ vai trò cân bằng)
+  // Khởi động nhanh bằng cấu hình đã lưu; phòng cũ chưa có cấu hình mới tự cân bằng.
   const handleQuickStart = async () => {
     if (!roomId || isStartingGame) return;
     if (playerMembers.length < RULES.minPlayers) {
@@ -204,9 +202,24 @@ export default function RoomPage() {
       return;
     }
 
+    const savedDistribution = getValidRoomSetupDistribution(
+      room.setupConfig,
+      playerMembers.length,
+    );
+    if (room.setupConfig && !savedDistribution) {
+      await showAlert({
+        title: 'Cấu hình vai trò không còn khớp',
+        message: 'Số người trong phòng đã thay đổi hoặc cấu hình vai chưa hợp lệ. Hãy mở “Tuỳ chỉnh vai trò” và lưu lại trước khi bắt đầu.',
+        tone: 'warning',
+        confirmLabel: 'Đã hiểu',
+      });
+      return;
+    }
+
     setIsStartingGame(true);
     try {
-      const distribution = getRoleDistribution(playerMembers.length, { randomize: true });
+      const distribution = savedDistribution
+        ?? getRoleDistribution(playerMembers.length, { randomize: true });
       const players = playerMembers.map(m => ({
         id: m.uid,
         name: m.displayName,
@@ -228,8 +241,8 @@ export default function RoomPage() {
 
       await syncRoomGame(room.id, newGame);
       replaceRemoteGame(newGame);
-      // Hiển thị ngay hiệu ứng chia bài cho Quản trò xem trước khi vào bàn điều khiển
-      setShowCeremonyBeforePlay(true);
+      // Quản trò vào thẳng bàn điều khiển; nghi thức xòe bài chỉ dành cho người chơi.
+      navigate('/play');
     } catch (err: unknown) {
       console.error("Lỗi bắt đầu ván nhanh:", err);
       await showAlert({
@@ -289,27 +302,6 @@ export default function RoomPage() {
 
   return (
     <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
-      {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH CHO QUẢN TRÒ XEM TRƯỚC KHI VÀO /play */}
-      {showCeremonyBeforePlay && game && (
-        <LazyCardSelectionRitual
-          myRole={game.players[0]?.role || 'wolf'}
-          roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
-          onComplete={() => {
-            setShowCeremonyBeforePlay(false);
-            navigate('/play');
-          }}
-        />
-      )}
-
-      {/* XEM THỬ HIỆU ỨNG RÚT BÀI BẤT KỲ LÚC NÀO */}
-      {testRitualOpen && (
-        <LazyCardSelectionRitual
-          myRole="wolf"
-          roleInfo={ROLE_DETAILS['wolf']}
-          onComplete={() => setTestRitualOpen(false)}
-        />
-      )}
-
       {/* HEADER PHÒNG CHỜ */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Button
@@ -536,15 +528,6 @@ export default function RoomPage() {
                     ❌ Giải Tán
                   </Button>
                 </div>
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setTestRitualOpen(true)}
-                  style={{ minHeight: '40px', fontSize: '12px', color: 'var(--gold-200)', background: 'rgba(201, 162, 74, 0.1)' }}
-                  title="Chạm để xem thử hiệu ứng chia bài bí mật"
-                >
-                  🃏 Xem Thử Hiệu Ứng Chia Bài ({playerMembers.length} lá)
-                </Button>
               </>
             )}
           </>

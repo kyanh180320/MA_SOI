@@ -29,8 +29,6 @@ import {
 } from '../components/ui';
 import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
-import { LazyCardSelectionRitual } from '../components/LazyCardSelectionRitual';
-import { ROLE_DETAILS } from '../components/PlayerLiveView';
 import { useDialog } from '../components/dialog';
 
 export default function PlayPage() {
@@ -39,7 +37,6 @@ export default function PlayPage() {
   const { user } = useAuth();
   const { showAlert, showConfirm } = useDialog();
   const [showRoles, setShowRoles] = useState(true);
-  const [showRitual, setShowRitual] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isSavingGame, setIsSavingGame] = useState(false);
   const [isStartingRematch, setIsStartingRematch] = useState(false);
@@ -592,14 +589,6 @@ export default function PlayPage() {
           >
             {showRoles ? 'Ẩn Role' : 'Hiện Role'}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => setShowRitual(true)}
-            style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px', color: 'var(--gold-300)' }}
-            title="Xem thử hiệu ứng chia bài bí mật của người chơi"
-          >
-            🃏 Xem Rút Bài
-          </Button>
         </div>
       </div>
 
@@ -609,15 +598,6 @@ export default function PlayPage() {
           message={roomSyncState === 'offline'
             ? '📶 Mạng yếu — thao tác của Quản trò đã lưu trên máy và sẽ tự gửi lại.'
             : '↻ Đang đồng bộ thao tác của Quản trò tới người chơi…'}
-        />
-      )}
-
-      {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH */}
-      {showRitual && game && (
-        <LazyCardSelectionRitual
-          myRole={game.players[0]?.role || 'wolf'}
-          roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
-          onComplete={() => setShowRitual(false)}
         />
       )}
 

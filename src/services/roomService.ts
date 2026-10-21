@@ -13,8 +13,9 @@ import {
   limit,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep } from "../game/types";
+import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep, RoomSetupConfig } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
+import { isValidRoleDistribution } from "../game/roomSetup";
 import {
   applyLiveNightActions,
   createLiveNightActionsBaseline,
@@ -318,6 +319,44 @@ export async function removeBotFromRoom(roomId: string, botUid?: string): Promis
 
     transaction.update(roomRef, {
       members: updatedMembers
+    });
+  });
+}
+
+/**
+ * Lưu cấu hình khi Quản trò quay lại phòng chờ. Transaction bảo vệ invariant
+ * số vai phải khớp đúng số người trong phòng tại thời điểm lưu.
+ */
+export async function saveRoomSetupConfig(
+  roomId: string,
+  hostUid: string,
+  config: RoomSetupConfig,
+): Promise<void> {
+  const roomRef = doc(db, "rooms", roomId);
+
+  await runTransaction(db, async transaction => {
+    const snap = await transaction.get(roomRef);
+    if (!snap.exists()) throw new Error("Phòng đã bị giải tán.");
+
+    const room = snap.data() as GameRoom;
+    if (room.hostUid !== hostUid) {
+      throw new Error("Chỉ Quản trò mới có thể lưu cấu hình vai trò.");
+    }
+
+    const actualPlayerCount = getPlayerMembers(room.members).length;
+    if (config.playerCount !== actualPlayerCount) {
+      throw new Error("Số người trong phòng vừa thay đổi. Hãy kiểm tra lại cấu hình vai trò.");
+    }
+    if (!isValidRoleDistribution(config.distribution, actualPlayerCount)) {
+      throw new Error("Số lượng vai trò chưa khớp với số người trong phòng.");
+    }
+
+    transaction.update(roomRef, {
+      setupConfig: {
+        playerCount: actualPlayerCount,
+        distribution: { ...config.distribution },
+        updatedAt: config.updatedAt,
+      },
     });
   });
 }
