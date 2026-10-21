@@ -44,17 +44,16 @@ export default function RoomPage() {
 
     const unsubscribe = subscribeRoom(roomId, (roomData) => {
       if (!roomData) {
-        if (!isLeavingRef.current) {
-          isLeavingRef.current = true;
-          void showAlert({
-            title: 'Phòng đã giải tán',
-            message: 'Chủ phòng (Quản trò) đã rời đi. Tất cả người chơi sẽ được đưa về Trang Chủ.',
-            tone: 'warning',
-            confirmLabel: 'Về Trang Chủ',
-          }).then(() => navigate('/'));
-          return;
-        }
-        navigate('/');
+        if (isLeavingRef.current) return;
+        isLeavingRef.current = true;
+        setGame(null);
+        void showAlert({
+          title: 'Phòng đã bị xoá',
+          message: 'Phòng đã bị chủ phòng hoặc người quản lý xoá. Bạn sẽ được đưa về Trang Chủ.',
+          tone: 'warning',
+          confirmLabel: 'Về Trang Chủ',
+        }).then(() => navigate('/', { replace: true }));
+        return;
       } else {
         setRoom(roomData);
         setLoading(false);
@@ -62,7 +61,7 @@ export default function RoomPage() {
     });
 
     return () => unsubscribe();
-  }, [roomId, navigate, showAlert]);
+  }, [roomId, navigate, setGame, showAlert]);
 
   if (loading) {
     return (

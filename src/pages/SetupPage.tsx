@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
@@ -6,9 +6,10 @@ import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
-import { syncRoomGame, getPlayerMembers } from '../services/roomService';
+import { syncRoomGame, getPlayerMembers, subscribeRoom } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
+import { useDialog } from '../components/dialog';
 import styles from './SetupPage.module.css';
 
 // Viên ngọc Ruby SVG hình thoi đính trên nút
@@ -87,7 +88,27 @@ export default function SetupPage() {
 
   const { setGame, replaceRemoteGame } = useGame();
   const { user, loading: authLoading } = useAuth();
+  const { showAlert } = useDialog();
+  const roomDeletedRef = useRef(false);
   const canManageSetup = canManageGameSetup(fromRoom?.hostUid, user?.uid, authLoading);
+
+  useEffect(() => {
+    if (!fromRoom?.id) return;
+
+    const unsubscribe = subscribeRoom(fromRoom.id, room => {
+      if (room || roomDeletedRef.current) return;
+      roomDeletedRef.current = true;
+      setGame(null);
+      void showAlert({
+        title: 'Phòng đã bị xoá',
+        message: 'Phòng đã bị chủ phòng hoặc người quản lý xoá. Bạn sẽ được đưa về Trang Chủ.',
+        tone: 'warning',
+        confirmLabel: 'Về Trang Chủ',
+      }).then(() => navigate('/', { replace: true }));
+    });
+
+    return () => unsubscribe();
+  }, [fromRoom?.id, navigate, setGame, showAlert]);
 
   const [playerCountInput, setPlayerCountInput] = useState<string>(() => {
     if (roomPlayers.length > 0) {

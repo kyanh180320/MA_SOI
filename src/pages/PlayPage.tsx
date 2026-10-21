@@ -41,6 +41,7 @@ export default function PlayPage() {
   // Chế độ online: lắng nghe phòng để nhận hành động ban đêm do người chơi thao tác trên điện thoại,
   // từ đó màn hình Quản trò tự động nhảy sang lượt gọi vai trò tiếp theo.
   const gameRef = useRef(game);
+  const roomDeletedRef = useRef(false);
   useEffect(() => {
     gameRef.current = game;
   }, [game]);
@@ -48,9 +49,23 @@ export default function PlayPage() {
   const roomId = game?.roomId;
   useEffect(() => {
     if (!roomId) return;
+    roomDeletedRef.current = false;
     const unsubscribe = subscribeRoom(roomId, (room) => {
+      if (!room) {
+        if (roomDeletedRef.current) return;
+        roomDeletedRef.current = true;
+        setGame(null);
+        void showAlert({
+          title: 'Phòng đã bị xoá',
+          message: 'Phòng đã bị chủ phòng hoặc người quản lý xoá. Bạn sẽ được đưa về Trang Chủ.',
+          tone: 'warning',
+          confirmLabel: 'Về Trang Chủ',
+        }).then(() => navigate('/', { replace: true }));
+        return;
+      }
+
       const local = gameRef.current;
-      if (!local || !room?.gameData) return;
+      if (!local || !room.gameData) return;
       const merged = mergeRemoteNightActions(local, room.gameData);
       if (merged) {
         gameRef.current = merged;
