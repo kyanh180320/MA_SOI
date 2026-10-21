@@ -262,6 +262,158 @@
   padding: var(--s-2) 0;
 }
 
+.roleOrderPanel {
+  padding: var(--s-3);
+  border: 1px solid rgba(201, 162, 74, 0.55);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(27, 34, 73, 0.96), rgba(9, 13, 32, 0.96));
+}
+
+.roleOrderHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.roleOrderHeader h3 {
+  margin: 0 0 4px;
+  color: var(--gold-200);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.roleOrderHeader p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.roleOrderReset {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 0 10px;
+  border: 1px solid rgba(201, 162, 74, 0.45);
+  border-radius: 8px;
+  color: var(--gold-200);
+  background: rgba(4, 7, 20, 0.7);
+  cursor: pointer;
+}
+
+.roleOrderList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roleOrderItem {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 22px 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 8px;
+  border: 1px solid rgba(222, 193, 126, 0.25);
+  border-radius: 9px;
+  background: rgba(8, 12, 31, 0.72);
+}
+
+.roleOrderItem img {
+  display: block;
+  object-fit: contain;
+}
+
+.roleOrderNumber {
+  color: var(--gold-400);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.roleOrderLabel {
+  overflow: hidden;
+  color: var(--gold-100);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleOrderControls {
+  display: flex;
+  gap: 5px;
+}
+
+.roleOrderControls button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(201, 162, 74, 0.55);
+  border-radius: 8px;
+  color: var(--gold-100);
+  background: rgba(42, 31, 18, 0.9);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.roleOrderControls button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.roleOrderReset:active,
+.roleOrderControls button:not(:disabled):active,
+.roleOrderSave:active {
+  transform: scale(0.96);
+}
+
+.roleOrderSave {
+  width: 100%;
+  min-height: 46px;
+  margin-top: var(--s-3);
+  padding: 0 var(--s-3);
+  border: 1px solid var(--gold-300);
+  border-radius: 9px;
+  color: #211302;
+  background: linear-gradient(180deg, #f2d98f, #b9872e);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.roleOrderFeedback {
+  margin: var(--s-2) 0 0;
+  color: var(--green-400);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.optionsDivider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 162, 74, 0.5), transparent);
+}
+
+@media (max-width: 380px) {
+  .roleOrderItem {
+    grid-template-columns: 18px 34px minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .roleOrderItem img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .roleOrderControls button {
+    width: 42px;
+  }
+}
+
 .adminMenuBtn {
   width: 100%;
   min-height: 48px;

@@ -36,6 +36,8 @@ export interface Round {
 export interface Game {
   id: string;
   createdAt: number;
+  /** Optional để ván cũ chưa có cấu hình vẫn dùng thứ tự gọi mặc định. */
+  nightRoleOrder?: NightRoleStep[];
   players: Player[];
   rounds: Round[];
   phase: Phase;

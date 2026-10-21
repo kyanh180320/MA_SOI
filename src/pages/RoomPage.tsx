@@ -20,6 +20,7 @@ import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
 import { useDialog } from '../components/dialog';
+import { loadNightRoleOrder } from '../services/gameSettings';
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -234,6 +235,7 @@ export default function RoomPage() {
       const newGame: Game = {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),
+        nightRoleOrder: loadNightRoleOrder(),
         players: assignedPlayers,
         rounds: [{ number: 1, nightDeaths: [] }],
         phase: "night",

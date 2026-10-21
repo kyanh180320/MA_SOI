@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { subscribeRooms, createRoom, joinRoom, closeRoom, getPlayerMembers } from '../services/roomService';
-import type { GameRoom } from '../game/types';
+import type { GameRoom, NightRoleStep } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
 import { prepareAvatarImage } from '../services/avatarImage';
 import { canEnterRoom } from '../game/roomAccess';
 import { isCleanupManager } from '../game/adminAccess';
+import { DEFAULT_NIGHT_ROLE_ORDER, moveNightRoleStep } from '../game/nightRoleOrder';
+import { loadNightRoleOrder, saveNightRoleOrder } from '../services/gameSettings';
+import { NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './HomePage.module.css';
 
 const PRESET_AVATARS = [
@@ -49,8 +52,33 @@ export default function HomePage() {
 
   // State cho Modal Menu Admin / Dev / Lịch sử
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [savedNightRoleOrder, setSavedNightRoleOrder] = useState<NightRoleStep[]>(loadNightRoleOrder);
+  const [nightRoleOrderDraft, setNightRoleOrderDraft] = useState<NightRoleStep[]>(loadNightRoleOrder);
+  const [roleOrderFeedback, setRoleOrderFeedback] = useState<string | null>(null);
 
   const canCleanUpRooms = isCleanupManager(user);
+
+  const openOptions = () => {
+    setNightRoleOrderDraft(savedNightRoleOrder);
+    setRoleOrderFeedback(null);
+    setIsAdminOpen(true);
+  };
+
+  const handleMoveNightRole = (step: NightRoleStep, offset: -1 | 1) => {
+    setNightRoleOrderDraft(current => moveNightRoleStep(current, step, offset));
+    setRoleOrderFeedback(null);
+  };
+
+  const handleSaveNightRoleOrder = () => {
+    try {
+      const savedOrder = saveNightRoleOrder(nightRoleOrderDraft);
+      setSavedNightRoleOrder(savedOrder);
+      setNightRoleOrderDraft(savedOrder);
+      setRoleOrderFeedback('Đã lưu. Các ván bắt đầu từ bây giờ sẽ gọi vai theo thứ tự này.');
+    } catch {
+      setRoleOrderFeedback('Không thể lưu cài đặt trên thiết bị này. Vui lòng thử lại.');
+    }
+  };
 
   // Chủ phòng được xoá phòng của mình; tài khoản dọn dữ liệu được xoá mọi phòng.
   const handleDeleteRoom = async (roomId: string, roomName: string) => {
@@ -253,7 +281,7 @@ export default function HomePage() {
 
           <button
             className={styles.utilityAction}
-            onClick={() => setIsAdminOpen(true)}
+            onClick={openOptions}
           >
             <span aria-hidden="true">✦</span> TÙY CHỌN <span aria-hidden="true">✦</span>
           </button>
@@ -371,6 +399,71 @@ export default function HomePage() {
         title="⚙️ HỆ THỐNG & ĐIỀU HƯỚNG"
       >
         <div className={styles.adminMenuContainer}>
+          <section className={styles.roleOrderPanel} aria-labelledby="night-role-order-title">
+            <div className={styles.roleOrderHeader}>
+              <div>
+                <h3 id="night-role-order-title">THỨ TỰ GỌI VAI BAN ĐÊM</h3>
+                <p>Vai không có trong ván sẽ tự bỏ qua; vai đã chết vẫn dừng để Quản trò gọi giả.</p>
+              </div>
+              <button
+                type="button"
+                className={styles.roleOrderReset}
+                onClick={() => {
+                  setNightRoleOrderDraft([...DEFAULT_NIGHT_ROLE_ORDER]);
+                  setRoleOrderFeedback(null);
+                }}
+              >
+                Mặc định
+              </button>
+            </div>
+
+            <ol className={styles.roleOrderList}>
+              {nightRoleOrderDraft.map((step, index) => {
+                const item = NIGHT_ROLE_PROGRESS_ITEMS[step];
+                return (
+                  <li key={step} className={styles.roleOrderItem}>
+                    <span className={styles.roleOrderNumber}>{index + 1}</span>
+                    <img src={item.iconUrl} alt="" width="38" height="38" />
+                    <span className={styles.roleOrderLabel}>{item.label}</span>
+                    <div className={styles.roleOrderControls}>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveNightRole(step, -1)}
+                        disabled={index === 0}
+                        aria-label={`Gọi ${item.label} sớm hơn`}
+                        title="Gọi sớm hơn"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveNightRole(step, 1)}
+                        disabled={index === nightRoleOrderDraft.length - 1}
+                        aria-label={`Gọi ${item.label} muộn hơn`}
+                        title="Gọi muộn hơn"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {roleOrderFeedback && (
+              <p className={styles.roleOrderFeedback} role="status">{roleOrderFeedback}</p>
+            )}
+            <button
+              type="button"
+              className={styles.roleOrderSave}
+              onClick={handleSaveNightRoleOrder}
+            >
+              💾 LƯU THỨ TỰ GỌI VAI
+            </button>
+          </section>
+
+          <div className={styles.optionsDivider} />
+
           <button
             className={styles.adminMenuBtn}
             onClick={() => {

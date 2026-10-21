@@ -1,5 +1,6 @@
 import { RULES } from './config';
 import { assignRoles } from './roles';
+import { normalizeNightRoleOrder } from './nightRoleOrder';
 import type { Game, Role } from './types';
 
 function getPreviousRoleDistribution(game: Game): Record<Role, number> {
@@ -37,6 +38,7 @@ export function createRematchGame(previousGame: Game, now = Date.now()): Game {
   return {
     id: `game_${now}`,
     createdAt: now,
+    nightRoleOrder: normalizeNightRoleOrder(previousGame.nightRoleOrder),
     players: assignedPlayers,
     rounds: [{ number: 1, nightDeaths: [] }],
     phase: 'night',

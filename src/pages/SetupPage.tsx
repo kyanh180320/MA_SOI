@@ -7,6 +7,7 @@ import { getRoleDistribution, assignRoles } from '../game/roles';
 import { getValidRoomSetupDistribution } from '../game/roomSetup';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
+import { loadNightRoleOrder } from '../services/gameSettings';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
 import { syncRoomGame, getPlayerMembers, subscribeRoom, saveRoomSetupConfig } from '../services/roomService';
 import type { Role, PresetName, GameRoom, Game } from '../game/types';
@@ -240,6 +241,7 @@ export default function SetupPage() {
       const newGame: Game = {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),
+        nightRoleOrder: loadNightRoleOrder(),
         players: assignedPlayers,
         rounds: [{ number: 1, nightDeaths: [] }],
         phase: "night",

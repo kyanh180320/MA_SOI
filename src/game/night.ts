@@ -1,10 +1,9 @@
 import type { Game, NightRoleStep, Player, Round } from "./types";
 import { isWolfTeam } from "./win";
+import { normalizeNightRoleOrder } from './nightRoleOrder';
 
 export type { NightRoleStep } from "./types";
 export type NightStep = NightRoleStep | 'done' | 'wait';
-
-const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch', 'hunter'];
 
 export interface WolfPackSelection {
   targetIds: string[];
@@ -49,8 +48,11 @@ export function getWolfPackSelection(
  * Các lượt thực sự cần gọi trong đêm, dựa trên những vai còn sống.
  * Sói thường và Sói quỷ cùng dùng một lượt "wolf".
  */
-export function getActiveNightRoleSteps(players: Player[]): NightRoleStep[] {
-  return NIGHT_ROLE_ORDER.filter(step => hasLivingNightRole(players, step));
+export function getActiveNightRoleSteps(
+  players: Player[],
+  roleOrder?: readonly NightRoleStep[],
+): NightRoleStep[] {
+  return normalizeNightRoleOrder(roleOrder).filter(step => hasLivingNightRole(players, step));
 }
 
 export function hasLivingNightRole(players: Player[], step: NightRoleStep): boolean {
@@ -64,8 +66,11 @@ export function hasLivingNightRole(players: Player[], step: NightRoleStep): bool
  * Danh sách icon cố định theo cấu hình đầu ván. Trạng thái sống/chết không được
  * làm mất icon vì điều đó sẽ vô tình tiết lộ role của người vừa bị loại.
  */
-export function getConfiguredNightRoleSteps(players: Player[]): NightRoleStep[] {
-  return NIGHT_ROLE_ORDER.filter(step => {
+export function getConfiguredNightRoleSteps(
+  players: Player[],
+  roleOrder?: readonly NightRoleStep[],
+): NightRoleStep[] {
+  return normalizeNightRoleOrder(roleOrder).filter(step => {
     if (step === 'wolf') {
       return players.some(player => isWolfTeam(player.role));
     }
@@ -77,10 +82,14 @@ export function getConfiguredNightRoleSteps(players: Player[]): NightRoleStep[] 
  * Tìm lượt ban đêm kế tiếp. Role đã cấu hình nhưng không còn người sống vẫn
  * dừng lại cho đến khi Quản trò xác nhận đã gọi giả để không lộ thông tin.
  */
-export function getNightStep(currentRound: Round | undefined, players: Player[]): NightStep {
+export function getNightStep(
+  currentRound: Round | undefined,
+  players: Player[],
+  roleOrder?: readonly NightRoleStep[],
+): NightStep {
   if (!currentRound) return 'wait';
 
-  for (const step of getConfiguredNightRoleSteps(players)) {
+  for (const step of getConfiguredNightRoleSteps(players, roleOrder)) {
     if (!hasLivingNightRole(players, step)) {
       if (!currentRound.skippedDeadRoleSteps?.includes(step)) return step;
       continue;

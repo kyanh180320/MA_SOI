@@ -8,6 +8,7 @@ const endedGame: Game = {
   roomId: '123456',
   phase: 'ended',
   winner: 'villager',
+  nightRoleOrder: ['wolf', 'seer', 'hunter', 'guard', 'witch'],
   players: [
     { id: 'p1', name: 'A', avatar: 'a.webp', role: 'wolf', alive: false },
     { id: 'p2', name: 'B', avatar: 'b.webp', role: 'seer', alive: true },
@@ -46,6 +47,7 @@ describe('createRematchGame', () => {
     expect(rematch.id).toBe('game_200');
     expect(rematch.roomId).toBe(endedGame.roomId);
     expect(rematch.createdAt).toBe(200);
+    expect(rematch.nightRoleOrder).toEqual(endedGame.nightRoleOrder);
     expect(rematch.phase).toBe('night');
     expect(rematch.winner).toBeUndefined();
     expect(rematch.rounds).toEqual([{ number: 1, nightDeaths: [] }]);

@@ -349,6 +349,23 @@ describe('night', () => {
       expect(getActiveNightRoleSteps(players)).toEqual(['guard', 'wolf', 'seer', 'witch', 'hunter']);
     });
 
+    it('uses the saved order for progress and role actions', () => {
+      const players = [
+        player('g1', 'guard'),
+        player('w1', 'wolf'),
+        player('s1', 'seer'),
+        player('wt1', 'witch'),
+        player('h1', 'hunter'),
+        player('v1', 'villager'),
+      ];
+      const customOrder = ['wolf', 'seer', 'hunter', 'guard', 'witch'] as const;
+      const round = { number: 1, nightDeaths: [] };
+
+      expect(getConfiguredNightRoleSteps(players, customOrder)).toEqual(customOrder);
+      expect(getNightStep(round, players, customOrder)).toBe('wolf');
+      expect(getNightStep({ ...round, wolfTargets: ['v1'] }, players, customOrder)).toBe('seer');
+    });
+
     it('skips a hunter after they have died', () => {
       const players = [player('w1', 'wolf'), player('h1', 'hunter', false), player('v1', 'villager')];
       expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);

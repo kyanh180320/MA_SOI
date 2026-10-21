@@ -140,8 +140,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const currentPhase = game.phase;
 
   // Xác định bước vai trò ban đêm hiện tại
-  const configuredNightRoleSteps = getConfiguredNightRoleSteps(game.players);
-  const nightStep = getNightStep(currentRound, game.players);
+  const configuredNightRoleSteps = getConfiguredNightRoleSteps(game.players, game.nightRoleOrder);
+  const nightStep = getNightStep(currentRound, game.players, game.nightRoleOrder);
   const currentNightRoleItem = nightStep !== 'done' && nightStep !== 'wait'
     ? NIGHT_ROLE_PROGRESS_ITEMS[nightStep]
     : null;
