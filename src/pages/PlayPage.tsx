@@ -101,10 +101,10 @@ export default function PlayPage() {
     setGame(null);
     navigate('/', { replace: true });
 
-    // Thoát UI ngay; Firestore tự xếp hàng delete khi mạng yếu nên không chặn
-    // Quản trò trên màn chơi trong lúc chờ request mạng hoàn tất.
+    // Thoát UI ngay, không giữ Quản trò ở màn chơi trong lúc xác minh và xoá
+    // phòng. Nếu mất mạng, transaction thất bại và phòng vẫn còn để khôi phục.
     if (exitingRoomId) {
-      void closeRoom(exitingRoomId).catch((error: unknown) => {
+      void closeRoom(exitingRoomId, user).catch((error: unknown) => {
         console.error(`Lỗi khi đóng phòng online ${exitingRoomId}:`, error);
       });
     }

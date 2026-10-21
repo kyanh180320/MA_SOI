@@ -2,7 +2,6 @@ import {
   collection, 
   doc, 
   setDoc, 
-  deleteDoc, 
   onSnapshot, 
   runTransaction,
   updateDoc,
@@ -22,6 +21,7 @@ import {
   sanitizeMembersForSync,
   sanitizeRoomAvatar,
 } from "../game/onlineSync";
+import { isCleanupManager } from "../game/adminAccess";
 
 /** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
 export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
@@ -195,9 +195,19 @@ export async function leaveRoom(roomId: string, stablePlayerUid?: string): Promi
   });
 }
 
-export async function closeRoom(roomId: string): Promise<void> {
+export async function closeRoom(roomId: string, actor?: AppUser | null): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
-  await deleteDoc(roomRef);
+  await runTransaction(db, async transaction => {
+    const snap = await transaction.get(roomRef);
+    if (!snap.exists()) return;
+
+    const room = snap.data() as GameRoom;
+    if (!actor || (room.hostUid !== actor.uid && !isCleanupManager(actor))) {
+      throw new Error("Bạn không có quyền xoá phòng này.");
+    }
+
+    transaction.delete(roomRef);
+  });
 }
 
 const BOT_NAMES = [

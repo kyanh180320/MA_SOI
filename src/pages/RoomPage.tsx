@@ -126,7 +126,7 @@ export default function RoomPage() {
 
     isLeavingRef.current = true;
     if (game?.roomId === roomId) setGame(null);
-    await closeRoom(roomId);
+    await closeRoom(roomId, user);
     navigate('/');
   };
 

@@ -7,6 +7,7 @@ import { Button, Badge, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
 import { prepareAvatarImage } from '../services/avatarImage';
 import { canEnterRoom } from '../game/roomAccess';
+import { isCleanupManager } from '../game/adminAccess';
 import styles from './HomePage.module.css';
 
 const PRESET_AVATARS = [
@@ -43,13 +44,17 @@ export default function HomePage() {
   const [maxPlayers, setMaxPlayers] = useState(20);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
+  const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
 
   // State cho Modal Menu Admin / Dev / Lịch sử
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  // Xoá phòng dành cho người tạo phòng (chủ phòng)
-  const handleDeleteMyRoom = async (roomId: string, roomName: string) => {
+  const canCleanUpRooms = isCleanupManager(user);
+
+  // Chủ phòng được xoá phòng của mình; tài khoản dọn dữ liệu được xoá mọi phòng.
+  const handleDeleteRoom = async (roomId: string, roomName: string) => {
+    if (deletingRoomId) return;
     const confirmed = await showConfirm({
       title: 'Xóa phòng chơi?',
       message: `Phòng “${roomName}” (#${roomId}) sẽ bị xóa và toàn bộ người chơi sẽ được đưa ra ngoài. Hành động này không thể hoàn tác.`,
@@ -60,14 +65,17 @@ export default function HomePage() {
     if (!confirmed) {
       return;
     }
+    setDeletingRoomId(roomId);
     try {
-      await closeRoom(roomId);
+      await closeRoom(roomId, user);
     } catch (err: unknown) {
       await showAlert({
         title: 'Không thể xóa phòng',
         message: (err as Error).message || 'Không thể xóa phòng lúc này. Vui lòng thử lại.',
         tone: 'danger',
       });
+    } finally {
+      setDeletingRoomId(null);
     }
   };
 
@@ -317,13 +325,15 @@ export default function HomePage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    {isMyRoom && (
+                    {(isMyRoom || canCleanUpRooms) && (
                       <Button
                         variant="danger"
-                        onClick={() => handleDeleteMyRoom(room.id, room.name)}
+                        disabled={deletingRoomId !== null}
+                        onClick={() => handleDeleteRoom(room.id, room.name)}
                         style={{ minHeight: '38px', padding: '0 8px', fontSize: '12px' }}
+                        title={isMyRoom ? 'Xóa phòng của bạn' : 'Xóa phòng với quyền dọn dữ liệu'}
                       >
-                        🗑️
+                        {deletingRoomId === room.id ? '…' : '🗑️'}
                       </Button>
                     )}
                     <Button
