@@ -24,7 +24,7 @@ export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { game, setGame, applyRemoteGame } = useGame();
+  const { game, setGame, replaceRemoteGame } = useGame();
   const { showAlert, showConfirm } = useDialog();
 
   const [room, setRoom] = useState<GameRoom | null>(null);
@@ -34,7 +34,6 @@ export default function RoomPage() {
   const [isStartingGame, setIsStartingGame] = useState(false);
   const [previewAsPlayer, setPreviewAsPlayer] = useState(false);
   const isLeavingRef = useRef(false);
-  const allowNavigationWithoutClosingRef = useRef(false);
   const [showCeremonyBeforePlay, setShowCeremonyBeforePlay] = useState(false);
   const [testRitualOpen, setTestRitualOpen] = useState(false);
 
@@ -64,38 +63,6 @@ export default function RoomPage() {
 
     return () => unsubscribe();
   }, [roomId, navigate, showAlert]);
-
-  // Tự động dọn dẹp hoặc xoá phòng khi tắt tab / reload hoặc bấm phím Back
-  useEffect(() => {
-    if (!roomId) return;
-
-    const handleBeforeUnload = () => {
-      if (allowNavigationWithoutClosingRef.current) return;
-      if (isHost) {
-        closeRoom(roomId).catch(() => {});
-      } else {
-        leaveRoom(roomId, user?.uid).catch(() => {});
-      }
-    };
-
-    const handlePopState = () => {
-      if (allowNavigationWithoutClosingRef.current || isLeavingRef.current) return;
-      isLeavingRef.current = true;
-      if (isHost) {
-        closeRoom(roomId).catch(() => {});
-      } else {
-        leaveRoom(roomId, user?.uid).catch(() => {});
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isHost, roomId, user?.uid]);
 
   if (loading) {
     return (
@@ -164,8 +131,13 @@ export default function RoomPage() {
   };
 
   const handleStartSetup = () => {
-    allowNavigationWithoutClosingRef.current = true;
     navigate('/setup', { state: { fromRoom: room } });
+  };
+
+  const handleResumeGame = () => {
+    if (!room.gameData) return;
+    replaceRemoteGame(room.gameData);
+    navigate('/play');
   };
 
   const copyRoomCode = () => {
@@ -254,8 +226,7 @@ export default function RoomPage() {
       };
 
       await syncRoomGame(room.id, newGame);
-      applyRemoteGame(newGame);
-      allowNavigationWithoutClosingRef.current = true;
+      replaceRemoteGame(newGame);
       // Hiển thị ngay hiệu ứng chia bài cho Quản trò xem trước khi vào bàn điều khiển
       setShowCeremonyBeforePlay(true);
     } catch (err: unknown) {
@@ -503,9 +474,11 @@ export default function RoomPage() {
                   variant="primary"
                   pulse
                   fullWidth
-                  onClick={() => navigate('/play')}
+                  onClick={handleResumeGame}
                 >
-                  🎮 TIẾP TỤC BÀN QUẢN TRÒ (ĐANG DIỄN RA)
+                  {room.status === 'ended'
+                    ? '🏁 XEM KẾT QUẢ / CHƠI LẠI CÙNG PHÒNG'
+                    : '🎮 TIẾP TỤC BÀN QUẢN TRÒ (ĐANG DIỄN RA)'}
                 </Button>
                 <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
                   <Button

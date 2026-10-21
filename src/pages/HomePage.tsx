@@ -6,6 +6,7 @@ import type { GameRoom } from '../game/types';
 import { Button, Badge, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
 import { prepareAvatarImage } from '../services/avatarImage';
+import { canEnterRoom } from '../game/roomAccess';
 import styles from './HomePage.module.css';
 
 const PRESET_AVATARS = [
@@ -289,6 +290,14 @@ export default function HomePage() {
               const playerCount = getPlayerMembers(room.members).length;
               const isFull = playerCount >= room.maxPlayers;
               const isMyRoom = user && room.hostUid === user.uid;
+              const isMember = Boolean(user && room.members.some(member => member.uid === user.uid));
+              const canJoinNew = (room.status === 'waiting' || room.status === 'setup') && !isFull;
+              const canEnter = canEnterRoom(room, user?.uid);
+              const roomStatusLabel = room.status === 'playing'
+                ? '🎮 Đang chơi'
+                : room.status === 'ended'
+                  ? '🏁 Đã kết thúc • có thể chơi lại'
+                  : '⏳ Đang chờ';
 
               return (
                 <div key={room.id} className={styles.roomCard}>
@@ -303,7 +312,7 @@ export default function HomePage() {
                       👑 {room.hostName} • Mã: <span style={{ color: 'var(--gold-300)' }}>#{room.id}</span>
                     </div>
                     <div style={{ fontSize: '11px', marginTop: '4px', color: isFull ? 'var(--red-400)' : 'var(--green-400)' }}>
-                      👥 {playerCount}/{room.maxPlayers} người chơi (+ 👑 Quản trò) • {room.status === 'playing' ? '🎮 Đang chơi' : '⏳ Đang chờ'}
+                      👥 {playerCount}/{room.maxPlayers} người chơi (+ 👑 Quản trò) • {roomStatusLabel}
                     </div>
                   </div>
 
@@ -319,11 +328,21 @@ export default function HomePage() {
                     )}
                     <Button
                       variant={isMyRoom ? "primary" : "secondary"}
-                      disabled={joiningRoomId === room.id || (isFull && !isMyRoom)}
+                      disabled={joiningRoomId === room.id || !canEnter}
                       onClick={() => handleJoinRoom(room.id)}
                       style={{ minHeight: '38px', padding: '0 12px', fontSize: '12px' }}
                     >
-                      {joiningRoomId === room.id ? '...' : (isMyRoom ? 'Vào phòng' : (isFull ? 'Đầy' : 'Tham gia'))}
+                      {joiningRoomId === room.id
+                        ? '...'
+                        : isMyRoom || isMember
+                          ? 'Vào lại'
+                          : canJoinNew
+                            ? 'Tham gia'
+                            : room.status === 'playing'
+                              ? 'Đang chơi'
+                              : room.status === 'ended'
+                                ? 'Đã kết thúc'
+                                : 'Đầy'}
                     </Button>
                   </div>
                 </div>

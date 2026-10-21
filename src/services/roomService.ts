@@ -10,6 +10,7 @@ import {
   deleteField,
   query,
   where,
+  limit,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions } from "../game/types";
@@ -64,29 +65,26 @@ export async function createRoom(roomName: string, maxPlayers: number = 20, user
 
 export function subscribeRooms(callback: (rooms: GameRoom[]) => void): () => void {
   const colRef = collection(db, "rooms");
-  // Không tải các room đã kết thúc (thường chứa gameData lớn) về trang chủ.
-  const activeRoomsQuery = query(colRef, where("status", "in", ["waiting", "setup", "playing"]));
+  // Bao gồm phòng vừa kết thúc để Quản trò có thể vào lại và chơi tiếp cùng nhóm.
+  // Giới hạn kết quả để không tạo listener vô hạn khi dữ liệu phòng tăng lên.
+  const activeRoomsQuery = query(
+    colRef,
+    where("status", "in", ["waiting", "setup", "playing", "ended"]),
+    limit(50),
+  );
   return onSnapshot(activeRoomsQuery, (snapshot) => {
     const list: GameRoom[] = [];
-    const now = Date.now();
-    const MAX_ROOM_AGE = 4 * 60 * 60 * 1000; // 4 tiếng
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data() as GameRoom;
-      
-      // Tự động dọn dẹp các phòng quá cũ (trên 4 tiếng) bị bỏ quên
-      if (data.createdAt && now - data.createdAt > MAX_ROOM_AGE) {
-        deleteDoc(docSnap.ref).catch(() => {});
-        return;
-      }
 
-      // Bỏ qua và xoá "phòng ma" (thiếu chủ phòng/thành viên hoặc chủ phòng không còn trong members)
+      // Không tự động xóa dữ liệu trong listener. Phòng không hợp lệ chỉ bị ẩn;
+      // chủ phòng vẫn có thể chủ động giải tán phòng hợp lệ từ giao diện.
       if (!data.hostUid || !data.members || data.members.length === 0 || !data.members.some(m => m.uid === data.hostUid)) {
-        deleteDoc(docSnap.ref).catch(() => {});
         return;
       }
 
-      if (data.status === "waiting" || data.status === "setup" || data.status === "playing") {
+      if (data.status === "waiting" || data.status === "setup" || data.status === "playing" || data.status === "ended") {
         list.push({ ...data, id: docSnap.id });
       }
     });
@@ -332,6 +330,41 @@ export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
       gameData: cleanGameData,
       members: sanitizeMembersForSync(room.members),
       liveNightActions: createLiveNightActionsBaseline(toWrite),
+    });
+  });
+}
+
+/**
+ * Thay ván đã kết thúc bằng một ván mới trong cùng phòng.
+ * Transaction bảo đảm hai tab Quản trò không thể cùng khởi động hai ván mới.
+ */
+export async function startRoomRematch(
+  roomId: string,
+  expectedGameId: string,
+  nextGame: Game,
+  hostUid: string,
+): Promise<void> {
+  const roomRef = doc(db, "rooms", roomId);
+
+  await runTransaction(db, async transaction => {
+    const snap = await transaction.get(roomRef);
+    if (!snap.exists()) throw new Error("Phòng đã bị giải tán.");
+
+    const room = snap.data() as GameRoom;
+    if (room.hostUid !== hostUid) {
+      throw new Error("Chỉ Quản trò mới có thể bắt đầu ván tiếp theo.");
+    }
+    if (!room.gameData || room.gameData.id !== expectedGameId || room.gameData.phase !== "ended") {
+      throw new Error("Trạng thái phòng đã thay đổi. Hãy tải lại phòng trước khi chơi tiếp.");
+    }
+
+    const cleanGameData = JSON.parse(JSON.stringify(sanitizeGameForSync(nextGame)));
+    transaction.update(roomRef, {
+      status: "playing",
+      gameId: nextGame.id,
+      gameData: cleanGameData,
+      members: sanitizeMembersForSync(room.members),
+      liveNightActions: createLiveNightActionsBaseline(nextGame),
     });
   });
 }

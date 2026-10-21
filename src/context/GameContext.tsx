@@ -7,6 +7,7 @@ interface GameContextType {
   game: Game | null;
   setGame: (game: Game | null) => void;
   applyRemoteGame: (game: Game) => void;
+  replaceRemoteGame: (game: Game) => void;
   updateGame: (updater: (prev: Game) => Game) => void;
   undo: () => void;
   canUndo: boolean;
@@ -75,6 +76,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // Dùng khi khôi phục hoặc bắt đầu một gameId mới từ dữ liệu phòng. Lịch sử
+  // undo của ván trước không được phép đi theo sang ván vừa nạp.
+  const replaceRemoteGame = (remoteGame: Game) => {
+    remoteGamesRef.current.add(remoteGame);
+    setHistory([remoteGame]);
+  };
+
   const undo = () => {
     setHistory(prev => {
       if (prev.length > 1) {
@@ -85,7 +93,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <GameContext.Provider value={{ game, setGame, applyRemoteGame, updateGame, undo, canUndo: history.length > 1 }}>
+    <GameContext.Provider value={{ game, setGame, applyRemoteGame, replaceRemoteGame, updateGame, undo, canUndo: history.length > 1 }}>
       {children}
     </GameContext.Provider>
   );

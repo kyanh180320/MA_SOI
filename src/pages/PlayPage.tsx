@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
 import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
+import { createRematchGame } from '../game/rematch';
 import type { Role, Player } from '../game/types';
-import { closeRoom, subscribeRoom } from '../services/roomService';
+import { closeRoom, startRoomRematch, subscribeRoom, syncRoomGame } from '../services/roomService';
 import { saveGame } from '../services/gameRepository';
 import {
   Button,
@@ -22,12 +24,14 @@ import { useDialog } from '../components/dialog';
 
 export default function PlayPage() {
   const navigate = useNavigate();
-  const { game, updateGame, applyRemoteGame, undo, canUndo, setGame } = useGame();
-  const { showConfirm } = useDialog();
+  const { game, updateGame, applyRemoteGame, replaceRemoteGame, undo, canUndo, setGame } = useGame();
+  const { user } = useAuth();
+  const { showAlert, showConfirm } = useDialog();
   const [showRoles, setShowRoles] = useState(true);
   const [showRitual, setShowRitual] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isSavingGame, setIsSavingGame] = useState(false);
+  const [isStartingRematch, setIsStartingRematch] = useState(false);
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -121,15 +125,46 @@ export default function PlayPage() {
       return;
     }
 
-    if (game.roomId) {
-      void closeRoom(game.roomId).catch((error: unknown) => {
-        console.error(`Lỗi khi đóng phòng online ${game.roomId}:`, error);
-      });
-    }
-    // saveGame lưu local đồng bộ trước khi chờ Firestore, nên màn BXH phản hồi ngay cả khi mạng yếu.
-    void saveGame(game);
+    // Phòng online được giữ lại để cả nhóm có thể vào lại hoặc chơi tiếp.
+    // saveGame lưu local trước rồi mới đồng bộ cloud nên kết quả vẫn có khi mạng yếu.
+    await saveGame(game);
     setGame(null);
     navigate('/leaderboard');
+  };
+
+  const handleRematch = async () => {
+    if (!game.roomId || !user || isStartingRematch || isSavingGame) return;
+
+    const confirmed = await showConfirm({
+      title: 'Chơi lại cùng phòng?',
+      message: 'Kết quả ván này sẽ được lưu. Danh sách người chơi và số lượng từng vai được giữ nguyên, sau đó vai sẽ được xáo lại.',
+      tone: 'warning',
+      confirmLabel: 'Chia lại vai',
+      cancelLabel: 'Ở lại kết quả',
+    });
+    if (!confirmed) return;
+
+    setIsStartingRematch(true);
+    try {
+      await saveGame(game);
+
+      // Đẩy trạng thái kết thúc lên trước để transaction rematch kiểm tra đúng
+      // ván hiện tại, kể cả khi effect đồng bộ trước đó vẫn đang chờ mạng.
+      await syncRoomGame(game.roomId, game);
+
+      const nextGame = createRematchGame(game);
+      await startRoomRematch(game.roomId, game.id, nextGame, user.uid);
+      replaceRemoteGame(nextGame);
+    } catch (error: unknown) {
+      console.error(`Không thể chơi lại trong phòng ${game.roomId}:`, error);
+      await showAlert({
+        title: 'Chưa thể bắt đầu ván mới',
+        message: (error as Error).message || 'Hãy kiểm tra kết nối rồi thử lại.',
+        tone: 'danger',
+      });
+    } finally {
+      setIsStartingRematch(false);
+    }
   };
 
   const getRoleLabel = (role: Role) => {
@@ -719,13 +754,24 @@ export default function PlayPage() {
           <p style={{ color: 'var(--text-dim)', fontSize: '14px', margin: 0 }}>
             Ván đấu đã khép lại. Lưu kết quả để cập nhật bảng xếp hạng của những người thuộc phe thắng.
           </p>
+          {game.roomId && (
+            <Button
+              variant="primary"
+              pulse
+              fullWidth
+              disabled={isSavingGame || isStartingRematch}
+              onClick={handleRematch}
+              style={{ marginTop: 'var(--s-2)' }}
+            >
+              {isStartingRematch ? 'ĐANG CHIA LẠI VAI...' : '🔄 CHƠI LẠI CÙNG PHÒNG'}
+            </Button>
+          )}
           <Button
-            variant="primary"
-            pulse
+            variant={game.roomId ? 'secondary' : 'primary'}
+            pulse={!game.roomId}
             fullWidth
-            disabled={isSavingGame}
+            disabled={isSavingGame || isStartingRematch}
             onClick={handleEndGame}
-            style={{ marginTop: 'var(--s-2)' }}
           >
             {isSavingGame ? 'ĐANG LƯU KẾT QUẢ...' : 'LƯU VÁN & XEM BẢNG XẾP HẠNG'}
           </Button>

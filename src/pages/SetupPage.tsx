@@ -85,7 +85,7 @@ export default function SetupPage() {
   // Chủ phòng là Quản trò nên không nằm trong danh sách người chơi
   const roomPlayers = getPlayerMembers(fromRoom?.members);
 
-  const { setGame, applyRemoteGame } = useGame();
+  const { setGame, replaceRemoteGame } = useGame();
   const { user, loading: authLoading } = useAuth();
   const canManageSetup = canManageGameSetup(fromRoom?.hostUid, user?.uid, authLoading);
 
@@ -234,7 +234,7 @@ export default function SetupPage() {
 
       if (fromRoom?.id) {
         await syncRoomGame(fromRoom.id, newGame);
-        applyRemoteGame(newGame);
+        replaceRemoteGame(newGame);
       } else {
         setGame(newGame);
       }
