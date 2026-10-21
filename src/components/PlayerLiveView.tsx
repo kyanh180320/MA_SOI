@@ -15,7 +15,7 @@ import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { LazyCardSelectionRitual } from './LazyCardSelectionRitual';
-import { getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from '../game/night';
+import { getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
 import { useDialog } from './dialog';
 import {
   createDetectiveCheck,
@@ -23,6 +23,7 @@ import {
   isDetectiveLockedForRound,
 } from '../game/detective';
 import { createWolfSeerCheck } from '../game/wolfSeer';
+import { getWolfLeaderId } from '../game/wolfLeadership';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -125,8 +126,10 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // States dành cho thao tác của các vai trò
-  const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
-  const [wolfWarningMsg, setWolfWarningMsg] = useState<string | null>(null);
+  const [wolfSelectionDraft, setWolfSelectionDraft] = useState<{
+    scope: string;
+    targetIds: string[];
+  } | null>(null);
   const [selectedWolfSeerTarget, setSelectedWolfSeerTarget] = useState<string | null>(null);
   const [wolfSeerResultModal, setWolfSeerResultModal] = useState<boolean | null>(null);
 
@@ -230,34 +233,26 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   }) || [];
 
   // -------------------------------------------------------------
-  // XỬ LÝ LOGIC RIÊNG CỦA BẦY SÓI (Consensus & Sói Quỷ)
+  // XỬ LÝ LOGIC RIÊNG CỦA BẦY SÓI (Đầu đàn & Sói Quỷ)
   // -------------------------------------------------------------
   const aliveWolves = game.players.filter(p => p.alive && isWolfTeam(p.role));
   const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
+  const wolfTargetLimit = getWolfTargetLimit(game.players);
   const wolfVotesMap = currentRound?.wolfVotes || {};
-
-  // Kiểm tra đồng thuận giữa các sói thường
-  const allAliveWolvesVoted = aliveWolves.length > 0 && aliveWolves.every(w => (wolfVotesMap[w.id]?.length || 0) > 0);
-  const votedTargetIds = aliveWolves.map(w => wolfVotesMap[w.id]?.[0]).filter(Boolean);
-  const isWolfConsensus = allAliveWolvesVoted && votedTargetIds.length === aliveWolves.length && new Set(votedTargetIds).size === 1;
-  const consensusTargetId = isWolfConsensus ? votedTargetIds[0] : null;
-  const consensusPlayer = consensusTargetId ? game.players.find(p => p.id === consensusTargetId) : null;
-  const myWolfTargets = selectedWolfTargets.length > 0
-    ? selectedWolfTargets
+  const wolfLeaderId = getWolfLeaderId(game.players, game.wolfLeadershipOrder);
+  const wolfLeader = game.players.find(player => player.id === wolfLeaderId);
+  const isWolfLeader = myPlayer.id === wolfLeaderId;
+  const wolfSelectionScope = `${game.id}:${roundNumber}`;
+  const myWolfTargets = wolfSelectionDraft?.scope === wolfSelectionScope
+    ? wolfSelectionDraft.targetIds
     : wolfVotesMap[myPlayer.id] ?? [];
 
   const queueWolfVote = (targetIds: string[]) => {
     if (!myPlayer || aliveWolves.length <= 1) return;
 
-    const votes: Record<string, string[]> = { [myPlayer.id]: targetIds };
-    aliveWolves.forEach(wolf => {
-      const isBot = wolf.id.startsWith('bot_') || room.members?.find(member => member.uid === wolf.id)?.isBot;
-      if (isBot) votes[wolf.id] = targetIds;
-    });
-
     if (wolfVoteTimerRef.current) clearTimeout(wolfVoteTimerRef.current);
     wolfVoteTimerRef.current = setTimeout(() => {
-      submitWolfVotes(room.id, game.id, roundNumber, votes).catch(error => {
+      submitWolfVotes(room.id, game.id, roundNumber, { [myPlayer.id]: targetIds }).catch(error => {
         console.error('Lỗi cập nhật vote bầy sói:', error);
       });
     }, 180);
@@ -265,90 +260,48 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   // Xử lý khi Sói bấm chọn mục tiêu
   const handleSelectWolfTarget = (targetId: string) => {
-    setWolfWarningMsg(null);
-
     const targetPlayer = game.players.find(p => p.id === targetId);
-    if (targetPlayer && isWolfTeam(targetPlayer.role)) {
-      setWolfWarningMsg("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+    if (!targetPlayer || isWolfTeam(targetPlayer.role)) return;
+
+    const selectionLimit = isWolfLeader ? wolfTargetLimit : 1;
+    let nextTargets: string[];
+    if (myWolfTargets.includes(targetId)) {
+      nextTargets = myWolfTargets.filter(id => id !== targetId);
+    } else if (selectionLimit === 1) {
+      nextTargets = [targetId];
+    } else if (myWolfTargets.length < selectionLimit) {
+      nextTargets = [...myWolfTargets, targetId];
+    } else {
       return;
     }
 
-    // TRƯỜNG HỢP 1: CÓ SÓI QUỶ (Tối đa 2 người)
-    if (hasDemonWolf) {
-      if (myWolfTargets.includes(targetId)) {
-        const nextTargets = myWolfTargets.filter(id => id !== targetId);
-        setSelectedWolfTargets(nextTargets);
-        queueWolfVote(nextTargets);
-      } else {
-        if (myWolfTargets.length >= 2) {
-          const message = 'Bầy Sói có Sói Quỷ cũng chỉ được cắn tối đa 2 người trong một đêm. Hãy bỏ chọn một mục tiêu trước khi đổi người.';
-          setWolfWarningMsg(`⚠️ ${message}`);
-          void showAlert({
-            title: 'Vượt giới hạn cắn',
-            message,
-            tone: 'warning',
-          });
-          return;
-        }
-        const nextTargets = [...myWolfTargets, targetId];
-        setSelectedWolfTargets(nextTargets);
-        queueWolfVote(nextTargets);
-      }
-      return;
-    }
-
-    // TRƯỜNG HỢP 2: CHỈ CÓ SÓI THƯỜNG (Bắt buộc chọn 1 người và đồng thuận nếu có nhiều sói)
-    setSelectedWolfTargets([targetId]);
-    queueWolfVote([targetId]);
+    setWolfSelectionDraft({ scope: wolfSelectionScope, targetIds: nextTargets });
+    queueWolfVote(nextTargets);
   };
 
   // Xác nhận cắn người của Bầy Sói
   const handleConfirmWolfBite = async () => {
+    if (!isWolfLeader) return;
     setIsSubmitting(true);
     try {
-      let finalTargets: string[] = [];
-
-      if (aliveWolves.length > 1) {
-        const selection = getWolfPackSelection(game.players, {
-          ...wolfVotesMap,
-          [myPlayer.id]: myWolfTargets,
-        });
-
-        if (!selection.allWolvesVoted) {
-          await showAlert({
-            title: 'Chưa đủ lựa chọn',
-            message: 'Cần chờ tất cả Sói còn sống chọn mục tiêu trước khi xác nhận.',
-            tone: 'warning',
-          });
-          return;
-        }
-
-        if (selection.exceedsLimit) {
-          await showAlert({
-            title: 'Bầy Sói chọn quá số người',
-            message: selection.maxTargets === 1
-              ? 'Bầy chỉ có Sói thường nên tất cả Sói phải thống nhất cắn cùng 1 người.'
-              : `Bầy có Sói Quỷ nhưng chỉ được cắn tối đa 2 người. Hiện các Sói đang chọn ${selection.targetIds.length} người khác nhau.`,
-            tone: 'danger',
-          });
-          return;
-        }
-
-        finalTargets = selection.targetIds;
-      } else {
-        finalTargets = selectedWolfTargets;
-      }
-
-      const validTargets = finalTargets.filter(id => {
+      const validTargets = [...new Set(myWolfTargets)].filter(id => {
         const p = game.players.find(player => player.id === id);
-        return p && !isWolfTeam(p.role);
+        return p?.alive && !isWolfTeam(p.role);
       });
+      if (validTargets.length > wolfTargetLimit) {
+        await showAlert({
+          title: 'Dữ liệu lựa chọn chưa đồng bộ',
+          message: `Bầy Sói chỉ được cắn tối đa ${wolfTargetLimit} người. Hãy chọn lại mục tiêu trước khi xác nhận.`,
+          tone: 'warning',
+        });
+        return;
+      }
       if (wolfVoteTimerRef.current) {
         clearTimeout(wolfVoteTimerRef.current);
         wolfVoteTimerRef.current = null;
       }
       await submitWolfAction(room.id, game.id, roundNumber, validTargets);
-      setSelectedWolfTargets([]);
+      setWolfSelectionDraft(null);
     } catch (e) {
       console.error("Lỗi xác nhận cắn người:", e);
       await showAlert({
@@ -363,6 +316,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   // Bỏ qua không cắn ai
   const handleSkipWolfBite = async () => {
+    if (!isWolfLeader) return;
     setIsSubmitting(true);
     try {
       if (wolfVoteTimerRef.current) {
@@ -370,7 +324,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
         wolfVoteTimerRef.current = null;
       }
       await submitWolfAction(room.id, game.id, roundNumber, []);
-      setSelectedWolfTargets([]);
+      setWolfSelectionDraft(null);
     } catch (e) {
       console.error("Lỗi bỏ qua lượt sói:", e);
     } finally {
@@ -783,74 +737,57 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   🐺 BẦY SÓI ĐI SĂN ĐÊM
                 </h3>
                 <Badge variant="red">
-                  {hasDemonWolf ? '😈 Có Sói Quỷ (Cắn 2)' : '🐺 Sói Thường (Cắn 1)'}
+                  {isWolfLeader
+                    ? `👑 Sói Đầu Đàn • Cắn ${wolfTargetLimit}`
+                    : `💬 Đề xuất cho ${wolfLeader?.name ?? 'Đầu đàn'}`}
                 </Badge>
               </div>
 
-              {/* Thông báo nếu có lỗi hoặc chọn quá số lượng */}
-              {wolfWarningMsg && (
-                <div className={styles.wolfAlertDisagreement}>
-                  {wolfWarningMsg}
+              <div className={isWolfLeader ? styles.wolfAlertConsensus : styles.wolfAlertDisagreement}>
+                {isWolfLeader
+                  ? `👑 Bạn là Sói Đầu Đàn. Bạn quyết định tối đa ${wolfTargetLimit} mục tiêu cuối cùng của bầy.`
+                  : `💬 Bạn chỉ gửi đề xuất. ${wolfLeader?.name ?? 'Sói Đầu Đàn'} là người xác nhận mục tiêu cuối cùng.`}
+              </div>
+
+              {hasDemonWolf && (
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
+                  😈 Sói Quỷ còn sống nên đầu đàn được quyết định tối đa <strong>2 người</strong>.
+                </p>
+              )}
+
+              {aliveWolves.length > 1 && (
+                <div className={styles.wolfConsensusBox}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>
+                    ĐỀ XUẤT CỦA BẦY SÓI:
+                  </span>
+                  {aliveWolves.map(wolf => {
+                    const targetIds = wolf.id === myPlayer.id ? myWolfTargets : (wolfVotesMap[wolf.id] ?? []);
+                    const targetNames = targetIds
+                      .map(id => game.players.find(player => player.id === id)?.name)
+                      .filter(Boolean);
+                    const isMe = wolf.id === myPlayer.id;
+                    const isLeader = wolf.id === wolfLeaderId;
+
+                    return (
+                      <div key={wolf.id} className={styles.wolfConsensusRow}>
+                        <span>
+                          {isLeader ? '👑' : wolf.role === 'wolf_demon' ? '😈' : wolf.role === 'wolf_seer' ? '👁️🐺' : '🐺'}{' '}
+                          {wolf.name} {isMe ? '(Bạn)' : ''}:
+                        </span>
+                        <span className={targetNames.length > 0 ? styles.wolfTargetSelected : ''}>
+                          {targetNames.length > 0 ? `👉 ${targetNames.join(', ')}` : '⏳ Chưa đề xuất'}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* CÓ SÓI QUỶ: CHỌN TỐI ĐA 2 NGƯỜI */}
-              {hasDemonWolf ? (
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
-                  Bầy sói có <strong>Sói Quỷ</strong>! Được chọn tối đa <strong>2 người</strong> để cắn đêm nay (Đã chọn: {selectedWolfTargets.length}/2):
-                </p>
-              ) : (
-                /* CHỈ CÓ SÓI THƯỜNG: BẮT BUỘC CHỌN CÙNG 1 NGƯỜI NẾU CÓ >= 2 SÓI */
-                <>
-                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
-                    Chọn 1 người để cắn. {aliveWolves.length > 1 && 'Bắt buộc tất cả sói phải chọn cùng 1 người mới cắn được!'}
-                  </p>
-
-                  {/* BẢNG THEO DÕI ĐỒNG THUẬN CỦA BẦY SÓI NẾU CÓ TỪ 2 SÓI */}
-                  {aliveWolves.length > 1 && (
-                    <div className={styles.wolfConsensusBox}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>
-                        Ý KIẾN CỦA BẦY SÓI:
-                      </span>
-                      {aliveWolves.map(w => {
-                        const targetId = wolfVotesMap[w.id]?.[0];
-                        const targetPlayer = targetId ? game.players.find(p => p.id === targetId) : null;
-                        const isMe = w.id === myPlayer.id;
-
-                        return (
-                          <div key={w.id} className={styles.wolfConsensusRow}>
-                            <span>{w.role === 'wolf_demon' ? '😈' : w.role === 'wolf_seer' ? '👁️🐺' : '🐺'} {w.name} {isMe ? '(Bạn)' : ''}:</span>
-                            <span className={targetPlayer ? styles.wolfTargetSelected : ''}>
-                              {targetPlayer ? `👉 ${targetPlayer.name}` : '⏳ Chưa chọn'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* THÔNG BÁO TRẠNG THÁI ĐỒNG THUẬN */}
-                  {aliveWolves.length > 1 && (
-                    <>
-                      {isWolfConsensus && consensusPlayer && (
-                        <div className={styles.wolfAlertConsensus}>
-                          🎉 Cả bầy sói đã ĐỒNG THUẬN chọn cắn: <strong>{consensusPlayer.name}</strong>!
-                        </div>
-                      )}
-                      {allAliveWolvesVoted && !isWolfConsensus && (
-                        <div className={styles.wolfAlertDisagreement}>
-                          ⚠️ Các Sói đang chọn khác người! Tất cả Sói thường phải thống nhất chọn CÙNG 1 NGƯỜI mới cắn được!
-                        </div>
-                      )}
-                      {!allAliveWolvesVoted && (
-                        <div style={{ fontSize: '12px', color: 'var(--gold-300)', fontStyle: 'italic' }}>
-                          ⏳ Đang đợi các sói khác bỏ phiếu... ({votedTargetIds.length}/{aliveWolves.length} đã chọn)
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
+                {isWolfLeader
+                  ? `Chọn tối đa ${wolfTargetLimit} người làm mục tiêu cuối cùng (${myWolfTargets.length}/${wolfTargetLimit}).`
+                  : 'Chọn 1 người để đề xuất cho Sói Đầu Đàn. Bạn có thể đổi đề xuất trước khi đầu đàn xác nhận.'}
+              </p>
 
               {/* LƯỚI CHỌN MỤC TIÊU CẮN (NGƯỜI CÒN SỐNG TRỪ PHE SÓI) */}
               <div className={styles.targetSelectionGrid}>
@@ -863,17 +800,13 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       key={p.id}
                       name={p.name}
                       avatarUrl={p.avatar}
-                      badgeLabel={isSelected ? '🎯 Cắn' : (isWolf ? '🐺 Phe Sói' : undefined)}
+                      badgeLabel={isSelected
+                        ? (isWolfLeader ? '🎯 Mục tiêu cuối' : '💬 Đề xuất')
+                        : (isWolf ? (p.id === wolfLeaderId ? '👑 Đầu đàn' : '🐺 Phe Sói') : undefined)}
                       badgeVariant={isSelected ? 'red' : 'ash'}
                       isSelected={isSelected}
-                      disabled={isWolf}
-                      onClick={() => {
-                        if (isWolf) {
-                          setWolfWarningMsg("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
-                          return;
-                        }
-                        handleSelectWolfTarget(p.id);
-                      }}
+                      disabled={isWolf || (!isSelected && myWolfTargets.length >= (isWolfLeader ? wolfTargetLimit : 1))}
+                      onClick={() => handleSelectWolfTarget(p.id)}
                     />
                   );
                 })}
@@ -881,51 +814,34 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
               {/* CÁC NÚT XÁC NHẬN BẦY SÓI */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
-                {hasDemonWolf ? (
-                  <Button
-                    variant="danger"
-                    pulse={myWolfTargets.length > 0}
-                    disabled={isSubmitting || myWolfTargets.length === 0}
-                    onClick={handleConfirmWolfBite}
-                  >
-                    {myWolfTargets.length > 0
-                      ? `✓ Kiểm tra và xác nhận (${myWolfTargets.map(id => game.players.find(p => p.id === id)?.name).join(', ')})`
-                      : 'Hãy chọn ít nhất 1 nạn nhân'}
-                  </Button>
-                ) : (
-                  aliveWolves.length > 1 ? (
+                {isWolfLeader ? (
+                  <>
                     <Button
                       variant="danger"
-                      pulse={isWolfConsensus}
+                      pulse={myWolfTargets.length > 0}
                       disabled={isSubmitting || myWolfTargets.length === 0}
                       onClick={handleConfirmWolfBite}
                     >
-                      {isWolfConsensus && consensusPlayer
-                        ? `✓ Xác Nhận Cắn Đồng Thuận: ${consensusPlayer.name}`
-                        : '⚠️ Kiểm tra lựa chọn của cả bầy'}
+                      {myWolfTargets.length > 0
+                        ? `✓ ĐẦU ĐÀN XÁC NHẬN CẮN: ${myWolfTargets.map(id => game.players.find(p => p.id === id)?.name).join(', ')}`
+                        : 'HÃY CHỌN MỤC TIÊU CUỐI CÙNG'}
                     </Button>
-                  ) : (
                     <Button
-                      variant="danger"
-                      pulse={selectedWolfTargets.length === 1}
-                      disabled={selectedWolfTargets.length !== 1 || isSubmitting}
-                      onClick={handleConfirmWolfBite}
+                      variant="ghost"
+                      disabled={isSubmitting}
+                      onClick={handleSkipWolfBite}
+                      style={{ fontSize: '12px' }}
                     >
-                      {selectedWolfTargets.length === 1
-                        ? `✓ Xác Nhận Cắn: ${game.players.find(p => p.id === selectedWolfTargets[0])?.name}`
-                        : 'Hãy chọn 1 người để cắn'}
+                      Đầu đàn quyết định không cắn ai đêm nay
                     </Button>
-                  )
+                  </>
+                ) : (
+                  <div className={styles.wolfAlertConsensus}>
+                    {myWolfTargets.length > 0
+                      ? `✓ Đã gửi đề xuất: ${myWolfTargets.map(id => game.players.find(player => player.id === id)?.name).join(', ')}. Đang chờ đầu đàn xác nhận.`
+                      : 'Hãy chọn 1 người để gửi đề xuất cho đầu đàn.'}
+                  </div>
                 )}
-
-                <Button
-                  variant="ghost"
-                  disabled={isSubmitting}
-                  onClick={handleSkipWolfBite}
-                  style={{ fontSize: '12px' }}
-                >
-                  Không cắn ai đêm nay (Bỏ qua)
-                </Button>
               </div>
             </div>
           )}

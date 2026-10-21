@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRematchGame } from './rematch';
 import type { Game, Role } from './types';
+import { isWolfTeam } from './win';
 
 const endedGame: Game = {
   id: 'game_old',
@@ -60,5 +61,8 @@ describe('createRematchGame', () => {
     expect(rematch.players.every(player => player.alive)).toBe(true);
     expect(countRoles(rematch)).toEqual(countRoles(endedGame));
     expect(rematch.players.filter((player, index) => player.role === endedGame.players[index].role)).toHaveLength(0);
+    expect(rematch.wolfLeadershipOrder).toEqual(
+      rematch.players.filter(player => isWolfTeam(player.role)).map(player => player.id),
+    );
   });
 });

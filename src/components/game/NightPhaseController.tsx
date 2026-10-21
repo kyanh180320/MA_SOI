@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { Game, NightRoleStep, Player, Role, Round } from '../../game/types';
-import { getWolfPackSelection, hasLivingNightRole, type NightStep } from '../../game/night';
+import { getWolfTargetLimit, hasLivingNightRole, type NightStep } from '../../game/night';
 import { isWolfTeam } from '../../game/win';
+import { getWolfLeaderId } from '../../game/wolfLeadership';
 import {
   Button,
   Panel,
@@ -10,7 +11,6 @@ import {
   Toast
 } from '../ui';
 import { ROLE_CARD_IMAGES } from '../../constants/assets';
-import { useDialog } from '../dialog';
 import {
   createDetectiveCheck,
   getDetectiveTargetLimit,
@@ -95,10 +95,11 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   onSkipDeadRole,
   onFinishNight
 }) => {
-  const { showAlert } = useDialog();
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
-  const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
-  const [wolfSelectionWarning, setWolfSelectionWarning] = useState<string | null>(null);
+  const [wolfSelectionDraft, setWolfSelectionDraft] = useState<{
+    scope: string;
+    targetIds: string[];
+  } | null>(null);
   const [selectedWolfSeerTarget, setSelectedWolfSeerTarget] = useState<string | null>(null);
   const [wolfSeerResult, setWolfSeerResult] = useState<{
     wolfSeerId: string;
@@ -266,46 +267,43 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   if (nightStep === 'wolf') {
     const aliveWolves = alivePlayers.filter(p => isWolfTeam(p.role));
     const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
-    const maxTargets = hasDemonWolf ? 2 : 1;
+    const maxTargets = getWolfTargetLimit(game.players);
     const wolfVotesMap = currentRound?.wolfVotes || {};
-
-    // Kiểm tra đồng thuận giữa các sói thường khi có từ 2 sói trở lên
-    const allWolvesVoted = aliveWolves.length > 1 && aliveWolves.every(w => (wolfVotesMap[w.id]?.length || 0) > 0);
-    const votedTargetIds = aliveWolves.map(w => wolfVotesMap[w.id]?.[0]).filter(Boolean);
-    const isWolfConsensus = allWolvesVoted && votedTargetIds.length === aliveWolves.length && new Set(votedTargetIds).size === 1;
-    const hasDisagreement = allWolvesVoted && !isWolfConsensus;
-    const packSelection = getWolfPackSelection(game.players, wolfVotesMap);
-    const hasRemoteWolfVotes = aliveWolves.some(wolf => (wolfVotesMap[wolf.id]?.length ?? 0) > 0);
-    const usesRemoteWolfVotes = selectedWolfTargets.length === 0 && hasRemoteWolfVotes;
-    const wolfTargetsToConfirm = usesRemoteWolfVotes ? packSelection.targetIds : selectedWolfTargets;
+    const wolfLeaderId = getWolfLeaderId(game.players, game.wolfLeadershipOrder);
+    const wolfLeader = aliveWolves.find(wolf => wolf.id === wolfLeaderId);
+    const validTargetIds = new Set(
+      alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => player.id),
+    );
+    const rawLeaderTargets = wolfLeaderId ? (wolfVotesMap[wolfLeaderId] ?? []) : [];
+    const leaderTargets = [...new Set(rawLeaderTargets.filter(targetId => validTargetIds.has(targetId)))];
+    const hasInvalidLeaderSelection = leaderTargets.length > maxTargets;
+    const wolfSelectionScope = `${game.id}:${currentRound.number}`;
+    const moderatorTargets = wolfSelectionDraft?.scope === wolfSelectionScope
+      ? wolfSelectionDraft.targetIds
+      : null;
+    const wolfTargetsToConfirm = moderatorTargets ?? leaderTargets;
 
     const toggleWolfTarget = (id: string) => {
-      setWolfSelectionWarning(null);
       const targetPlayer = game.players.find(p => p.id === id);
-      if (targetPlayer && isWolfTeam(targetPlayer.role)) {
-        setWolfSelectionWarning("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
+      if (!targetPlayer || isWolfTeam(targetPlayer.role)) return;
+
+      if (wolfTargetsToConfirm.includes(id)) {
+        setWolfSelectionDraft({
+          scope: wolfSelectionScope,
+          targetIds: wolfTargetsToConfirm.filter(targetId => targetId !== id),
+        });
         return;
       }
 
-      if (selectedWolfTargets.includes(id)) {
-        setSelectedWolfTargets(prev => prev.filter(x => x !== id));
-      } else {
-        if (hasDemonWolf) {
-          if (selectedWolfTargets.length >= 2) {
-            const message = 'Bầy Sói có Sói Quỷ cũng chỉ được cắn tối đa 2 người trong một đêm. Hãy bỏ chọn một mục tiêu trước khi đổi người.';
-            setWolfSelectionWarning(`⚠️ ${message}`);
-            void showAlert({
-              title: 'Vượt giới hạn cắn',
-              message,
-              tone: 'warning',
-            });
-            return;
-          }
-          setSelectedWolfTargets(prev => [...prev, id]);
-        } else {
-          setSelectedWolfTargets([id]);
-        }
+      if (maxTargets === 1) {
+        setWolfSelectionDraft({ scope: wolfSelectionScope, targetIds: [id] });
+        return;
       }
+      if (wolfTargetsToConfirm.length >= maxTargets) return;
+      setWolfSelectionDraft({
+        scope: wolfSelectionScope,
+        targetIds: [...wolfTargetsToConfirm, id],
+      });
     };
 
     const selectedNames = wolfTargetsToConfirm.map(id => game.players.find(p => p.id === id)?.name).filter(Boolean);
@@ -335,40 +333,32 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
               🐺 BẦY SÓI muốn cắn ai?
             </h3>
             <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
-              {hasDemonWolf ? '😈 Sói Quỷ: Cắn tối đa 2 người' : 'Thống nhất chọn con mồi đêm nay'}
+              Quản trò có thể dùng quyết định của đầu đàn hoặc chọn lại mục tiêu
             </span>
           </div>
         </div>
+        <Toast
+          variant="info"
+          message={wolfLeader
+            ? `👑 ${wolfLeader.name} là Sói Đầu Đàn và là người xác nhận mục tiêu cuối cùng.`
+            : 'Chưa xác định được Sói Đầu Đàn còn sống. Quản trò hãy chọn mục tiêu thay cho bầy.'}
+          style={{ marginBottom: 'var(--s-3)' }}
+        />
         {hasDemonWolf && (
           <Toast
             variant="danger"
-            message={`😈 SÓI QUỶ còn sống! Bầy sói được cắn tối đa 2 người (Đã chọn ${selectedWolfTargets.length}/2)`}
+            message={`😈 Sói Quỷ còn sống: đầu đàn được xác nhận tối đa 2 người (đang chọn ${wolfTargetsToConfirm.length}/2).`}
             style={{ marginBottom: 'var(--s-3)' }}
           />
         )}
-        {wolfSelectionWarning && (
+        {hasInvalidLeaderSelection && moderatorTargets === null && (
           <Toast
             variant="danger"
-            message={wolfSelectionWarning}
+            message={`Dữ liệu đề xuất của đầu đàn vượt giới hạn ${maxTargets} người. Quản trò hãy chọn lại mục tiêu trước khi xác nhận.`}
             style={{ marginBottom: 'var(--s-3)' }}
           />
         )}
-        {!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement && (
-          <Toast
-            variant="danger"
-            message="⚠️ Các Sói đang chọn khác người! Tất cả Sói thường phải thống nhất chọn CÙNG 1 NGƯỜI mới cắn được!"
-            style={{ marginBottom: 'var(--s-3)' }}
-          />
-        )}
-        {!hasDemonWolf && aliveWolves.length > 1 && isWolfConsensus && (
-          <Toast
-            variant="success"
-            message={`🎉 Cả bầy sói đã ĐỒNG THUẬN chọn cắn: ${game.players.find(p => p.id === votedTargetIds[0])?.name}!`}
-            style={{ marginBottom: 'var(--s-3)' }}
-          />
-        )}
-        {/* HIỂN THỊ Ý KIẾN TỪNG SÓI NẾU CÓ NHIỀU SÓI VÀ CHƠI ONLINE */}
-        {aliveWolves.length > 1 && !hasDemonWolf && (
+        {aliveWolves.length > 1 && (
           <div style={{
             background: 'rgba(11, 16, 38, 0.7)',
             border: '1px solid rgba(229, 57, 53, 0.3)',
@@ -377,16 +367,17 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             marginBottom: 'var(--s-3)',
             fontSize: '12px'
           }}>
-            <span style={{ color: 'var(--text-dim)', fontWeight: 600 }}>Ý KIẾN CÁC SÓI TRONG BẦY:</span>
+            <span style={{ color: 'var(--text-dim)', fontWeight: 600 }}>ĐỀ XUẤT CỦA BẦY SÓI:</span>
             <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {aliveWolves.map(w => {
-                const targetId = wolfVotesMap[w.id]?.[0];
-                const targetPlayer = targetId ? game.players.find(p => p.id === targetId) : null;
+                const targetNames = (wolfVotesMap[w.id] ?? [])
+                  .map(targetId => game.players.find(player => player.id === targetId)?.name)
+                  .filter(Boolean);
                 return (
                   <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>🐺 {w.name}:</span>
-                    <strong style={{ color: targetPlayer ? 'var(--red-300)' : 'var(--text-dim)' }}>
-                      {targetPlayer ? `👉 ${targetPlayer.name}` : '⏳ Chưa vote'}
+                    <span>{w.id === wolfLeaderId ? '👑' : '🐺'} {w.name}:</span>
+                    <strong style={{ color: targetNames.length > 0 ? 'var(--red-300)' : 'var(--text-dim)' }}>
+                      {targetNames.length > 0 ? `👉 ${targetNames.join(', ')}` : '⏳ Chưa đề xuất'}
                     </strong>
                   </div>
                 );
@@ -400,6 +391,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             const targetIndex = wolfTargetsToConfirm.indexOf(p.id);
             const isTarget = targetIndex !== -1;
             const isWolf = isWolfTeam(p.role);
+            const isAtLimit = maxTargets > 1 && !isTarget && wolfTargetsToConfirm.length >= maxTargets;
 
             return (
               <PlayerTile
@@ -410,14 +402,8 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? '🐺 Phe Sói' : undefined)}
                 badgeVariant={isTarget ? 'red' : 'ash'}
                 isSelected={isTarget}
-                disabled={isWolf}
-                onClick={() => {
-                  if (isWolf) {
-                    setWolfSelectionWarning("⚠️ Sói không thể cắn đồng đội trong phe Sói!");
-                    return;
-                  }
-                  toggleWolfTarget(p.id);
-                }}
+                disabled={isWolf || isAtLimit}
+                onClick={() => toggleWolfTarget(p.id)}
               />
             );
           })}
@@ -429,32 +415,14 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
               variant="danger"
               pulse
               fullWidth
-              onClick={async () => {
-                if (usesRemoteWolfVotes && !packSelection.allWolvesVoted) {
-                  await showAlert({
-                    title: 'Chưa đủ lựa chọn',
-                    message: 'Cần chờ tất cả Sói còn sống chọn mục tiêu trước khi xác nhận.',
-                    tone: 'warning',
-                  });
-                  return;
-                }
-                if (usesRemoteWolfVotes && packSelection.exceedsLimit) {
-                  await showAlert({
-                    title: 'Bầy Sói chọn quá số người',
-                    message: packSelection.maxTargets === 1
-                      ? 'Bầy chỉ có Sói thường nên tất cả Sói phải thống nhất cắn cùng 1 người.'
-                      : `Bầy có Sói Quỷ nhưng chỉ được cắn tối đa 2 người. Hiện các Sói đang chọn ${packSelection.targetIds.length} người khác nhau.`,
-                    tone: 'danger',
-                  });
-                  return;
-                }
-
+              disabled={wolfTargetsToConfirm.length > maxTargets}
+              onClick={() => {
                 onWolfTargets(wolfTargetsToConfirm);
-                setSelectedWolfTargets([]);
+                setWolfSelectionDraft(null);
               }}
             >
-              {usesRemoteWolfVotes && packSelection.exceedsLimit
-                ? '⚠️ Kiểm tra giới hạn và xác nhận'
+              {wolfTargetsToConfirm.length > maxTargets
+                ? '⚠️ Hãy chọn lại mục tiêu hợp lệ'
                 : `✓ Xác Nhận Cắn: ${selectedNames.join(', ')}`}
             </Button>
           ) : (
@@ -463,23 +431,22 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
               fullWidth
               onClick={() => {
                 onWolfTargets([]);
-                setSelectedWolfTargets([]);
+                setWolfSelectionDraft(null);
               }}
             >
               Sói không cắn ai (Bỏ qua)
             </Button>
           )}
 
-          {selectedWolfTargets.length > 0 && (
+          {moderatorTargets !== null && moderatorTargets.length > 0 && (
             <Button
               variant="ghost"
               fullWidth
               onClick={() => {
-                setSelectedWolfTargets([]);
-                setWolfSelectionWarning(null);
+                setWolfSelectionDraft({ scope: wolfSelectionScope, targetIds: [] });
               }}
             >
-              Bỏ qua (Không cắn ai)
+              Bỏ chọn mục tiêu
             </Button>
           )}
         </div>

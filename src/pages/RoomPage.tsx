@@ -16,6 +16,7 @@ import {
 import type { GameRoom, Game } from '../game/types';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { getValidRoomSetupDistribution } from '../game/roomSetup';
+import { createWolfLeadershipOrder } from '../game/wolfLeadership';
 import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
@@ -235,6 +236,7 @@ export default function RoomPage() {
       const newGame: Game = {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),
+        wolfLeadershipOrder: createWolfLeadershipOrder(assignedPlayers),
         nightRoleOrder: loadNightRoleOrder(),
         roleSettings: loadGameRoleSettings(),
         players: assignedPlayers,

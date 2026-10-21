@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getRoleDistribution, assignRoles } from './roles';
-import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from './night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
 import { applyLiveNightActions, sanitizeGameForSync } from './onlineSync';
@@ -237,7 +237,7 @@ describe('roles', () => {
 });
 
 describe('night', () => {
-  describe('wolf pack selection', () => {
+  describe('wolf target limit', () => {
     const normalWolfPlayers: Player[] = [
       { id: 'w1', name: 'Wolf 1', role: 'wolf', alive: true },
       { id: 'w2', name: 'Wolf 2', role: 'wolf', alive: true },
@@ -246,38 +246,26 @@ describe('night', () => {
       { id: 'v3', name: 'Villager 3', role: 'villager', alive: true },
     ];
 
-    it('rejects two normal wolves choosing different victims', () => {
-      expect(getWolfPackSelection(normalWolfPlayers, { w1: ['v1'], w2: ['v2'] })).toEqual({
-        targetIds: ['v1', 'v2'],
-        maxTargets: 1,
-        allWolvesVoted: true,
-        exceedsLimit: true,
-      });
+    it('allows one victim while only normal wolves are alive', () => {
+      expect(getWolfTargetLimit(normalWolfPlayers)).toBe(1);
     });
 
-    it('accepts normal wolves agreeing on one victim', () => {
-      expect(getWolfPackSelection(normalWolfPlayers, { w1: ['v1'], w2: ['v1'] })).toEqual({
-        targetIds: ['v1'],
-        maxTargets: 1,
-        allWolvesVoted: true,
-        exceedsLimit: false,
-      });
-    });
-
-    it('rejects more than two distinct victims when a demon wolf is alive', () => {
+    it('allows two victims while a demon wolf is alive', () => {
       const players: Player[] = [
         ...normalWolfPlayers,
         { id: 'wd1', name: 'Demon Wolf', role: 'wolf_demon', alive: true },
       ];
-      const selection = getWolfPackSelection(players, {
-        w1: ['v1'],
-        w2: ['v2'],
-        wd1: ['v2', 'v3'],
-      });
 
-      expect(selection.maxTargets).toBe(2);
-      expect(selection.targetIds).toEqual(['v1', 'v2', 'v3']);
-      expect(selection.exceedsLimit).toBe(true);
+      expect(getWolfTargetLimit(players)).toBe(2);
+    });
+
+    it('returns to one victim after the demon wolf dies', () => {
+      const players: Player[] = [
+        ...normalWolfPlayers,
+        { id: 'wd1', name: 'Demon Wolf', role: 'wolf_demon', alive: false },
+      ];
+
+      expect(getWolfTargetLimit(players)).toBe(1);
     });
   });
 

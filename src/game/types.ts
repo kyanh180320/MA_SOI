@@ -56,6 +56,8 @@ export interface GameRoleSettings {
 export interface Game {
   id: string;
   createdAt: number;
+  /** Thứ tự kế nhiệm cố định của bầy Sói; phần tử cuối còn sống là đầu đàn. */
+  wolfLeadershipOrder?: string[];
   /** Optional để ván cũ chưa có cấu hình vẫn dùng thứ tự gọi mặc định. */
   nightRoleOrder?: NightRoleStep[];
   /** Optional để ván cũ tự dùng luật mặc định. */

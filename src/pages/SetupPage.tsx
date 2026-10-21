@@ -5,6 +5,7 @@ import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
 import { getValidRoomSetupDistribution } from '../game/roomSetup';
+import { createWolfLeadershipOrder } from '../game/wolfLeadership';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
 import { loadGameRoleSettings, loadNightRoleOrder } from '../services/gameSettings';
@@ -243,6 +244,7 @@ export default function SetupPage() {
       const newGame: Game = {
         id: `game_${Date.now()}`,
         createdAt: Date.now(),
+        wolfLeadershipOrder: createWolfLeadershipOrder(assignedPlayers),
         nightRoleOrder: loadNightRoleOrder(),
         roleSettings: loadGameRoleSettings(),
         players: assignedPlayers,
