@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { flushSync } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { 
@@ -133,8 +134,9 @@ export default function RoomPage() {
 
   const handleResumeGame = () => {
     if (!room.gameData) return;
-    replaceRemoteGame(room.gameData);
-    navigate('/play');
+    const resumedGame = room.gameData;
+    flushSync(() => replaceRemoteGame(resumedGame));
+    navigate('/play', { state: { expectedGameId: resumedGame.id } });
   };
 
   const copyRoomCode = () => {
@@ -240,9 +242,9 @@ export default function RoomPage() {
       };
 
       await syncRoomGame(room.id, newGame);
-      replaceRemoteGame(newGame);
+      flushSync(() => replaceRemoteGame(newGame));
       // Quản trò vào thẳng bàn điều khiển; nghi thức xòe bài chỉ dành cho người chơi.
-      navigate('/play');
+      navigate('/play', { state: { expectedGameId: newGame.id } });
     } catch (err: unknown) {
       console.error("Lỗi bắt đầu ván nhanh:", err);
       await showAlert({

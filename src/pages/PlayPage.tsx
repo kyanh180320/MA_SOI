@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
+import { isExpectedGameReady } from '../game/playEntry';
 import type { NightRoleStep, Role, Player } from '../game/types';
 import {
   closeRoom,
@@ -33,6 +34,7 @@ import { useDialog } from '../components/dialog';
 
 export default function PlayPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { game, updateGame, updateGameLocally, applyRemoteGame, replaceRemoteGame, undo, canUndo, setGame } = useGame();
   const { user } = useAuth();
   const { showAlert, showConfirm } = useDialog();
@@ -41,6 +43,8 @@ export default function PlayPage() {
   const [isSavingGame, setIsSavingGame] = useState(false);
   const [isStartingRematch, setIsStartingRematch] = useState(false);
   const [roomSyncState, setRoomSyncState] = useState<'synced' | 'syncing' | 'offline'>('synced');
+  const expectedGameId = (location.state as { expectedGameId?: string } | null)?.expectedGameId;
+  const isPlayEntryReady = isExpectedGameReady(game, expectedGameId);
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -49,13 +53,13 @@ export default function PlayPage() {
 
   // Chế độ online: lắng nghe phòng để nhận hành động ban đêm do người chơi thao tác trên điện thoại,
   // từ đó màn hình Quản trò tự động nhảy sang lượt gọi vai trò tiếp theo.
-  const gameRef = useRef(game);
+  const gameRef = useRef(isPlayEntryReady ? game : null);
   const roomDeletedRef = useRef(false);
   useEffect(() => {
-    gameRef.current = game;
-  }, [game]);
+    gameRef.current = isPlayEntryReady ? game : null;
+  }, [game, isPlayEntryReady]);
 
-  const roomId = game?.roomId;
+  const roomId = isPlayEntryReady ? game?.roomId : undefined;
   useEffect(() => {
     if (!roomId) return;
     roomDeletedRef.current = false;
@@ -85,6 +89,16 @@ export default function PlayPage() {
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
+
+  if (expectedGameId && !isPlayEntryReady) {
+    return (
+      <div className="screen-container" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p role="status" style={{ color: 'var(--gold-300)', fontSize: '14px', fontWeight: 600 }}>
+          Đang đồng bộ đúng cấu hình vai trò…
+        </p>
+      </div>
+    );
+  }
 
   if (!game) {
     return (

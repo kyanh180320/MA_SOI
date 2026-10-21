@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { flushSync } from 'react-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
@@ -248,12 +249,15 @@ export default function SetupPage() {
 
       if (fromRoom?.id) {
         await syncRoomGame(fromRoom.id, newGame);
-        replaceRemoteGame(newGame);
+        flushSync(() => replaceRemoteGame(newGame));
       } else {
-        setGame(newGame);
+        flushSync(() => setGame(newGame));
       }
 
-      navigate('/play', { replace: true });
+      navigate('/play', {
+        replace: true,
+        state: { expectedGameId: newGame.id },
+      });
     } catch (err: unknown) {
       console.error(`Không thể bắt đầu ván${fromRoom?.id ? ` trong phòng ${fromRoom.id}` : ''}:`, err);
       setStartError('Không thể bắt đầu ván lúc này. Hãy kiểm tra kết nối rồi thử lại.');
