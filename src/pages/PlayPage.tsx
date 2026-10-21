@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
-import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from '../game/night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
 import type { Role, Player } from '../game/types';
@@ -224,11 +224,12 @@ export default function PlayPage() {
   const handleWolfTargets = (targetIds: string[]) => {
     updateGame(g => {
       const rounds = [...g.rounds];
+      const maxTargets = getWolfTargetLimit(g.players);
       // Sói không thể cắn đồng đội thuộc phe Sói
-      const validTargetIds = targetIds.filter(id => {
+      const validTargetIds = [...new Set(targetIds)].filter(id => {
         const p = g.players.find(player => player.id === id);
-        return p && !isWolfTeam(p.role);
-      });
+        return p?.alive && !isWolfTeam(p.role);
+      }).slice(0, maxTargets);
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
         wolfTarget: validTargetIds[0] || 'none',

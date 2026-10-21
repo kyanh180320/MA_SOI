@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Game, Player, Role, Round } from '../../game/types';
-import type { NightStep } from '../../game/night';
+import { getWolfPackSelection, type NightStep } from '../../game/night';
 import { isWolfTeam } from '../../game/win';
 import {
   Button,
@@ -10,6 +10,7 @@ import {
   Toast
 } from '../ui';
 import { ROLE_CARD_IMAGES } from '../../constants/assets';
+import { useDialog } from '../dialog';
 
 export interface NightPhaseControllerProps {
   game: Game;
@@ -40,6 +41,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   onHunterTarget,
   onFinishNight
 }) => {
+  const { showAlert } = useDialog();
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
   const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
   const [wolfSelectionWarning, setWolfSelectionWarning] = useState<string | null>(null);
@@ -165,6 +167,10 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     const votedTargetIds = aliveWolves.map(w => wolfVotesMap[w.id]?.[0]).filter(Boolean);
     const isWolfConsensus = allWolvesVoted && votedTargetIds.length === aliveWolves.length && new Set(votedTargetIds).size === 1;
     const hasDisagreement = allWolvesVoted && !isWolfConsensus;
+    const packSelection = getWolfPackSelection(game.players, wolfVotesMap);
+    const hasRemoteWolfVotes = aliveWolves.some(wolf => (wolfVotesMap[wolf.id]?.length ?? 0) > 0);
+    const usesRemoteWolfVotes = selectedWolfTargets.length === 0 && hasRemoteWolfVotes;
+    const wolfTargetsToConfirm = usesRemoteWolfVotes ? packSelection.targetIds : selectedWolfTargets;
 
     const toggleWolfTarget = (id: string) => {
       setWolfSelectionWarning(null);
@@ -179,7 +185,13 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
       } else {
         if (hasDemonWolf) {
           if (selectedWolfTargets.length >= 2) {
-            setWolfSelectionWarning("⚠️ Có Sói Quỷ chỉ được chọn tối đa 2 người! Bạn đã chọn đủ 2 người rồi, hãy bấm bỏ chọn 1 người trước nếu muốn đổi mục tiêu.");
+            const message = 'Bầy Sói có Sói Quỷ cũng chỉ được cắn tối đa 2 người trong một đêm. Hãy bỏ chọn một mục tiêu trước khi đổi người.';
+            setWolfSelectionWarning(`⚠️ ${message}`);
+            void showAlert({
+              title: 'Vượt giới hạn cắn',
+              message,
+              tone: 'warning',
+            });
             return;
           }
           setSelectedWolfTargets(prev => [...prev, id]);
@@ -189,7 +201,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
       }
     };
 
-    const selectedNames = selectedWolfTargets.map(id => game.players.find(p => p.id === id)?.name).filter(Boolean);
+    const selectedNames = wolfTargetsToConfirm.map(id => game.players.find(p => p.id === id)?.name).filter(Boolean);
 
     return (
       <Panel variant="danger">
@@ -237,7 +249,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
         {!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement && (
           <Toast
             variant="danger"
-            message="⚠️ 2 Sói đang chọn khác người! Bắt buộc tất cả sói thường phải thống nhất chọn CÙNG 1 NGƯỜI mới cắn được!"
+            message="⚠️ Các Sói đang chọn khác người! Tất cả Sói thường phải thống nhất chọn CÙNG 1 NGƯỜI mới cắn được!"
             style={{ marginBottom: 'var(--s-3)' }}
           />
         )}
@@ -282,7 +294,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
           {alivePlayers.map(p => {
-            const targetIndex = selectedWolfTargets.indexOf(p.id);
+            const targetIndex = wolfTargetsToConfirm.indexOf(p.id);
             const isTarget = targetIndex !== -1;
             const isWolf = isWolfTeam(p.role);
 
@@ -309,19 +321,37 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
         </div>
 
         <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-          {selectedWolfTargets.length > 0 ? (
+          {wolfTargetsToConfirm.length > 0 ? (
             <Button
               variant="danger"
               pulse
               fullWidth
-              disabled={!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement}
-              onClick={() => {
-                onWolfTargets(selectedWolfTargets);
+              onClick={async () => {
+                if (usesRemoteWolfVotes && !packSelection.allWolvesVoted) {
+                  await showAlert({
+                    title: 'Chưa đủ lựa chọn',
+                    message: 'Cần chờ tất cả Sói còn sống chọn mục tiêu trước khi xác nhận.',
+                    tone: 'warning',
+                  });
+                  return;
+                }
+                if (usesRemoteWolfVotes && packSelection.exceedsLimit) {
+                  await showAlert({
+                    title: 'Bầy Sói chọn quá số người',
+                    message: packSelection.maxTargets === 1
+                      ? 'Bầy chỉ có Sói thường nên tất cả Sói phải thống nhất cắn cùng 1 người.'
+                      : `Bầy có Sói Quỷ nhưng chỉ được cắn tối đa 2 người. Hiện các Sói đang chọn ${packSelection.targetIds.length} người khác nhau.`,
+                    tone: 'danger',
+                  });
+                  return;
+                }
+
+                onWolfTargets(wolfTargetsToConfirm);
                 setSelectedWolfTargets([]);
               }}
             >
-              {!hasDemonWolf && aliveWolves.length > 1 && hasDisagreement
-                ? '🔒 Cần cả 2 sói chọn cùng 1 người'
+              {usesRemoteWolfVotes && packSelection.exceedsLimit
+                ? '⚠️ Kiểm tra giới hạn và xác nhận'
                 : `✓ Xác Nhận Cắn: ${selectedNames.join(', ')}`}
             </Button>
           ) : (

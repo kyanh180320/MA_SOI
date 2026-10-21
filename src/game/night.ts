@@ -6,6 +6,45 @@ export type NightStep = NightRoleStep | 'done' | 'wait';
 
 const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch', 'hunter'];
 
+export interface WolfPackSelection {
+  targetIds: string[];
+  maxTargets: 1 | 2;
+  allWolvesVoted: boolean;
+  exceedsLimit: boolean;
+}
+
+export function getWolfTargetLimit(players: Player[]): 1 | 2 {
+  return players.some(player => player.alive && player.role === 'wolf_demon') ? 2 : 1;
+}
+
+/**
+ * Tổng hợp lựa chọn riêng của từng Sói thành quyết định chung của cả bầy.
+ * Chỉ nhận mục tiêu còn sống và không thuộc phe Sói.
+ */
+export function getWolfPackSelection(
+  players: Player[],
+  votes: Record<string, string[]> = {},
+): WolfPackSelection {
+  const aliveWolves = players.filter(player => player.alive && isWolfTeam(player.role));
+  const validTargetIds = new Set(
+    players
+      .filter(player => player.alive && !isWolfTeam(player.role))
+      .map(player => player.id),
+  );
+  const targetIds = [...new Set(
+    aliveWolves.flatMap(wolf => (votes[wolf.id] ?? []).filter(targetId => validTargetIds.has(targetId))),
+  )];
+  const maxTargets = getWolfTargetLimit(players);
+
+  return {
+    targetIds,
+    maxTargets,
+    allWolvesVoted: aliveWolves.length > 0
+      && aliveWolves.every(wolf => (votes[wolf.id] ?? []).some(targetId => validTargetIds.has(targetId))),
+    exceedsLimit: targetIds.length > maxTargets,
+  };
+}
+
 /**
  * Các lượt thực sự cần gọi trong đêm, dựa trên những vai còn sống.
  * Sói thường và Sói quỷ cùng dùng một lượt "wolf".
@@ -160,7 +199,9 @@ export function resolveNight(
   // Thu thập danh sách người bị sói cắn
   const wolfBites: string[] = [];
   if (round.wolfTargets && round.wolfTargets.length > 0) {
+    const maxTargets = players ? getWolfTargetLimit(players) : round.wolfTargets.length;
     for (const target of round.wolfTargets) {
+      if (wolfBites.length >= maxTargets) break;
       if (target && target !== 'none' && !wolfBites.includes(target)) {
         if (players) {
           const targetPlayer = players.find(p => p.id === target);
