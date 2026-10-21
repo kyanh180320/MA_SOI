@@ -1,6 +1,8 @@
 import type { Player, Role } from "./types";
 
-export const isWolfTeam = (role: Role): boolean => role === "wolf" || role === "wolf_demon";
+export const isWolfTeam = (role: Role): boolean => (
+  role === "wolf" || role === "wolf_demon" || role === "wolf_seer"
+);
 
 /**
  * Kiểm tra điều kiện thắng

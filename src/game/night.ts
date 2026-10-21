@@ -46,7 +46,7 @@ export function getWolfPackSelection(
 
 /**
  * Các lượt thực sự cần gọi trong đêm, dựa trên những vai còn sống.
- * Sói thường và Sói quỷ cùng dùng một lượt "wolf".
+ * Mọi vai phe Sói cùng dùng lượt "wolf"; Sói Tiên Tri có thêm lượt soi riêng.
  */
 export function getActiveNightRoleSteps(
   players: Player[],
@@ -96,6 +96,10 @@ export function getNightStep(
     }
     if (step === 'guard' && currentRound.guardProtectTarget === undefined) return step;
     if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
+    if (step === 'wolf_seer') {
+      const aliveWolfSeers = players.filter(player => player.alive && player.role === 'wolf_seer');
+      if (aliveWolfSeers.some(wolfSeer => currentRound.wolfSeerChecks?.[wolfSeer.id] === undefined)) return step;
+    }
     if (step === 'seer' && currentRound.seerCheck === undefined) return step;
     if (step === 'detective') {
       const aliveDetectives = players.filter(player => player.alive && player.role === 'detective');
@@ -147,6 +151,14 @@ export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game
   if (lr.seerCheck === undefined && rr.seerCheck !== undefined) {
     next.seerCheck = rr.seerCheck;
     changed = true;
+  }
+
+  if (rr.wolfSeerChecks) {
+    const mergedWolfSeerChecks = { ...(lr.wolfSeerChecks ?? {}), ...rr.wolfSeerChecks };
+    if (JSON.stringify(mergedWolfSeerChecks) !== JSON.stringify(lr.wolfSeerChecks ?? {})) {
+      next.wolfSeerChecks = mergedWolfSeerChecks;
+      changed = true;
+    }
   }
 
   if (rr.detectiveChecks) {

@@ -17,6 +17,7 @@ import {
   submitSeerAction,
   submitWitchAction,
   submitWolfAction,
+  submitWolfSeerAction,
   subscribeRoom,
   syncRoomGame,
 } from '../services/roomService';
@@ -33,6 +34,7 @@ import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { useDialog } from '../components/dialog';
 import { createDetectiveCheck } from '../game/detective';
+import { createWolfSeerCheck } from '../game/wolfSeer';
 
 export default function PlayPage() {
   const navigate = useNavigate();
@@ -217,6 +219,7 @@ export default function PlayPage() {
     switch (role) {
       case 'wolf': return '🐺 Sói';
       case 'wolf_demon': return '😈 Sói quỷ';
+      case 'wolf_seer': return '👁️🐺 Sói tiên tri';
       case 'seer': return '👁 Tiên tri';
       case 'detective': return '🔎 Thám tử';
       case 'witch': return '🧪 Phù thủy';
@@ -334,6 +337,30 @@ export default function PlayPage() {
       syncModeratorNightAction(
         'kết quả của Thám Tử',
         submitDetectiveAction(game.roomId, game.id, currentRound.number, detectiveId, detectiveCheck),
+      );
+    }
+  };
+
+  const handleWolfSeerCheck = (wolfSeerId: string, targetId: string) => {
+    const wolfSeerCheck = createWolfSeerCheck(game.players, targetId);
+    if (!wolfSeerCheck) return;
+
+    updateGameLocally(currentGame => {
+      const rounds = [...currentGame.rounds];
+      const round = rounds[rounds.length - 1];
+      rounds[rounds.length - 1] = {
+        ...round,
+        wolfSeerChecks: {
+          ...(round.wolfSeerChecks ?? {}),
+          [wolfSeerId]: wolfSeerCheck,
+        },
+      };
+      return { ...currentGame, rounds };
+    });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'kết quả của Sói Tiên Tri',
+        submitWolfSeerAction(game.roomId, game.id, currentRound.number, wolfSeerId, wolfSeerCheck),
       );
     }
   };
@@ -974,6 +1001,7 @@ export default function PlayPage() {
               getRoleLabel={getRoleLabel}
               onGuardProtect={handleGuardProtect}
               onWolfTargets={handleWolfTargets}
+              onWolfSeerCheck={handleWolfSeerCheck}
               onSeerCheck={handleSeerCheck}
               onDetectiveCheck={handleDetectiveCheck}
               onWitchAction={handleWitchAction}

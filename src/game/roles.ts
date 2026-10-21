@@ -23,6 +23,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
     return {
       wolf: wolves,
       wolf_demon: 0,
+      wolf_seer: 0,
       seer,
       detective,
       witch,
@@ -35,15 +36,17 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   // Thuật toán cân bằng linh hoạt: Không nhất thiết phải có đủ mọi role
   // 1. Phân bổ phe Sói
   let wolfDemonCount = 0;
+  let wolfSeerCount = 0;
   let normalWolfCount = n <= 5 ? 1 : Math.max(2, Math.floor(n / 3));
 
-  // Sói quỷ có thể xuất hiện khi từ 8 người trở lên (tỉ lệ 40%)
+  // Giữ tổng tỉ lệ Sói đặc biệt ở 40%, rồi chia đều giữa Sói Quỷ và Sói Tiên Tri.
   if (n >= 8 && Math.random() < 0.4) {
-    wolfDemonCount = 1;
+    if (Math.random() < 0.5) wolfDemonCount = 1;
+    else wolfSeerCount = 1;
     normalWolfCount = Math.max(1, normalWolfCount - 1);
   }
 
-  const totalWolves = wolfDemonCount + normalWolfCount;
+  const totalWolves = wolfDemonCount + wolfSeerCount + normalWolfCount;
 
   // 2. Phân bổ phe Dân đặc biệt (Tiên tri, Thám tử, Phù thủy, Bảo vệ, Thợ săn)
   // Số lượng vai đặc biệt được chọn tùy theo số người và sự hiện diện của Sói quỷ
@@ -78,6 +81,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   return {
     wolf: normalWolfCount,
     wolf_demon: wolfDemonCount,
+    wolf_seer: wolfSeerCount,
     seer,
     detective,
     witch,

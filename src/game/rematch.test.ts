@@ -8,7 +8,7 @@ const endedGame: Game = {
   roomId: '123456',
   phase: 'ended',
   winner: 'villager',
-  nightRoleOrder: ['wolf', 'seer', 'detective', 'hunter', 'guard', 'witch'],
+  nightRoleOrder: ['wolf', 'wolf_seer', 'seer', 'detective', 'hunter', 'guard', 'witch'],
   roleSettings: { detective: { lockNextRoundAfterClearCheck: false } },
   players: [
     { id: 'p1', name: 'A', avatar: 'a.webp', role: 'wolf', alive: false },
@@ -33,6 +33,7 @@ function countRoles(game: Game): Record<Role, number> {
   }, {
     wolf: 0,
     wolf_demon: 0,
+    wolf_seer: 0,
     villager: 0,
     seer: 0,
     detective: 0,

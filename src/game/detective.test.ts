@@ -6,6 +6,7 @@ const players: Player[] = [
   { id: 'd1', name: 'Detective', role: 'detective', alive: true },
   { id: 'w1', name: 'Wolf', role: 'wolf', alive: true },
   { id: 'wd1', name: 'Demon', role: 'wolf_demon', alive: true },
+  { id: 'ws1', name: 'Wolf Seer', role: 'wolf_seer', alive: true },
   { id: 'v1', name: 'Villager 1', role: 'villager', alive: true },
   { id: 'v2', name: 'Villager 2', role: 'villager', alive: true },
 ];
@@ -35,6 +36,7 @@ describe('detective role', () => {
       targets: ['v1', 'wd1', 'v2'],
       hasWolf: true,
     });
+    expect(createDetectiveCheck(players, 'd1', ['v1', 'ws1', 'v2']).hasWolf).toBe(true);
     expect(createDetectiveCheck(players, 'd1', ['v1', 'v2'])).toEqual({
       targets: ['v1', 'v2'],
       hasWolf: false,

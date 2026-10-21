@@ -3,6 +3,7 @@ import type { Role, RoleDistribution, RoomSetupConfig } from './types';
 const ALL_ROLES: Role[] = [
   'wolf',
   'wolf_demon',
+  'wolf_seer',
   'villager',
   'seer',
   'detective',
@@ -24,7 +25,7 @@ export function isValidRoleDistribution(
     totalRoles += count;
   }
 
-  const totalWolves = distribution.wolf + distribution.wolf_demon;
+  const totalWolves = distribution.wolf + distribution.wolf_demon + distribution.wolf_seer;
   return totalRoles === playerCount && totalWolves > 0 && totalWolves < playerCount;
 }
 
@@ -40,6 +41,7 @@ export function getValidRoomSetupDistribution(
   const normalizedDistribution: RoleDistribution = {
     wolf: config.distribution.wolf ?? 0,
     wolf_demon: config.distribution.wolf_demon ?? 0,
+    wolf_seer: config.distribution.wolf_seer ?? 0,
     villager: config.distribution.villager ?? 0,
     seer: config.distribution.seer ?? 0,
     detective: config.distribution.detective ?? 0,

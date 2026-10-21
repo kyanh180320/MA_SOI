@@ -6,6 +6,7 @@ import type { Game, Player, Role } from '../game/types';
 import { canDeleteGameHistory } from '../game/historyAccess';
 import { Button } from '../components/ui';
 import { useDialog } from '../components/dialog';
+import { isWolfTeam } from '../game/win';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -68,6 +69,7 @@ export default function HistoryPage() {
     switch (role) {
       case 'wolf': return 'Sói thường';
       case 'wolf_demon': return 'Sói quỷ';
+      case 'wolf_seer': return 'Sói tiên tri';
       case 'seer': return 'Tiên tri';
       case 'detective': return 'Thám tử';
       case 'witch': return 'Phù thủy';
@@ -163,9 +165,9 @@ export default function HistoryPage() {
 
                 {/* 2. Bầy sói */}
                 {(() => {
-                  const wolves = selectedGame.players.filter(p => p.role === 'wolf' || p.role === 'wolf_demon');
+                  const wolves = selectedGame.players.filter(p => isWolfTeam(p.role));
                   const wolfNames = wolves.length > 0 
-                    ? wolves.map(w => `${w.name} (${w.role === 'wolf_demon' ? 'Sói quỷ' : 'Sói'})`).join(', ') 
+                    ? wolves.map(w => `${w.name} (${getRoleTitle(w.role)})`).join(', ')
                     : 'Bầy sói';
 
                   const targets = round.wolfTargets && round.wolfTargets.length > 0 
@@ -182,6 +184,16 @@ export default function HistoryPage() {
                     </p>
                   );
                 })()}
+
+                {round.wolfSeerChecks && Object.entries(round.wolfSeerChecks).map(([wolfSeerId, check]) => (
+                  <p key={wolfSeerId} style={{ margin: '6px 0', fontSize: '14px' }}>
+                    👁️🐺 <strong>{formatPlayer(wolfSeerId, selectedGame.players)}</strong> đã soi{' '}
+                    <strong>{formatPlayer(check.target, selectedGame.players)}</strong> ➔ Kết quả:{' '}
+                    <span style={{ color: check.hasAbility ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 'bold' }}>
+                      {check.hasAbility ? 'Có chức năng' : 'Không có chức năng'}
+                    </span>
+                  </p>
+                ))}
 
                 {/* 3. Tiên tri */}
                 {round.seerCheck && (() => {

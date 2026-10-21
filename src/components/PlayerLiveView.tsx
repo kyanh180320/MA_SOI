@@ -8,6 +8,7 @@ import {
   submitSeerAction,
   submitWitchAction,
   submitWolfAction,
+  submitWolfSeerAction,
   submitWolfVotes,
 } from '../services/roomService';
 import { isWolfTeam } from '../game/win';
@@ -21,6 +22,7 @@ import {
   getDetectiveTargetLimit,
   isDetectiveLockedForRound,
 } from '../game/detective';
+import { createWolfSeerCheck } from '../game/wolfSeer';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -51,6 +53,14 @@ export const ROLE_DETAILS: Record<Role, {
     color: "var(--red-300)",
     description: "Chúa tể loài sói tàn bạo! Khi thức dậy cùng bầy sói, có quyền năng cắn tới 2 người trong 1 đêm. Hiểm họa tột cùng cho dân làng.",
     actionHint: "🌙 Ban đêm: Thức dậy cùng sói và có thể cắn tới 2 nạn nhân."
+  },
+  wolf_seer: {
+    name: "SÓI TIÊN TRI",
+    team: "Phe Ma Sói",
+    icon: "👁️🐺",
+    color: "var(--purple-400)",
+    description: "Thức dậy cùng bầy Sói để chọn con mồi, sau đó có một lượt riêng soi 1 người ngoài phe Sói để biết người đó có chức năng đặc biệt hay chỉ là Dân Làng.",
+    actionHint: "🌙 Ban đêm: Cùng bầy Sói chọn người cắn, rồi soi chức năng của 1 người phe Dân."
   },
   seer: {
     name: "TIÊN TRI",
@@ -117,6 +127,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   // States dành cho thao tác của các vai trò
   const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
   const [wolfWarningMsg, setWolfWarningMsg] = useState<string | null>(null);
+  const [selectedWolfSeerTarget, setSelectedWolfSeerTarget] = useState<string | null>(null);
+  const [wolfSeerResultModal, setWolfSeerResultModal] = useState<boolean | null>(null);
 
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
 
@@ -361,6 +373,40 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       setSelectedWolfTargets([]);
     } catch (e) {
       console.error("Lỗi bỏ qua lượt sói:", e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // XỬ LÝ LOGIC CỦA SÓI TIÊN TRI
+  // -------------------------------------------------------------
+  const myWolfSeerCheck = currentRound?.wolfSeerChecks?.[myPlayer.id];
+
+  const handleTriggerWolfSeerInspect = () => {
+    if (!selectedWolfSeerTarget) return;
+    const check = createWolfSeerCheck(game.players, selectedWolfSeerTarget);
+    if (!check) return;
+    setWolfSeerResultModal(check.hasAbility);
+  };
+
+  const handleFinishWolfSeerCheck = async () => {
+    if (!selectedWolfSeerTarget) return;
+    const check = createWolfSeerCheck(game.players, selectedWolfSeerTarget);
+    if (!check) return;
+
+    setIsSubmitting(true);
+    try {
+      await submitWolfSeerAction(room.id, game.id, roundNumber, myPlayer.id, check);
+      setWolfSeerResultModal(null);
+      setSelectedWolfSeerTarget(null);
+    } catch (error) {
+      console.error('Lỗi lưu kết quả Sói Tiên Tri:', error);
+      await showAlert({
+        title: 'Chưa lưu được kết quả',
+        message: 'Kết quả soi chức năng chưa được gửi. Hãy kiểm tra kết nối và thử lại.',
+        tone: 'danger',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -773,7 +819,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
                         return (
                           <div key={w.id} className={styles.wolfConsensusRow}>
-                            <span>{w.role === 'wolf_demon' ? '😈' : '🐺'} {w.name} {isMe ? '(Bạn)' : ''}:</span>
+                            <span>{w.role === 'wolf_demon' ? '😈' : w.role === 'wolf_seer' ? '👁️🐺' : '🐺'} {w.name} {isMe ? '(Bạn)' : ''}:</span>
                             <span className={targetPlayer ? styles.wolfTargetSelected : ''}>
                               {targetPlayer ? `👉 ${targetPlayer.name}` : '⏳ Chưa chọn'}
                             </span>
@@ -884,7 +930,54 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* B. THAO TÁC CỦA BẢO VỆ */}
+          {/* B. THAO TÁC CỦA SÓI TIÊN TRI */}
+          {nightStep === 'wolf_seer' && myPlayer.role === 'wolf_seer' && myWolfSeerCheck === undefined && (
+            <div className={`${styles.actionPanel} ${styles.actionPanelWolf}`}>
+              <div className={styles.actionHeader}>
+                <h3 className={styles.actionTitle} style={{ color: 'var(--purple-400)' }}>
+                  👁️🐺 SÓI TIÊN TRI SOI CHỨC NĂNG
+                </h3>
+                <Badge variant="red">Sói Tiên Tri</Badge>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
+                Chọn 1 người ngoài phe Sói. Kết quả chỉ cho biết người đó <strong>có chức năng</strong> hay <strong>không có chức năng</strong>.
+              </p>
+
+              <div className={styles.targetSelectionGrid}>
+                {alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => {
+                  const isSelected = selectedWolfSeerTarget === player.id;
+                  return (
+                    <PlayerTile
+                      key={player.id}
+                      name={player.name}
+                      avatarUrl={player.avatar}
+                      badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
+                      badgeVariant="red"
+                      isSelected={isSelected}
+                      onClick={() => {
+                        setSelectedWolfSeerTarget(current => current === player.id ? null : player.id);
+                        setWolfSeerResultModal(null);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="danger"
+                pulse={!!selectedWolfSeerTarget}
+                disabled={!selectedWolfSeerTarget || isSubmitting}
+                onClick={handleTriggerWolfSeerInspect}
+              >
+                {selectedWolfSeerTarget
+                  ? `SOI CHỨC NĂNG: ${game.players.find(player => player.id === selectedWolfSeerTarget)?.name}`
+                  : 'HÃY CHỌN 1 NGƯỜI ĐỂ SOI'}
+              </Button>
+            </div>
+          )}
+
+          {/* C. THAO TÁC CỦA BẢO VỆ */}
           {nightStep === 'guard' && myPlayer.role === 'guard' && (
             <div className={styles.actionPanel}>
               <div className={styles.actionHeader}>
@@ -952,7 +1045,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* C. THAO TÁC CỦA TIÊN TRI */}
+          {/* D. THAO TÁC CỦA TIÊN TRI */}
           {nightStep === 'seer' && myPlayer.role === 'seer' && (
             <div className={`${styles.actionPanel} ${styles.actionPanelSeer}`}>
               <div className={styles.actionHeader}>
@@ -999,7 +1092,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* D. THAO TÁC CỦA THÁM TỬ */}
+          {/* E. THAO TÁC CỦA THÁM TỬ */}
           {nightStep === 'detective' && myPlayer.role === 'detective' && myDetectiveCheck === undefined && (
             <div className={`${styles.actionPanel} ${styles.actionPanelSeer}`}>
               <div className={styles.actionHeader}>
@@ -1061,7 +1154,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* E. THAO TÁC CỦA PHÙ THỦY */}
+          {/* F. THAO TÁC CỦA PHÙ THỦY */}
           {nightStep === 'witch' && myPlayer.role === 'witch' && (
             <div className={`${styles.actionPanel} ${styles.actionPanelWitch}`}>
               <div className={styles.actionHeader}>
@@ -1177,7 +1270,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* F. THAO TÁC CỦA THỢ SĂN */}
+          {/* G. THAO TÁC CỦA THỢ SĂN */}
           {nightStep === 'hunter' && myPlayer.role === 'hunter' && (
             <div className={styles.actionPanel}>
               <div className={styles.actionHeader}>
@@ -1244,9 +1337,10 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* G. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
+          {/* H. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
           {((nightStep === 'guard' && myPlayer.role !== 'guard') ||
             (nightStep === 'wolf' && !isWolfTeam(myPlayer.role)) ||
+            (nightStep === 'wolf_seer' && (myPlayer.role !== 'wolf_seer' || myWolfSeerCheck !== undefined)) ||
             (nightStep === 'seer' && myPlayer.role !== 'seer') ||
             (nightStep === 'detective' && (myPlayer.role !== 'detective' || myDetectiveCheck !== undefined)) ||
             (nightStep === 'witch' && myPlayer.role !== 'witch') ||
@@ -1263,6 +1357,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 <strong>
                   {nightStep === 'guard' && '🛡️ BẢO VỆ'}
                   {nightStep === 'wolf' && '🐺 BẦY MA SÓI'}
+                  {nightStep === 'wolf_seer' && '👁️🐺 SÓI TIÊN TRI'}
                   {nightStep === 'seer' && '🔮 TIÊN TRI'}
                   {nightStep === 'detective' && '🔎 THÁM TỬ'}
                   {nightStep === 'witch' && '🧪 PHÙ THỦY'}
@@ -1345,6 +1440,36 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       )}
 
       {/* MODAL KẾT QUẢ TIÊN TRI SOI THÂN PHẬN */}
+      {wolfSeerResultModal !== null && (
+        <Modal
+          isOpen={true}
+          onClose={() => setWolfSeerResultModal(null)}
+          title="👁️🐺 KẾT QUẢ CỦA SÓI TIÊN TRI"
+          footer={
+            <Button
+              variant="danger"
+              fullWidth
+              disabled={isSubmitting}
+              onClick={handleFinishWolfSeerCheck}
+            >
+              ✓ ĐÃ RÕ — HOÀN TẤT LƯỢT SOI
+            </Button>
+          }
+        >
+          <div style={{ textAlign: 'center', padding: 'var(--s-5) 0' }}>
+            <div style={{
+              fontSize: '30px',
+              fontFamily: 'var(--font-title)',
+              fontWeight: 800,
+              color: wolfSeerResultModal ? 'var(--purple-400)' : 'var(--text-dim)',
+              letterSpacing: '0.06em',
+            }}>
+              {wolfSeerResultModal ? '👁 CÓ CHỨC NĂNG' : '○ KHÔNG CÓ CHỨC NĂNG'}
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {seerResultModal && (
         <Modal
           isOpen={true}

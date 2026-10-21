@@ -53,6 +53,9 @@ export function applyLiveNightActions(game: Game, live?: LiveNightActions): Game
     ...(live.wolfVotes !== undefined
       ? { wolfVotes: { ...(currentRound.wolfVotes || {}), ...live.wolfVotes } }
       : {}),
+    ...(live.wolfSeerChecks !== undefined
+      ? { wolfSeerChecks: { ...(currentRound.wolfSeerChecks || {}), ...live.wolfSeerChecks } }
+      : {}),
     ...(live.seerCheck !== undefined ? { seerCheck: live.seerCheck } : {}),
     ...(live.detectiveChecks !== undefined
       ? { detectiveChecks: { ...(currentRound.detectiveChecks || {}), ...live.detectiveChecks } }

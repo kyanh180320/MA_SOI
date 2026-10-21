@@ -143,7 +143,7 @@ export const DevShowcasePage: React.FC = () => {
           gap: 'var(--s-3)'
         }}>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-dim)', textAlign: 'center' }}>
-            Chạm vào thẻ bài để lật mặt trước / mặt sau (3D Flip Effect). Thử đổi vai để xem toàn bộ 8 bộ bài Gothic Art.
+            Chạm vào thẻ bài để lật mặt trước / mặt sau (3D Flip Effect). Thử đổi vai để xem toàn bộ 9 bộ bài Gothic Art.
           </p>
 
           {/* Chọn vai trò để xem lá bài tương ứng */}
@@ -151,7 +151,9 @@ export const DevShowcasePage: React.FC = () => {
             {[
               { id: 'wolf', label: '🐺 Sói' },
               { id: 'wolf_demon', label: '😈 Sói Quỷ' },
+              { id: 'wolf_seer', label: '👁️🐺 Sói Tiên Tri' },
               { id: 'seer', label: '🔮 Tiên Tri' },
+              { id: 'detective', label: '🔎 Thám Tử' },
               { id: 'witch', label: '🧪 Phù Thủy' },
               { id: 'guard', label: '🛡️ Bảo Vệ' },
               { id: 'hunter', label: '🏹 Thợ Săn' },

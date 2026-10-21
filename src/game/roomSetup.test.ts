@@ -6,6 +6,7 @@ import { getValidRoomSetupDistribution, isValidRoleDistribution } from './roomSe
 const customFourPlayerRoles: RoleDistribution = {
   wolf: 1,
   wolf_demon: 0,
+  wolf_seer: 0,
   villager: 1,
   seer: 0,
   detective: 0,
@@ -41,6 +42,7 @@ describe('room setup configuration', () => {
     }), {
       wolf: 0,
       wolf_demon: 0,
+      wolf_seer: 0,
       villager: 0,
       seer: 0,
       detective: 0,
@@ -64,7 +66,7 @@ describe('room setup configuration', () => {
     expect(getValidRoomSetupDistribution(undefined, 4)).toBeNull();
   });
 
-  it('treats a missing detective field in an old saved room as zero', () => {
+  it('treats new role fields missing from an old saved room as zero', () => {
     const oldDistribution = {
       wolf: 1,
       wolf_demon: 0,
@@ -77,6 +79,7 @@ describe('room setup configuration', () => {
 
     expect(getValidRoomSetupDistribution(createConfig({ distribution: oldDistribution }), 4)).toEqual({
       ...oldDistribution,
+      wolf_seer: 0,
       detective: 0,
     });
   });

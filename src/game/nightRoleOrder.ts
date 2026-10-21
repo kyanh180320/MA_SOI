@@ -3,6 +3,7 @@ import type { NightRoleStep } from './types';
 export const DEFAULT_NIGHT_ROLE_ORDER: readonly NightRoleStep[] = [
   'guard',
   'wolf',
+  'wolf_seer',
   'seer',
   'detective',
   'witch',

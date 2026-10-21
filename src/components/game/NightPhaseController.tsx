@@ -16,6 +16,7 @@ import {
   getDetectiveTargetLimit,
   isDetectiveLockedForRound,
 } from '../../game/detective';
+import { createWolfSeerCheck } from '../../game/wolfSeer';
 
 export interface NightPhaseControllerProps {
   game: Game;
@@ -26,6 +27,7 @@ export interface NightPhaseControllerProps {
   getRoleLabel: (role: Role) => string;
   onGuardProtect: (targetId: string | null) => void;
   onWolfTargets: (targetIds: string[]) => void;
+  onWolfSeerCheck: (wolfSeerId: string, targetId: string) => void;
   onSeerCheck: (targetId: string | null) => void;
   onDetectiveCheck: (detectiveId: string, targetIds: string[], locked?: boolean) => void;
   onWitchAction: (saveTargetId: string | null, poisonTargetId: string | null) => void;
@@ -48,6 +50,11 @@ const DEAD_ROLE_COPY: Record<NightRoleStep, {
     label: 'BẦY SÓI',
     callInstruction: '“Bầy Sói thức dậy và chọn người muốn cắn.”',
     accent: 'var(--red-300)',
+  },
+  wolf_seer: {
+    label: 'SÓI TIÊN TRI',
+    callInstruction: '“Sói Tiên Tri thức dậy và chọn người muốn soi chức năng.”',
+    accent: 'var(--purple-400)',
   },
   seer: {
     label: 'TIÊN TRI',
@@ -80,6 +87,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   getRoleLabel,
   onGuardProtect,
   onWolfTargets,
+  onWolfSeerCheck,
   onSeerCheck,
   onDetectiveCheck,
   onWitchAction,
@@ -91,6 +99,12 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
   const [selectedWolfTargets, setSelectedWolfTargets] = useState<string[]>([]);
   const [wolfSelectionWarning, setWolfSelectionWarning] = useState<string | null>(null);
+  const [selectedWolfSeerTarget, setSelectedWolfSeerTarget] = useState<string | null>(null);
+  const [wolfSeerResult, setWolfSeerResult] = useState<{
+    wolfSeerId: string;
+    targetId: string;
+    hasAbility: boolean;
+  } | null>(null);
   const [selectedSeerTarget, setSelectedSeerTarget] = useState<string | null>(null);
   const [seerResultModal, setSeerResultModal] = useState<{ targetId: string; name: string; isWolf: boolean } | null>(null);
   const [selectedDetectiveTargets, setSelectedDetectiveTargets] = useState<string[]>([]);
@@ -473,7 +487,134 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 3. LƯỢT TIÊN TRI
+  // 3. LƯỢT SÓI TIÊN TRI
+  if (nightStep === 'wolf_seer') {
+    const aliveWolfSeers = alivePlayers.filter(player => player.role === 'wolf_seer');
+    const currentWolfSeer = aliveWolfSeers.find(
+      wolfSeer => currentRound.wolfSeerChecks?.[wolfSeer.id] === undefined,
+    );
+
+    if (!currentWolfSeer) {
+      return (
+        <Panel>
+          <Toast variant="info" message="Đang chờ đồng bộ kết quả của Sói Tiên Tri…" />
+        </Panel>
+      );
+    }
+
+    const selectedPlayer = selectedWolfSeerTarget
+      ? game.players.find(player => player.id === selectedWolfSeerTarget)
+      : null;
+
+    return (
+      <Panel variant="danger">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img
+            src={ROLE_CARD_IMAGES.wolf_seer}
+            alt="Sói Tiên Tri"
+            style={{
+              width: '46px',
+              height: '69px',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              border: '1.5px solid var(--purple-400)',
+              objectFit: 'cover',
+            }}
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--purple-400)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px',
+            }}>
+              👁️🐺 {currentWolfSeer.name} muốn soi ai?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              Chọn 1 người ngoài phe Sói để biết họ có chức năng hay không
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+          {alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => {
+            const isSelected = selectedWolfSeerTarget === player.id;
+            return (
+              <PlayerTile
+                key={player.id}
+                name={player.name}
+                avatarUrl={player.avatar}
+                role={showRoles ? getRoleLabel(player.role) : undefined}
+                badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
+                badgeVariant="red"
+                isSelected={isSelected}
+                onClick={() => {
+                  setSelectedWolfSeerTarget(current => current === player.id ? null : player.id);
+                  setWolfSeerResult(null);
+                }}
+              />
+            );
+          })}
+        </div>
+
+        <Button
+          variant="danger"
+          pulse={!!selectedPlayer}
+          fullWidth
+          disabled={!selectedPlayer}
+          style={{ marginTop: 'var(--s-4)' }}
+          onClick={() => {
+            if (!selectedPlayer) return;
+            const check = createWolfSeerCheck(game.players, selectedPlayer.id);
+            if (!check) return;
+            setWolfSeerResult({
+              wolfSeerId: currentWolfSeer.id,
+              targetId: check.target,
+              hasAbility: check.hasAbility,
+            });
+          }}
+        >
+          {selectedPlayer ? `XEM KẾT QUẢ SOI: ${selectedPlayer.name}` : 'HÃY CHỌN 1 NGƯỜI ĐỂ SOI'}
+        </Button>
+
+        <Modal
+          isOpen={wolfSeerResult !== null}
+          onClose={() => setWolfSeerResult(null)}
+          title="KẾT QUẢ CỦA SÓI TIÊN TRI"
+          footer={wolfSeerResult ? (
+            <Button
+              variant="danger"
+              pulse
+              fullWidth
+              onClick={() => {
+                onWolfSeerCheck(wolfSeerResult.wolfSeerId, wolfSeerResult.targetId);
+                setWolfSeerResult(null);
+                setSelectedWolfSeerTarget(null);
+              }}
+            >
+              XÁC NHẬN & TIẾP TỤC ➔
+            </Button>
+          ) : undefined}
+        >
+          {wolfSeerResult && (
+            <div style={{ textAlign: 'center', padding: 'var(--s-4) 0' }}>
+              <div style={{
+                fontSize: '28px',
+                fontFamily: 'var(--font-title)',
+                fontWeight: 800,
+                color: wolfSeerResult.hasAbility ? 'var(--purple-400)' : 'var(--text-dim)',
+                letterSpacing: '0.06em',
+              }}>
+                {wolfSeerResult.hasAbility ? '👁 CÓ CHỨC NĂNG' : '○ KHÔNG CÓ CHỨC NĂNG'}
+              </div>
+            </div>
+          )}
+        </Modal>
+      </Panel>
+    );
+  }
+
+  // 4. LƯỢT TIÊN TRI
   if (nightStep === 'seer') {
     const selectedPlayer = selectedSeerTarget ? game.players.find(p => p.id === selectedSeerTarget) : null;
 
@@ -617,7 +758,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 4. LƯỢT THÁM TỬ
+  // 5. LƯỢT THÁM TỬ
   if (nightStep === 'detective') {
     const aliveDetectives = alivePlayers.filter(player => player.role === 'detective');
     const currentDetective = aliveDetectives.find(
@@ -764,7 +905,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 5. LƯỢT PHÙ THỦY
+  // 6. LƯỢT PHÙ THỦY
   if (nightStep === 'witch') {
     const wolfTargetsList = currentRound.wolfTargets 
       ? currentRound.wolfTargets.filter(id => id && id !== 'none') 
@@ -923,7 +1064,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 6. LƯỢT THỢ SĂN
+  // 7. LƯỢT THỢ SĂN
   if (nightStep === 'hunter') {
     const aliveHunters = alivePlayers.filter(player => player.role === 'hunter');
     const currentHunter = aliveHunters.find(hunter => currentRound.hunterTargets?.[hunter.id] === undefined);
@@ -1030,7 +1171,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 7. KẾT THÚC ĐÊM
+  // 8. KẾT THÚC ĐÊM
   if (nightStep === 'done') {
     return (
       <Panel style={{ textAlign: 'center' }}>

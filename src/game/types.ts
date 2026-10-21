@@ -1,4 +1,4 @@
-export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "detective" | "witch" | "guard" | "hunter";
+export type Role = "wolf" | "wolf_demon" | "wolf_seer" | "villager" | "seer" | "detective" | "witch" | "guard" | "hunter";
 export type RoleDistribution = Record<Role, number>;
 export type NightRoleStep = Exclude<Role, "villager" | "wolf_demon">;
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
@@ -18,6 +18,7 @@ export interface Round {
   wolfTarget?: string;                 // Tương thích ngược (1 mục tiêu)
   wolfTargets?: string[];              // Danh sách mục tiêu sói cắn (hỗ trợ sói quỷ cắn 2 người)
   wolfVotes?: Record<string, string[]>; // Id từng con sói -> mục tiêu đang vote cắn
+  wolfSeerChecks?: Record<string, WolfSeerCheck>; // Id Sói Tiên Tri -> kết quả soi chức năng
   seerCheck?: { target: string; isWolf: boolean };
   detectiveChecks?: Record<string, DetectiveCheck>; // Id Thám tử -> kết quả soi nhóm trong vòng
   witchSaved?: boolean;                // Cứu nạn nhân (boolean)
@@ -39,6 +40,11 @@ export interface DetectiveCheck {
   hasWolf: boolean;
   /** Vòng bị khóa vẫn cần một thao tác xác nhận để thanh gọi vai không tự nhảy. */
   locked?: boolean;
+}
+
+export interface WolfSeerCheck {
+  target: string;
+  hasAbility: boolean;
 }
 
 export interface GameRoleSettings {
@@ -102,6 +108,7 @@ export interface LiveNightActions {
   wolfTarget?: string;
   wolfTargets?: string[];
   wolfVotes?: Record<string, string[]>;
+  wolfSeerChecks?: Record<string, WolfSeerCheck>;
   seerCheck?: { target: string; isWolf: boolean };
   detectiveChecks?: Record<string, DetectiveCheck>;
   witchSaved?: boolean;

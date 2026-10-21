@@ -8,6 +8,7 @@ function getPreviousRoleDistribution(game: Game): Record<Role, number> {
   const distribution: Record<Role, number> = {
     wolf: 0,
     wolf_demon: 0,
+    wolf_seer: 0,
     villager: 0,
     seer: 0,
     detective: 0,
