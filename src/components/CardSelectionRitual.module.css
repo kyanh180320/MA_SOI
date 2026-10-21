@@ -29,11 +29,9 @@
 @keyframes ritualFadeIn {
   0% {
     opacity: 0;
-    backdrop-filter: blur(0px);
   }
   100% {
     opacity: 1;
-    backdrop-filter: blur(12px);
   }
 }
 
@@ -219,12 +217,10 @@
   0% {
     opacity: 0;
     transform: translateX(-50%) translateY(42px) scale(0.52) rotate(0deg);
-    filter: brightness(0.7);
   }
   100% {
     opacity: 1;
     transform: translateX(-50%) translateX(var(--fan-x)) translateY(var(--fan-y)) rotate(var(--fan-angle));
-    filter: brightness(1);
   }
 }
 
@@ -318,7 +314,7 @@
   opacity: 0 !important;
   transform: scale(0.4) translateY(40px) !important;
   pointer-events: none;
-  transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease !important;
 }
 
 /* ==========================================================================
@@ -341,7 +337,7 @@
   aspect-ratio: 2 / 3;
   transform: translate(-50%, -50%) scale(1.08);
   transform-origin: center;
-  will-change: left, top, transform;
+  will-change: transform, opacity;
 }
 
 .cardConverging .spotlightCardMotion {
@@ -356,18 +352,15 @@
 
 @keyframes cardConvergeToCenter {
   0% {
-    left: var(--card-start-x);
-    top: var(--card-start-y);
-    transform: translate(-50%, -50%) scale(var(--card-start-scale));
+    transform:
+      translate(calc(var(--card-start-x) - 50vw), calc(var(--card-start-y) - 50vh))
+      translate(-50%, -50%)
+      scale(var(--card-start-scale));
   }
   58% {
-    left: 50%;
-    top: 50%;
     transform: translate(-50%, -50%) scale(1.16) rotate(-1.5deg);
   }
   100% {
-    left: 50%;
-    top: 50%;
     transform: translate(-50%, -50%) scale(1.08);
   }
 }
@@ -691,6 +684,32 @@
 
   .revealedRoleInfo {
     top: calc(50% + 145px);
+  }
+}
+
+/* Điện thoại tầm trung: giữ nghi thức nhưng tránh blur/glow liên tục tốn GPU. */
+@media (max-width: 600px) {
+  .ritualOverlay {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .ambientFog {
+    filter: blur(20px);
+    animation: none;
+  }
+
+  .moonIcon,
+  .ritualHint {
+    animation: none;
+  }
+
+  .goldenBurst {
+    filter: blur(9px);
+  }
+
+  .goldenBurst.effectVisible {
+    animation: goldenReveal 620ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
   }
 }
 

@@ -156,6 +156,17 @@ export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game
     }
   }
 
+  if (rr.skippedDeadRoleSteps) {
+    const skippedDeadRoleSteps = [...new Set([
+      ...(lr.skippedDeadRoleSteps ?? []),
+      ...rr.skippedDeadRoleSteps,
+    ])];
+    if (skippedDeadRoleSteps.length !== (lr.skippedDeadRoleSteps?.length ?? 0)) {
+      next.skippedDeadRoleSteps = skippedDeadRoleSteps;
+      changed = true;
+    }
+  }
+
   if (!changed) return null;
   const rounds = [...local.rounds];
   rounds[rounds.length - 1] = next;

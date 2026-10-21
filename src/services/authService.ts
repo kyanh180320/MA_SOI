@@ -11,8 +11,7 @@ import {
   runTransaction,
   setDoc,
 } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { auth, db, storage } from './firebase';
+import { app, auth, db } from './firebase';
 import type { AppUser } from '../game/types';
 import { normalizeUsername, validateUsername } from '../game/username';
 
@@ -224,7 +223,10 @@ export async function uploadUserAvatar(blob: Blob): Promise<string> {
   const profile = await getUserProfile(firebaseUser);
   if (!profile) throw new Error('Hãy tạo hồ sơ trước khi tải ảnh đại diện.');
 
-  const avatarRef = ref(storage, `avatars/${profile.uid}/profile.webp`);
+  // Storage chỉ cần khi người dùng thực sự upload ảnh; không đưa SDK này vào
+  // bundle mở màn hình chính.
+  const { getDownloadURL, getStorage, ref, uploadBytes } = await import('firebase/storage');
+  const avatarRef = ref(getStorage(app), `avatars/${profile.uid}/profile.webp`);
   await uploadBytes(avatarRef, blob, {
     contentType: blob.type || 'image/webp',
     cacheControl: 'public,max-age=3600',

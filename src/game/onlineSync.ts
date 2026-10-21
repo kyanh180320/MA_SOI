@@ -60,6 +60,12 @@ export function applyLiveNightActions(game: Game, live?: LiveNightActions): Game
     ...(live.hunterTargets !== undefined
       ? { hunterTargets: { ...(currentRound.hunterTargets || {}), ...live.hunterTargets } }
       : {}),
+    ...(live.skippedDeadRoleSteps !== undefined
+      ? { skippedDeadRoleSteps: [...new Set([
+        ...(currentRound.skippedDeadRoleSteps || []),
+        ...live.skippedDeadRoleSteps,
+      ])] }
+      : {}),
   };
 
   const rounds = [...game.rounds];

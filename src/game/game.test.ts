@@ -26,11 +26,13 @@ describe('online sync', () => {
       guardProtectTarget: 'v1',
       wolfVotes: { w1: ['v1'] },
       hunterTargets: { h1: 'v1' },
+      skippedDeadRoleSteps: ['seer'],
     });
 
     expect(hydrated.rounds[0].guardProtectTarget).toBe('v1');
     expect(hydrated.rounds[0].wolfVotes).toEqual({ w1: ['v1'] });
     expect(hydrated.rounds[0].hunterTargets).toEqual({ h1: 'v1' });
+    expect(hydrated.rounds[0].skippedDeadRoleSteps).toEqual(['seer']);
   });
 
   it('ignores stale actions from another round', () => {
@@ -91,6 +93,15 @@ describe('mergeRemoteNightActions', () => {
       h1: 'p1',
       h2: 'p2',
     });
+  });
+
+  it('merges dead-role acknowledgements without losing local ones', () => {
+    const local = withRound(base, { skippedDeadRoleSteps: ['guard'] });
+    const remote = withRound(base, { skippedDeadRoleSteps: ['seer'] });
+    expect(mergeRemoteNightActions(local, remote)?.rounds[0].skippedDeadRoleSteps).toEqual([
+      'guard',
+      'seer',
+    ]);
   });
 });
 

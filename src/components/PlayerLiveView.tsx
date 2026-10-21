@@ -12,7 +12,7 @@ import {
 import { isWolfTeam } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
-import { CardSelectionRitual } from './CardSelectionRitual';
+import { LazyCardSelectionRitual } from './LazyCardSelectionRitual';
 import { getConfiguredNightRoleSteps, getNightStep, getWolfPackSelection } from '../game/night';
 import { useDialog } from './dialog';
 
@@ -506,7 +506,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH KHI QUẢN TRÒ BẮT ĐẦU VÁN */}
       {showRitual && myPlayer && roleInfo && (
-        <CardSelectionRitual
+        <LazyCardSelectionRitual
           myRole={myPlayer.role}
           roleInfo={roleInfo}
           onComplete={handleRitualComplete}

@@ -6,7 +6,18 @@ import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getConfigure
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
 import type { NightRoleStep, Role, Player } from '../game/types';
-import { closeRoom, startRoomRematch, subscribeRoom, syncRoomGame } from '../services/roomService';
+import {
+  closeRoom,
+  startRoomRematch,
+  submitDeadRoleSkipAction,
+  submitGuardAction,
+  submitHunterAction,
+  submitSeerAction,
+  submitWitchAction,
+  submitWolfAction,
+  subscribeRoom,
+  syncRoomGame,
+} from '../services/roomService';
 import { saveGame } from '../services/gameRepository';
 import {
   Button,
@@ -18,13 +29,13 @@ import {
 } from '../components/ui';
 import { DiscussionTimer, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
-import { CardSelectionRitual } from '../components/CardSelectionRitual';
+import { LazyCardSelectionRitual } from '../components/LazyCardSelectionRitual';
 import { ROLE_DETAILS } from '../components/PlayerLiveView';
 import { useDialog } from '../components/dialog';
 
 export default function PlayPage() {
   const navigate = useNavigate();
-  const { game, updateGame, applyRemoteGame, replaceRemoteGame, undo, canUndo, setGame } = useGame();
+  const { game, updateGame, updateGameLocally, applyRemoteGame, replaceRemoteGame, undo, canUndo, setGame } = useGame();
   const { user } = useAuth();
   const { showAlert, showConfirm } = useDialog();
   const [showRoles, setShowRoles] = useState(true);
@@ -32,6 +43,7 @@ export default function PlayPage() {
   const [isExiting, setIsExiting] = useState(false);
   const [isSavingGame, setIsSavingGame] = useState(false);
   const [isStartingRematch, setIsStartingRematch] = useState(false);
+  const [roomSyncState, setRoomSyncState] = useState<'synced' | 'syncing' | 'offline'>('synced');
 
   // States hỗ trợ chọn trước khi xác nhận (Vote & Thợ săn)
   const [selectedVoteTarget, setSelectedVoteTarget] = useState<string | null>(null);
@@ -64,6 +76,7 @@ export default function PlayPage() {
         return;
       }
 
+      setRoomSyncState(room.syncState ?? 'synced');
       const local = gameRef.current;
       if (!local || !room.gameData) return;
       const merged = mergeRemoteNightActions(local, room.gameData);
@@ -213,51 +226,90 @@ export default function PlayPage() {
       ? 0
       : Math.max(0, (nightStepIndex / (configuredNightRoleSteps.length - 1)) * 100);
 
+  const syncModeratorNightAction = (label: string, operation: Promise<void>) => {
+    void operation.catch((error: unknown) => {
+      console.error(`Không thể đồng bộ thao tác ${label} trong phòng ${game.roomId}:`, error);
+      void showAlert({
+        title: 'Chưa thể đồng bộ thao tác',
+        message: `${label} đã được lưu trên máy này nhưng chưa gửi được tới các người chơi. Hãy kiểm tra kết nối rồi thử lại.`,
+        tone: 'danger',
+      });
+    });
+  };
+
   const handleGuardProtect = (targetId: string | null) => {
-    updateGame(g => {
+    const selectedTarget = targetId || 'none';
+    updateGameLocally(g => {
       const rounds = [...g.rounds];
-      rounds[rounds.length - 1] = { ...rounds[rounds.length - 1], guardProtectTarget: targetId || 'none' };
+      rounds[rounds.length - 1] = { ...rounds[rounds.length - 1], guardProtectTarget: selectedTarget };
       return { ...g, rounds };
     });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'lựa chọn của Bảo Vệ',
+        submitGuardAction(game.roomId, game.id, currentRound.number, selectedTarget),
+      );
+    }
   };
 
   const handleWolfTargets = (targetIds: string[]) => {
-    updateGame(g => {
+    const maxTargets = getWolfTargetLimit(game.players);
+    const validTargetIds = [...new Set(targetIds)].filter(id => {
+      const player = game.players.find(candidate => candidate.id === id);
+      return player?.alive && !isWolfTeam(player.role);
+    }).slice(0, maxTargets);
+    const selectedTargets = validTargetIds.length > 0 ? validTargetIds : ['none'];
+
+    updateGameLocally(g => {
       const rounds = [...g.rounds];
-      const maxTargets = getWolfTargetLimit(g.players);
-      // Sói không thể cắn đồng đội thuộc phe Sói
-      const validTargetIds = [...new Set(targetIds)].filter(id => {
-        const p = g.players.find(player => player.id === id);
-        return p?.alive && !isWolfTeam(p.role);
-      }).slice(0, maxTargets);
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
-        wolfTarget: validTargetIds[0] || 'none',
-        wolfTargets: validTargetIds.length > 0 ? validTargetIds : ['none']
+        wolfTarget: selectedTargets[0],
+        wolfTargets: selectedTargets,
       };
       return { ...g, rounds };
     });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'mục tiêu của Bầy Sói',
+        submitWolfAction(game.roomId, game.id, currentRound.number, validTargetIds),
+      );
+    }
   };
 
   const handleSeerCheck = (targetId: string | null) => {
-    updateGame(g => {
+    const target = targetId ? game.players.find(player => player.id === targetId) : null;
+    const seerCheck = targetId
+      ? { target: targetId, isWolf: target ? isWolfTeam(target.role) : false }
+      : { target: 'none', isWolf: false };
+
+    updateGameLocally(g => {
       const rounds = [...g.rounds];
-      const target = targetId ? g.players.find(p => p.id === targetId) : null;
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
-        seerCheck: targetId ? { target: targetId, isWolf: target ? isWolfTeam(target.role) : false } : { target: 'none', isWolf: false }
+        seerCheck,
       };
       return { ...g, rounds };
     });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'kết quả của Tiên Tri',
+        submitSeerAction(game.roomId, game.id, currentRound.number, seerCheck),
+      );
+    }
   };
 
   const handleWitchAction = (saveTargetId: string | null, poisonTargetId: string | null) => {
-    updateGame(g => {
-      const rounds = [...g.rounds];
-      // Phù thủy không thể tự ném bình độc giết chính mình
-      const isSelfPoison = poisonTargetId && g.players.some(p => p.id === poisonTargetId && p.role === 'witch');
-      const validPoisonTargetId = isSelfPoison ? null : poisonTargetId;
+    const isSelfPoison = poisonTargetId && game.players.some(player => (
+      player.id === poisonTargetId && player.role === 'witch'
+    ));
+    const validPoisonTargetId = isSelfPoison ? null : poisonTargetId;
+    const nextWitchItems = { ...game.witchItems };
+    if (saveTargetId) nextWitchItems.saveLeft = Math.max(0, nextWitchItems.saveLeft - 1);
+    if (validPoisonTargetId) nextWitchItems.poisonLeft = Math.max(0, nextWitchItems.poisonLeft - 1);
 
+    updateGameLocally(g => {
+      const rounds = [...g.rounds];
       rounds[rounds.length - 1] = { 
         ...rounds[rounds.length - 1], 
         witchSaved: !!saveTargetId,
@@ -265,31 +317,45 @@ export default function PlayPage() {
         witchPoisonTarget: validPoisonTargetId || undefined
       };
       
-      const newItems = { ...g.witchItems };
-      if (saveTargetId) newItems.saveLeft = Math.max(0, newItems.saveLeft - 1);
-      if (validPoisonTargetId) newItems.poisonLeft = Math.max(0, newItems.poisonLeft - 1);
-
-      return { ...g, rounds, witchItems: newItems };
+      return { ...g, rounds, witchItems: nextWitchItems };
     });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'lựa chọn của Phù Thủy',
+        submitWitchAction(game.roomId, game.id, currentRound.number, {
+          saved: !!saveTargetId,
+          savedTarget: saveTargetId || undefined,
+          poisonTarget: validPoisonTargetId || undefined,
+          witchItems: nextWitchItems,
+        }),
+      );
+    }
   };
 
   const handleHunterTarget = (hunterId: string, targetId: string | null) => {
-    updateGame(g => {
+    const selectedTarget = targetId || 'none';
+    updateGameLocally(g => {
       const rounds = [...g.rounds];
       const round = rounds[rounds.length - 1];
       rounds[rounds.length - 1] = {
         ...round,
         hunterTargets: {
           ...(round.hunterTargets ?? {}),
-          [hunterId]: targetId || 'none',
+          [hunterId]: selectedTarget,
         },
       };
       return { ...g, rounds };
     });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'lựa chọn của Thợ Săn',
+        submitHunterAction(game.roomId, game.id, currentRound.number, hunterId, selectedTarget),
+      );
+    }
   };
 
   const handleSkipDeadRole = (step: NightRoleStep) => {
-    updateGame(g => {
+    updateGameLocally(g => {
       const rounds = [...g.rounds];
       const roundIndex = rounds.length - 1;
       const round = rounds[roundIndex];
@@ -301,6 +367,12 @@ export default function PlayPage() {
       };
       return { ...g, rounds };
     });
+    if (game.roomId && !currentRound.skippedDeadRoleSteps?.includes(step)) {
+      syncModeratorNightAction(
+        `bước gọi role ${step}`,
+        submitDeadRoleSkipAction(game.roomId, game.id, currentRound.number, step),
+      );
+    }
   };
 
   // Thợ săn bắn người khi chết
@@ -531,9 +603,18 @@ export default function PlayPage() {
         </div>
       </div>
 
+      {game.roomId && roomSyncState !== 'synced' && (
+        <Toast
+          variant="info"
+          message={roomSyncState === 'offline'
+            ? '📶 Mạng yếu — thao tác của Quản trò đã lưu trên máy và sẽ tự gửi lại.'
+            : '↻ Đang đồng bộ thao tác của Quản trò tới người chơi…'}
+        />
+      )}
+
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH */}
       {showRitual && game && (
-        <CardSelectionRitual
+        <LazyCardSelectionRitual
           myRole={game.players[0]?.role || 'wolf'}
           roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
           onComplete={() => setShowRitual(false)}

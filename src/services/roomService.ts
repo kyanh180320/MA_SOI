@@ -6,13 +6,14 @@ import {
   runTransaction,
   updateDoc,
   FieldPath,
+  arrayUnion,
   deleteField,
   query,
   where,
   limit,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
-import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions } from "../game/types";
+import type { GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
 import {
   applyLiveNightActions,
@@ -468,6 +469,17 @@ export function submitHunterAction(
 ): Promise<void> {
   return updateLiveNightFields(roomId, gameId, roundNumber, [
     { path: ["liveNightActions", "hunterTargets", hunterId], value: targetId },
+  ]);
+}
+
+export function submitDeadRoleSkipAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  step: NightRoleStep,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "skippedDeadRoleSteps"], value: arrayUnion(step) },
   ]);
 }
 

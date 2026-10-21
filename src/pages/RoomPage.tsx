@@ -17,7 +17,7 @@ import { getRoleDistribution, assignRoles } from '../game/roles';
 import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView, ROLE_DETAILS } from '../components/PlayerLiveView';
-import { CardSelectionRitual } from '../components/CardSelectionRitual';
+import { LazyCardSelectionRitual } from '../components/LazyCardSelectionRitual';
 import { useDialog } from '../components/dialog';
 
 export default function RoomPage() {
@@ -291,7 +291,7 @@ export default function RoomPage() {
     <div className="screen-container" style={{ gap: 'var(--s-4)' }}>
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH CHO QUẢN TRÒ XEM TRƯỚC KHI VÀO /play */}
       {showCeremonyBeforePlay && game && (
-        <CardSelectionRitual
+        <LazyCardSelectionRitual
           myRole={game.players[0]?.role || 'wolf'}
           roleInfo={ROLE_DETAILS[game.players[0]?.role || 'wolf']}
           onComplete={() => {
@@ -303,7 +303,7 @@ export default function RoomPage() {
 
       {/* XEM THỬ HIỆU ỨNG RÚT BÀI BẤT KỲ LÚC NÀO */}
       {testRitualOpen && (
-        <CardSelectionRitual
+        <LazyCardSelectionRitual
           myRole="wolf"
           roleInfo={ROLE_DETAILS['wolf']}
           onComplete={() => setTestRitualOpen(false)}

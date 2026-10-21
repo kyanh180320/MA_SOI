@@ -89,6 +89,7 @@ export interface LiveNightActions {
   witchPoisonTarget?: string;
   witchItems?: Game['witchItems'];
   hunterTargets?: Record<string, string>;
+  skippedDeadRoleSteps?: NightRoleStep[];
 }
 
 export interface AppUser {
