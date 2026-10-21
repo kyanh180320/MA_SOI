@@ -668,12 +668,12 @@ export const DevShowcasePage: React.FC = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
-              {/* Cột 1: Playfair Display vs Fallback Serif */}
+              {/* Cột 1: Noto Serif vs Fallback Serif */}
               <div style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                  Playfair Display (Online)
+                  Noto Serif (Tiêu đề)
                 </div>
-                <div style={{ fontFamily: '"Playfair Display", serif', fontSize: '16px', fontWeight: 700, color: 'var(--gold-100)', letterSpacing: '0.04em' }}>
+                <div style={{ fontFamily: '"Noto Serif", serif', fontSize: '16px', fontWeight: 800, color: 'var(--gold-100)', letterSpacing: '0.025em' }}>
                   {phrase}
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--ash)', marginTop: '8px', marginBottom: '2px' }}>
@@ -684,18 +684,18 @@ export const DevShowcasePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Cột 2: Be Vietnam Pro vs Fallback Sans-serif */}
+              {/* Cột 2: Lora vs Fallback Serif */}
               <div style={{ padding: '8px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '6px' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                  Be Vietnam Pro (Online)
+                  Lora (Nội dung)
                 </div>
-                <div style={{ fontFamily: '"Be Vietnam Pro", sans-serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em' }}>
+                <div style={{ fontFamily: '"Lora", serif', fontSize: '15px', fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
                   {phrase}
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--ash)', marginTop: '8px', marginBottom: '2px' }}>
-                  Fallback: system-ui / sans-serif
+                  Fallback: Georgia / Times
                 </div>
-                <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontSize: '15px', fontWeight: 700, color: 'var(--text-dim)', opacity: 0.85 }}>
+                <div style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontSize: '15px', fontWeight: 700, color: 'var(--text-dim)', opacity: 0.85 }}>
                   {phrase}
                 </div>
               </div>

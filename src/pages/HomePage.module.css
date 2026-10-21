@@ -178,7 +178,7 @@
 }
 
 .actionTitle {
-  font: 800 clamp(18px, 4.8vw, 24px) var(--font-title, 'Cinzel', serif);
+  font: 800 clamp(18px, 4.8vw, 24px) var(--font-title, 'Noto Serif', serif);
   letter-spacing: 0.035em;
 }
 
@@ -195,7 +195,7 @@
   min-height: 44px;
   padding: 0 16px;
   color: #cdb982;
-  font: 700 13px var(--font-title, 'Cinzel', serif);
+  font: 700 13px var(--font-title, 'Noto Serif', serif);
   letter-spacing: 0.09em;
   background: rgba(8, 10, 22, 0.48);
   border: 1px solid rgba(203, 170, 94, 0.24);

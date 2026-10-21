@@ -15,12 +15,14 @@
   border-radius: 0;
   background-color: var(--bg-1);
   font-family: var(--font-title);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
   line-height: 1;
-  letter-spacing: 0.045em;
+  letter-spacing: 0.025em;
   color: var(--gold-100);
-  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 1px 0 rgba(255, 241, 198, 0.28),
+    0 2px 2px rgba(0, 0, 0, 0.9);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;

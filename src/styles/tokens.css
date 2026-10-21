@@ -56,9 +56,12 @@
   --shadow-soft: 0 10px 16px rgba(0, 0, 0, .45);
   --shadow-panel: 0 16px 32px rgba(0, 0, 0, .5);
 
-  /* Font chữ hỗ trợ tiếng Việt tuyệt đối */
-  --font-title: "Cinzel", "Playfair Display", Georgia, serif;
-  --font-body: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
+  /*
+   * Noto Serif giữ nét khắc cổ điển ở tiêu đề nhưng có đủ bộ dấu Việt.
+   * Lora mềm hơn cho nội dung dài, vẫn cùng chất liệu fantasy và dễ đọc trên mobile.
+   */
+  --font-title: "Noto Serif", "Times New Roman", Georgia, serif;
+  --font-body: "Lora", "Noto Serif", Georgia, serif;
 
   /* Art slots: để trống (none), sau này chỉ cần gán url ảnh vào biến */
   --art-bg-night: none;
@@ -89,7 +92,11 @@ body {
   background-color: var(--bg-0);
   color: var(--text);
   font-family: var(--font-body);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   min-height: -webkit-fill-available;
   overflow-x: hidden;
