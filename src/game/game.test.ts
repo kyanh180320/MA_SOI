@@ -253,7 +253,7 @@ describe('night', () => {
       expect(getNightStep({ ...round, wolfTarget: 'v1', seerCheck: { target: 'w1', isWolf: true } }, players)).toBe('done');
     });
 
-    it('skips night roles that have died', () => {
+    it('waits for the moderator to call every configured role that has died', () => {
       const players = [
         player('w1', 'wolf'),
         player('g1', 'guard', false),
@@ -264,8 +264,36 @@ describe('night', () => {
       const round = { number: 2, nightDeaths: [] };
 
       expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
-      expect(getNightStep(round, players)).toBe('wolf');
-      expect(getNightStep({ ...round, wolfTargets: ['v1'] }, players)).toBe('done');
+      expect(getNightStep(round, players)).toBe('guard');
+      expect(getNightStep({ ...round, skippedDeadRoleSteps: ['guard'] }, players)).toBe('wolf');
+      expect(getNightStep({
+        ...round,
+        skippedDeadRoleSteps: ['guard'],
+        wolfTargets: ['v1'],
+      }, players)).toBe('seer');
+      expect(getNightStep({
+        ...round,
+        skippedDeadRoleSteps: ['guard', 'seer'],
+        wolfTargets: ['v1'],
+      }, players)).toBe('witch');
+      expect(getNightStep({
+        ...round,
+        skippedDeadRoleSteps: ['guard', 'seer', 'witch'],
+        wolfTargets: ['v1'],
+      }, players)).toBe('done');
+    });
+
+    it('pauses at a dead role between living roles until it is acknowledged', () => {
+      const players = [
+        player('w1', 'wolf'),
+        player('s1', 'seer', false),
+        player('h1', 'hunter'),
+        player('v1', 'villager'),
+      ];
+      const round = { number: 3, nightDeaths: [], wolfTargets: ['v1'] };
+
+      expect(getNightStep(round, players)).toBe('seer');
+      expect(getNightStep({ ...round, skippedDeadRoleSteps: ['seer'] }, players)).toBe('hunter');
     });
 
     it('keeps configured role icons after those roles die', () => {

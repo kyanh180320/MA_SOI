@@ -1,4 +1,5 @@
 export type Role = "wolf" | "wolf_demon" | "villager" | "seer" | "witch" | "guard" | "hunter";
+export type NightRoleStep = Exclude<Role, "villager" | "wolf_demon">;
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
 export type WinningTeam = "wolf" | "villager";
 
@@ -23,6 +24,7 @@ export interface Round {
   hunterTargets?: Record<string, string>;     // Id Thợ săn -> người đã chọn chết cùng trong vòng
   hunterShotTarget?: string;           // Id người bị thợ săn bắn chết
   hunterShotTargets?: Record<string, string>; // Id Thợ săn -> người thực tế bị bắn (hỗ trợ nhiều Thợ săn)
+  skippedDeadRoleSteps?: NightRoleStep[];     // Role đã chết được Quản trò gọi giả và chủ động cho qua
   nightDeaths: string[];               // Id những người chết trong đêm
   vote?: {
     tally: Record<string, number>;     // Id -> số phiếu

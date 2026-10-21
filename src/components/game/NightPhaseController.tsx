@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { Game, Player, Role, Round } from '../../game/types';
-import { getWolfPackSelection, type NightStep } from '../../game/night';
+import type { Game, NightRoleStep, Player, Role, Round } from '../../game/types';
+import { getWolfPackSelection, hasLivingNightRole, type NightStep } from '../../game/night';
 import { isWolfTeam } from '../../game/win';
 import {
   Button,
@@ -24,8 +24,41 @@ export interface NightPhaseControllerProps {
   onSeerCheck: (targetId: string | null) => void;
   onWitchAction: (saveTargetId: string | null, poisonTargetId: string | null) => void;
   onHunterTarget: (hunterId: string, targetId: string | null) => void;
+  onSkipDeadRole: (step: NightRoleStep) => void;
   onFinishNight: () => void;
 }
+
+const DEAD_ROLE_COPY: Record<NightRoleStep, {
+  label: string;
+  callInstruction: string;
+  accent: string;
+}> = {
+  guard: {
+    label: 'BẢO VỆ',
+    callInstruction: '“Bảo Vệ thức dậy và chọn người muốn bảo vệ.”',
+    accent: 'var(--green-400)',
+  },
+  wolf: {
+    label: 'BẦY SÓI',
+    callInstruction: '“Bầy Sói thức dậy và chọn người muốn cắn.”',
+    accent: 'var(--red-300)',
+  },
+  seer: {
+    label: 'TIÊN TRI',
+    callInstruction: '“Tiên Tri thức dậy và chọn người muốn soi.”',
+    accent: 'var(--gold-100)',
+  },
+  witch: {
+    label: 'PHÙ THỦY',
+    callInstruction: '“Phù Thủy thức dậy và quyết định có dùng bình hay không.”',
+    accent: 'var(--purple-400)',
+  },
+  hunter: {
+    label: 'THỢ SĂN',
+    callInstruction: '“Thợ Săn thức dậy và chọn người muốn chết cùng.”',
+    accent: 'var(--gold-100)',
+  },
+};
 
 export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   game,
@@ -39,6 +72,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   onSeerCheck,
   onWitchAction,
   onHunterTarget,
+  onSkipDeadRole,
   onFinishNight
 }) => {
   const { showAlert } = useDialog();
@@ -51,7 +85,57 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   const [witchPoisonSelection, setWitchPoisonSelection] = useState<string | null>(null);
   const [selectedHunterChoice, setSelectedHunterChoice] = useState<{ hunterId: string; targetId: string } | null>(null);
 
-  const hasRole = (role: Role) => alivePlayers.some(p => p.role === role);
+  if (nightStep !== 'done' && nightStep !== 'wait' && !hasLivingNightRole(game.players, nightStep)) {
+    const roleCopy = DEAD_ROLE_COPY[nightStep];
+
+    return (
+      <Panel>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img
+            src={ROLE_CARD_IMAGES[nightStep]}
+            alt={roleCopy.label}
+            style={{
+              width: '46px',
+              height: '69px',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              border: `1.5px solid ${roleCopy.accent}`,
+              objectFit: 'cover',
+            }}
+          />
+          <div>
+            <h3 style={{
+              color: roleCopy.accent,
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px',
+            }}>
+              {roleCopy.label} KHÔNG CÒN SỐNG
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              Chỉ Quản trò thấy thông báo này
+            </span>
+          </div>
+        </div>
+
+        <Toast
+          variant="info"
+          message={`Để không lộ vai, vẫn đọc ${roleCopy.callInstruction} Chờ một nhịp như bình thường rồi mới tiếp tục.`}
+          style={{ marginBottom: 'var(--s-3)' }}
+        />
+        <p style={{ color: 'var(--text-dim)', fontSize: '13px', lineHeight: 1.5, margin: '0 0 var(--s-3)' }}>
+          Không nói role này đã chết. Người chơi đã chết sẽ không có nút chọn hay hành động nào trên máy của họ.
+        </p>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => onSkipDeadRole(nightStep)}
+        >
+          ĐÃ GỌI {roleCopy.label} — TIẾP TỤC ➔
+        </Button>
+      </Panel>
+    );
+  }
 
   // 1. LƯỢT BẢO VỆ
   if (nightStep === 'guard') {
@@ -89,10 +173,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Chọn 1 người chơi để khiên chở che đêm nay</span>
           </div>
         </div>
-        {!hasRole('guard') && (
-          <Toast variant="info" message="Bảo vệ đã chết hoặc không có trong ván, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
-        )}
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
           {alivePlayers.map(p => {
             const isLocked = p.id === previousTarget && p.id !== 'none';
@@ -159,7 +239,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     const aliveWolves = alivePlayers.filter(p => isWolfTeam(p.role));
     const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
     const maxTargets = hasDemonWolf ? 2 : 1;
-    const isWolfAlive = aliveWolves.length > 0;
     const wolfVotesMap = currentRound?.wolfVotes || {};
 
     // Kiểm tra đồng thuận giữa các sói thường khi có từ 2 sói trở lên
@@ -260,10 +339,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             style={{ marginBottom: 'var(--s-3)' }}
           />
         )}
-        {!isWolfAlive && (
-          <Toast variant="info" message="Không còn sói sống trong bầy, có thể bỏ qua." style={{ marginBottom: 'var(--s-3)' }} />
-        )}
-
         {/* HIỂN THỊ Ý KIẾN TỪNG SÓI NẾU CÓ NHIỀU SÓI VÀ CHƠI ONLINE */}
         {aliveWolves.length > 1 && !hasDemonWolf && (
           <div style={{
@@ -420,10 +495,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Nhìn thấu thân phận thật sự của 1 người</span>
           </div>
         </div>
-        {!hasRole('seer') && (
-          <Toast variant="info" message="Tiên tri đã chết hoặc không có, bấm Bỏ qua để giữ nhịp trò chơi." style={{ marginBottom: 'var(--s-3)' }} />
-        )}
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
           {alivePlayers.map(p => {
             const isSelected = selectedSeerTarget === p.id;

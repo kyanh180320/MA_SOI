@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
-import type { Role, Player } from '../game/types';
+import type { NightRoleStep, Role, Player } from '../game/types';
 import { closeRoom, startRoomRematch, subscribeRoom, syncRoomGame } from '../services/roomService';
 import { saveGame } from '../services/gameRepository';
 import {
@@ -283,6 +283,21 @@ export default function PlayPage() {
           ...(round.hunterTargets ?? {}),
           [hunterId]: targetId || 'none',
         },
+      };
+      return { ...g, rounds };
+    });
+  };
+
+  const handleSkipDeadRole = (step: NightRoleStep) => {
+    updateGame(g => {
+      const rounds = [...g.rounds];
+      const roundIndex = rounds.length - 1;
+      const round = rounds[roundIndex];
+      if (round.skippedDeadRoleSteps?.includes(step)) return g;
+
+      rounds[roundIndex] = {
+        ...round,
+        skippedDeadRoleSteps: [...(round.skippedDeadRoleSteps ?? []), step],
       };
       return { ...g, rounds };
     });
@@ -859,6 +874,7 @@ export default function PlayPage() {
               onSeerCheck={handleSeerCheck}
               onWitchAction={handleWitchAction}
               onHunterTarget={handleHunterTarget}
+              onSkipDeadRole={handleSkipDeadRole}
               onFinishNight={finishNight}
             />
           )}

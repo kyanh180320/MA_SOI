@@ -1,7 +1,7 @@
-import type { Game, Player, Round } from "./types";
+import type { Game, NightRoleStep, Player, Round } from "./types";
 import { isWolfTeam } from "./win";
 
-export type NightRoleStep = 'guard' | 'wolf' | 'seer' | 'witch' | 'hunter';
+export type { NightRoleStep } from "./types";
 export type NightStep = NightRoleStep | 'done' | 'wait';
 
 const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch', 'hunter'];
@@ -50,12 +50,14 @@ export function getWolfPackSelection(
  * Sói thường và Sói quỷ cùng dùng một lượt "wolf".
  */
 export function getActiveNightRoleSteps(players: Player[]): NightRoleStep[] {
-  return NIGHT_ROLE_ORDER.filter(step => {
-    if (step === 'wolf') {
-      return players.some(player => player.alive && isWolfTeam(player.role));
-    }
-    return players.some(player => player.alive && player.role === step);
-  });
+  return NIGHT_ROLE_ORDER.filter(step => hasLivingNightRole(players, step));
+}
+
+export function hasLivingNightRole(players: Player[], step: NightRoleStep): boolean {
+  if (step === 'wolf') {
+    return players.some(player => player.alive && isWolfTeam(player.role));
+  }
+  return players.some(player => player.alive && player.role === step);
 }
 
 /**
@@ -72,12 +74,17 @@ export function getConfiguredNightRoleSteps(players: Player[]): NightRoleStep[] 
 }
 
 /**
- * Tìm lượt ban đêm kế tiếp. Những role không có trong ván hoặc đã chết được bỏ qua.
+ * Tìm lượt ban đêm kế tiếp. Role đã cấu hình nhưng không còn người sống vẫn
+ * dừng lại cho đến khi Quản trò xác nhận đã gọi giả để không lộ thông tin.
  */
 export function getNightStep(currentRound: Round | undefined, players: Player[]): NightStep {
   if (!currentRound) return 'wait';
 
-  for (const step of getActiveNightRoleSteps(players)) {
+  for (const step of getConfiguredNightRoleSteps(players)) {
+    if (!hasLivingNightRole(players, step)) {
+      if (!currentRound.skippedDeadRoleSteps?.includes(step)) return step;
+      continue;
+    }
     if (step === 'guard' && currentRound.guardProtectTarget === undefined) return step;
     if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
     if (step === 'seer' && currentRound.seerCheck === undefined) return step;

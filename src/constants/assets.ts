@@ -1,5 +1,4 @@
-import type { Role } from '../game/types';
-import type { NightRoleStep } from '../game/night';
+import type { NightRoleStep, Role } from '../game/types';
 
 export const ROLE_CARD_IMAGES: Record<Role, string> = {
   wolf: '/assets/cards/card_wolf.webp',
