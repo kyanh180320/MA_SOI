@@ -57,6 +57,9 @@ export function applyLiveNightActions(game: Game, live?: LiveNightActions): Game
     ...(live.witchSaved !== undefined ? { witchSaved: live.witchSaved } : {}),
     ...(live.witchSavedTarget !== undefined ? { witchSavedTarget: live.witchSavedTarget } : {}),
     ...(live.witchPoisonTarget !== undefined ? { witchPoisonTarget: live.witchPoisonTarget } : {}),
+    ...(live.hunterTargets !== undefined
+      ? { hunterTargets: { ...(currentRound.hunterTargets || {}), ...live.hunterTargets } }
+      : {}),
   };
 
   const rounds = [...game.rounds];

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getRoleDistribution, assignRoles } from './roles';
-import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from './night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from './night';
 import { resolveVote } from './vote';
 import { checkWinner } from './win';
 import { applyLiveNightActions, sanitizeGameForSync } from './onlineSync';
@@ -25,10 +25,12 @@ describe('online sync', () => {
       roundNumber: 2,
       guardProtectTarget: 'v1',
       wolfVotes: { w1: ['v1'] },
+      hunterTargets: { h1: 'v1' },
     });
 
     expect(hydrated.rounds[0].guardProtectTarget).toBe('v1');
     expect(hydrated.rounds[0].wolfVotes).toEqual({ w1: ['v1'] });
+    expect(hydrated.rounds[0].hunterTargets).toEqual({ h1: 'v1' });
   });
 
   it('ignores stale actions from another round', () => {
@@ -80,6 +82,15 @@ describe('mergeRemoteNightActions', () => {
   it('never carries night actions from an older game into a new game', () => {
     const oldGame = { ...withRound(base, { wolfTarget: 'p1' }), id: 'old-game' };
     expect(mergeRemoteNightActions(base, oldGame)).toBeNull();
+  });
+
+  it('merges independent choices from multiple hunters', () => {
+    const local = withRound(base, { hunterTargets: { h1: 'p1' } });
+    const remote = withRound(base, { hunterTargets: { h2: 'p2' } });
+    expect(mergeRemoteNightActions(local, remote)?.rounds[0].hunterTargets).toEqual({
+      h1: 'p1',
+      h2: 'p2',
+    });
   });
 });
 
@@ -184,6 +195,61 @@ describe('night', () => {
     it('treats demon wolf as the wolf night step', () => {
       const players = [player('wd1', 'wolf_demon'), player('v1', 'villager')];
       expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
+    });
+
+    it('includes living hunters and waits for every hunter choice', () => {
+      const players = [player('w1', 'wolf'), player('h1', 'hunter'), player('h2', 'hunter'), player('v1', 'villager')];
+      const round = { number: 1, nightDeaths: [], wolfTargets: ['v1'] };
+
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf', 'hunter']);
+      expect(getNightStep(round, players)).toBe('hunter');
+      expect(getNightStep({ ...round, hunterTargets: { h1: 'v1' } }, players)).toBe('hunter');
+      expect(getNightStep({ ...round, hunterTargets: { h1: 'v1', h2: 'none' } }, players)).toBe('done');
+    });
+
+    it('returns every configured actionable role in the exact call order', () => {
+      const players = [
+        player('g1', 'guard'),
+        player('w1', 'wolf'),
+        player('s1', 'seer'),
+        player('wt1', 'witch'),
+        player('h1', 'hunter'),
+        player('v1', 'villager'),
+      ];
+
+      expect(getActiveNightRoleSteps(players)).toEqual(['guard', 'wolf', 'seer', 'witch', 'hunter']);
+    });
+
+    it('skips a hunter after they have died', () => {
+      const players = [player('w1', 'wolf'), player('h1', 'hunter', false), player('v1', 'villager')];
+      expect(getActiveNightRoleSteps(players)).toEqual(['wolf']);
+    });
+  });
+
+  describe('resolveHunterShots', () => {
+    const players: Player[] = [
+      { id: 'h1', name: 'Hunter 1', role: 'hunter', alive: true },
+      { id: 'h2', name: 'Hunter 2', role: 'hunter', alive: true },
+      { id: 'v1', name: 'Villager', role: 'villager', alive: true },
+    ];
+
+    it('applies the target selected by a hunter before death', () => {
+      expect(resolveHunterShots(['h1'], { hunterTargets: { h1: 'v1' } }, players)).toEqual({
+        deaths: ['h1', 'v1'],
+        shots: { h1: 'v1' },
+        unresolvedHunterIds: [],
+      });
+    });
+
+    it('resolves a chain when one hunter shoots another hunter', () => {
+      const result = resolveHunterShots(['h1'], { hunterTargets: { h1: 'h2', h2: 'v1' } }, players);
+      expect(result.deaths).toEqual(['h1', 'h2', 'v1']);
+      expect(result.shots).toEqual({ h1: 'h2', h2: 'v1' });
+      expect(result.unresolvedHunterIds).toEqual([]);
+    });
+
+    it('keeps old rounds compatible by returning hunters without a saved choice', () => {
+      expect(resolveHunterShots(['h1'], {}, players).unresolvedHunterIds).toEqual(['h1']);
     });
   });
 

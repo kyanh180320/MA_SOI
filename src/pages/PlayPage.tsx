@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
-import { resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from '../game/night';
+import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getActiveNightRoleSteps, getNightStep } from '../game/night';
 import { checkWinner, isWolfTeam } from '../game/win';
 import { createRematchGame } from '../game/rematch';
 import type { Role, Player } from '../game/types';
@@ -17,7 +17,7 @@ import {
   Toast
 } from '../components/ui';
 import { DiscussionTimer, NightPhaseController } from '../components/game';
-import { ROLE_MEDALLION_ICONS, PHASE_MEDALLION_ICONS } from '../constants/assets';
+import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { CardSelectionRitual } from '../components/CardSelectionRitual';
 import { ROLE_DETAILS } from '../components/PlayerLiveView';
 import { useDialog } from '../components/dialog';
@@ -96,6 +96,11 @@ export default function PlayPage() {
 
   const alivePlayers = game.players.filter(p => p.alive);
   const currentRound = game.rounds[game.rounds.length - 1];
+  const currentHunterShotTargetIds = currentRound.hunterShotTargets
+    ? [...new Set(Object.values(currentRound.hunterShotTargets))]
+    : currentRound.hunterShotTarget
+      ? [currentRound.hunterShotTarget]
+      : [];
 
   const handleExit = async () => {
     if (isExiting) return;
@@ -196,6 +201,9 @@ export default function PlayPage() {
 
   const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
   const nightStep = getNightStep(currentRound, game.players);
+  const currentNightRoleItem = nightStep !== 'done' && nightStep !== 'wait'
+    ? NIGHT_ROLE_PROGRESS_ITEMS[nightStep]
+    : null;
   const nightStepIndex = nightStep === 'done'
     ? activeNightRoleSteps.length
     : activeNightRoleSteps.indexOf(nightStep as (typeof activeNightRoleSteps)[number]);
@@ -264,6 +272,21 @@ export default function PlayPage() {
     });
   };
 
+  const handleHunterTarget = (hunterId: string, targetId: string | null) => {
+    updateGame(g => {
+      const rounds = [...g.rounds];
+      const round = rounds[rounds.length - 1];
+      rounds[rounds.length - 1] = {
+        ...round,
+        hunterTargets: {
+          ...(round.hunterTargets ?? {}),
+          [hunterId]: targetId || 'none',
+        },
+      };
+      return { ...g, rounds };
+    });
+  };
+
   // Thợ săn bắn người khi chết
   const handleHunterShoot = (targetId: string | null) => {
     if (!hunterPendingDeath) return;
@@ -279,7 +302,11 @@ export default function PlayPage() {
       if (targetId) {
         rounds[rounds.length - 1] = {
           ...rounds[rounds.length - 1],
-          hunterShotTarget: targetId
+          hunterShotTarget: targetId,
+          hunterShotTargets: {
+            ...(rounds[rounds.length - 1].hunterShotTargets ?? {}),
+            [hunterPendingDeath.hunter.id]: targetId,
+          },
         };
       }
 
@@ -313,32 +340,42 @@ export default function PlayPage() {
 
   const finishNight = () => {
     const lastRound = game.rounds[game.rounds.length - 1];
-    const deaths = resolveNight(lastRound, game.players);
-    
+    const nightDeaths = resolveNight(lastRound, game.players);
+    const hunterResolution = resolveHunterShots(nightDeaths, lastRound, game.players);
     const newPlayers = game.players.map(p => 
-      deaths.includes(p.id) ? { ...p, alive: false } : p
+      hunterResolution.deaths.includes(p.id) ? { ...p, alive: false } : p
     );
 
-    const deadHunterId = deaths.find(id => game.players.find(p => p.id === id)?.role === 'hunter');
-    const deadHunter = deadHunterId ? game.players.find(p => p.id === deadHunterId) : null;
+    const shotTargets = Object.values(hunterResolution.shots);
+    const resolvedRound = {
+      ...lastRound,
+      nightDeaths,
+      ...(shotTargets.length > 0 ? {
+        hunterShotTarget: shotTargets[0],
+        hunterShotTargets: hunterResolution.shots,
+      } : {}),
+    };
+    const unresolvedHunter = hunterResolution.unresolvedHunterIds.length > 0
+      ? game.players.find(player => player.id === hunterResolution.unresolvedHunterIds[0])
+      : null;
 
-    if (deadHunter) {
+    if (unresolvedHunter) {
       updateGame(g => {
         const rounds = [...g.rounds];
-        rounds[rounds.length - 1] = { ...lastRound, nightDeaths: deaths };
+        rounds[rounds.length - 1] = resolvedRound;
         return {
           ...g,
           players: newPlayers,
           rounds
         };
       });
-      setHunterPendingDeath({ hunter: deadHunter, from: 'night' });
+      setHunterPendingDeath({ hunter: unresolvedHunter, from: 'night' });
       return;
     }
 
     updateGame(g => {
       const rounds = [...g.rounds];
-      rounds[rounds.length - 1] = { ...lastRound, nightDeaths: deaths };
+      rounds[rounds.length - 1] = resolvedRound;
 
       const winner = checkWinner(newPlayers);
 
@@ -377,17 +414,25 @@ export default function PlayPage() {
       return;
     }
 
-    const eliminatedPlayer = game.players.find(p => p.id === eliminatedId);
-    const newPlayers = game.players.map(p => 
-      p.id === eliminatedId ? { ...p, alive: false } : p
+    const hunterResolution = resolveHunterShots([eliminatedId], currentRound, game.players);
+    const newPlayers = game.players.map(player =>
+      hunterResolution.deaths.includes(player.id) ? { ...player, alive: false } : player
     );
+    const shotTargets = Object.values(hunterResolution.shots);
+    const unresolvedHunter = hunterResolution.unresolvedHunterIds.length > 0
+      ? game.players.find(player => player.id === hunterResolution.unresolvedHunterIds[0])
+      : null;
 
-    if (eliminatedPlayer?.role === 'hunter') {
+    if (unresolvedHunter) {
       updateGame(g => {
         const rounds = [...g.rounds];
         rounds[rounds.length - 1] = {
           ...rounds[rounds.length - 1],
-          vote: { tally: {}, eliminated: eliminatedId }
+          vote: { tally: {}, eliminated: eliminatedId },
+          ...(shotTargets.length > 0 ? {
+            hunterShotTarget: shotTargets[0],
+            hunterShotTargets: hunterResolution.shots,
+          } : {}),
         };
         return {
           ...g,
@@ -395,7 +440,7 @@ export default function PlayPage() {
           rounds
         };
       });
-      setHunterPendingDeath({ hunter: eliminatedPlayer, from: 'vote' });
+      setHunterPendingDeath({ hunter: unresolvedHunter, from: 'vote' });
       setSelectedVoteTarget(null);
       return;
     }
@@ -404,7 +449,11 @@ export default function PlayPage() {
       const rounds = [...g.rounds];
       rounds[rounds.length - 1] = {
         ...rounds[rounds.length - 1],
-        vote: { tally: {}, eliminated: eliminatedId }
+        vote: { tally: {}, eliminated: eliminatedId },
+        ...(shotTargets.length > 0 ? {
+          hunterShotTarget: shotTargets[0],
+          hunterShotTargets: hunterResolution.shots,
+        } : {}),
       };
 
       const winner = checkWinner(newPlayers);
@@ -500,14 +549,20 @@ export default function PlayPage() {
           </div>
           <Badge variant={game.phase === 'ended' ? 'green' : (game.phase === 'vote' ? 'red' : 'gold')}>
             {game.phase === 'night' && (
-              <>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 🌙 Đêm:{' '}
-                {nightStep === 'guard' && '🛡️ Bảo Vệ'}
-                {nightStep === 'wolf' && '🐺 Ma Sói'}
-                {nightStep === 'seer' && '🔮 Tiên Tri'}
-                {nightStep === 'witch' && '🧪 Phù Thủy'}
+                {currentNightRoleItem && (
+                  <>
+                    <img
+                      src={currentNightRoleItem.iconUrl}
+                      alt=""
+                      style={{ width: '20px', height: '20px', objectFit: 'contain' }}
+                    />
+                    {currentNightRoleItem.label}
+                  </>
+                )}
                 {nightStep === 'done' && '✨ Chờ Bình Minh'}
-              </>
+              </span>
             )}
             {game.phase === 'day' && '☀️ Ban Ngày'}
             {game.phase === 'vote' && '⚖️ Bỏ Phiếu Treo Cổ'}
@@ -542,17 +597,13 @@ export default function PlayPage() {
               }} />
             </div>
 
-            {[
-              { id: 'guard', label: 'Bảo Vệ', iconUrl: ROLE_MEDALLION_ICONS.guard },
-              { id: 'wolf', label: 'Ma Sói', iconUrl: ROLE_MEDALLION_ICONS.wolf },
-              { id: 'seer', label: 'Tiên Tri', iconUrl: ROLE_MEDALLION_ICONS.seer },
-              { id: 'witch', label: 'Phù Thủy', iconUrl: ROLE_MEDALLION_ICONS.witch }
-            ].filter(step => activeNightRoleSteps.includes(step.id as (typeof activeNightRoleSteps)[number])).map((step, idx) => {
+            {activeNightRoleSteps.map((stepId, idx) => {
+              const step = NIGHT_ROLE_PROGRESS_ITEMS[stepId];
               const isPassed = idx < nightStepIndex || nightStep === 'done';
               const isActive = idx === nightStepIndex && nightStep !== 'done';
 
               return (
-                <div key={step.id} style={{
+                <div key={stepId} style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -806,6 +857,7 @@ export default function PlayPage() {
               onWolfTargets={handleWolfTargets}
               onSeerCheck={handleSeerCheck}
               onWitchAction={handleWitchAction}
+              onHunterTarget={handleHunterTarget}
               onFinishNight={finishNight}
             />
           )}
@@ -825,10 +877,10 @@ export default function PlayPage() {
                   style={{ marginBottom: 'var(--s-3)' }}
                 />
               )}
-              {currentRound.hunterShotTarget && (
+              {currentHunterShotTargetIds.length > 0 && (
                 <Toast
                   variant="info"
-                  message={`🏹 Thợ săn đã bắn chết: ${game.players.find(p => p.id === currentRound.hunterShotTarget)?.name}`}
+                  message={`🏹 Thợ săn đã kéo theo: ${currentHunterShotTargetIds.map(id => game.players.find(p => p.id === id)?.name).filter(Boolean).join(', ')}`}
                   style={{ marginBottom: 'var(--s-3)' }}
                 />
               )}

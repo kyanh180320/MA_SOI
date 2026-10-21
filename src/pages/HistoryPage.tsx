@@ -238,12 +238,23 @@ export default function HistoryPage() {
                 </p>
 
                 {/* Thợ săn nổ súng */}
-                {round.hunterShotTarget && (() => {
-                  const hunters = getPlayersByRole('hunter', selectedGame.players);
-                  const hunterNames = hunters.length > 0 ? hunters.map(h => `${h.name} (Thợ săn)`).join(', ') : 'Thợ săn';
+                {(round.hunterShotTargets || round.hunterShotTarget) && (() => {
+                  const shotEntries = round.hunterShotTargets
+                    ? Object.entries(round.hunterShotTargets)
+                    : round.hunterShotTarget
+                      ? [['legacy', round.hunterShotTarget] as const]
+                      : [];
                   return (
                     <p style={{ margin: '4px 0', fontSize: '14px', color: 'var(--hunter)' }}>
-                      🏹 <strong>{hunterNames}</strong> bị hạ gục và nổ súng kéo theo: <strong>{formatPlayer(round.hunterShotTarget, selectedGame.players)}</strong>
+                      🏹 Thợ săn kéo theo:{' '}
+                      <strong>
+                        {shotEntries.map(([hunterId, targetId]) => {
+                          const hunterName = hunterId === 'legacy'
+                            ? 'Thợ săn'
+                            : formatPlayer(hunterId, selectedGame.players);
+                          return `${hunterName} → ${formatPlayer(targetId, selectedGame.players)}`;
+                        }).join(', ')}
+                      </strong>
                     </p>
                   );
                 })()}

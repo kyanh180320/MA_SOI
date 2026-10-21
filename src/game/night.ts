@@ -1,10 +1,10 @@
 import type { Game, Player, Round } from "./types";
 import { isWolfTeam } from "./win";
 
-export type NightRoleStep = 'guard' | 'wolf' | 'seer' | 'witch';
+export type NightRoleStep = 'guard' | 'wolf' | 'seer' | 'witch' | 'hunter';
 export type NightStep = NightRoleStep | 'done' | 'wait';
 
-const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch'];
+const NIGHT_ROLE_ORDER: NightRoleStep[] = ['guard', 'wolf', 'seer', 'witch', 'hunter'];
 
 /**
  * Các lượt thực sự cần gọi trong đêm, dựa trên những vai còn sống.
@@ -30,6 +30,10 @@ export function getNightStep(currentRound: Round | undefined, players: Player[])
     if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
     if (step === 'seer' && currentRound.seerCheck === undefined) return step;
     if (step === 'witch' && currentRound.witchSaved === undefined && currentRound.witchSavedTarget === undefined) return step;
+    if (step === 'hunter') {
+      const aliveHunters = players.filter(player => player.alive && player.role === 'hunter');
+      if (aliveHunters.some(hunter => currentRound.hunterTargets?.[hunter.id] === undefined)) return step;
+    }
   }
 
   return 'done';
@@ -85,10 +89,63 @@ export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game
     changed = true;
   }
 
+  if (rr.hunterTargets) {
+    const mergedHunterTargets = { ...(lr.hunterTargets ?? {}), ...rr.hunterTargets };
+    if (JSON.stringify(mergedHunterTargets) !== JSON.stringify(lr.hunterTargets ?? {})) {
+      next.hunterTargets = mergedHunterTargets;
+      changed = true;
+    }
+  }
+
   if (!changed) return null;
   const rounds = [...local.rounds];
   rounds[rounds.length - 1] = next;
   return { ...local, rounds, witchItems };
+}
+
+export interface HunterShotResolution {
+  deaths: string[];
+  shots: Record<string, string>;
+  unresolvedHunterIds: string[];
+}
+
+/**
+ * Áp dụng lựa chọn chết cùng của Thợ săn, gồm cả chuỗi Thợ săn bắn trúng
+ * Thợ săn khác. Dữ liệu cũ chưa có lựa chọn được trả về để Quản trò xử lý tay.
+ */
+export function resolveHunterShots(
+  initialDeaths: string[],
+  round: Pick<Round, 'hunterTargets'>,
+  players: Player[],
+): HunterShotResolution {
+  const deaths = new Set(initialDeaths);
+  const pendingDeaths = [...initialDeaths];
+  const shots: Record<string, string> = {};
+  const unresolvedHunterIds: string[] = [];
+
+  while (pendingDeaths.length > 0) {
+    const deadPlayerId = pendingDeaths.shift();
+    const deadPlayer = players.find(player => player.id === deadPlayerId);
+    if (!deadPlayer || deadPlayer.role !== 'hunter') continue;
+
+    const targetId = round.hunterTargets?.[deadPlayer.id];
+    if (targetId === undefined) {
+      unresolvedHunterIds.push(deadPlayer.id);
+      continue;
+    }
+    if (targetId === 'none' || targetId === deadPlayer.id) continue;
+
+    const target = players.find(player => player.id === targetId);
+    if (!target || !target.alive) continue;
+
+    shots[deadPlayer.id] = targetId;
+    if (!deaths.has(targetId)) {
+      deaths.add(targetId);
+      pendingDeaths.push(targetId);
+    }
+  }
+
+  return { deaths: [...deaths], shots, unresolvedHunterIds };
 }
 
 /**

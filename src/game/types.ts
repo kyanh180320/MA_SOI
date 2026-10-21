@@ -20,7 +20,9 @@ export interface Round {
   witchSaved?: boolean;                // Cứu nạn nhân (boolean)
   witchSavedTarget?: string;           // Id người cụ thể được cứu nếu có nhiều người bị cắn
   witchPoisonTarget?: string;          // Id người bị đầu độc
+  hunterTargets?: Record<string, string>;     // Id Thợ săn -> người đã chọn chết cùng trong vòng
   hunterShotTarget?: string;           // Id người bị thợ săn bắn chết
+  hunterShotTargets?: Record<string, string>; // Id Thợ săn -> người thực tế bị bắn (hỗ trợ nhiều Thợ săn)
   nightDeaths: string[];               // Id những người chết trong đêm
   vote?: {
     tally: Record<string, number>;     // Id -> số phiếu
@@ -84,6 +86,7 @@ export interface LiveNightActions {
   witchSavedTarget?: string;
   witchPoisonTarget?: string;
   witchItems?: Game['witchItems'];
+  hunterTargets?: Record<string, string>;
 }
 
 export interface AppUser {

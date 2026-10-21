@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Game, Player, Role, Round } from '../../game/types';
+import type { NightStep } from '../../game/night';
 import { isWolfTeam } from '../../game/win';
 import {
   Button,
@@ -14,13 +15,14 @@ export interface NightPhaseControllerProps {
   game: Game;
   alivePlayers: Player[];
   currentRound: Round;
-  nightStep: 'guard' | 'wolf' | 'seer' | 'witch' | 'done' | 'wait';
+  nightStep: NightStep;
   showRoles: boolean;
   getRoleLabel: (role: Role) => string;
   onGuardProtect: (targetId: string | null) => void;
   onWolfTargets: (targetIds: string[]) => void;
   onSeerCheck: (targetId: string | null) => void;
   onWitchAction: (saveTargetId: string | null, poisonTargetId: string | null) => void;
+  onHunterTarget: (hunterId: string, targetId: string | null) => void;
   onFinishNight: () => void;
 }
 
@@ -35,6 +37,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   onWolfTargets,
   onSeerCheck,
   onWitchAction,
+  onHunterTarget,
   onFinishNight
 }) => {
   const [selectedGuardTarget, setSelectedGuardTarget] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   const [seerResultModal, setSeerResultModal] = useState<{ targetId: string; name: string; isWolf: boolean } | null>(null);
   const [witchSaveSelection, setWitchSaveSelection] = useState<string | null>(null);
   const [witchPoisonSelection, setWitchPoisonSelection] = useState<string | null>(null);
+  const [selectedHunterChoice, setSelectedHunterChoice] = useState<{ hunterId: string; targetId: string } | null>(null);
 
   const hasRole = (role: Role) => alivePlayers.some(p => p.role === role);
 
@@ -657,7 +661,114 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
     );
   }
 
-  // 5. KẾT THÚC ĐÊM
+  // 5. LƯỢT THỢ SĂN
+  if (nightStep === 'hunter') {
+    const aliveHunters = alivePlayers.filter(player => player.role === 'hunter');
+    const currentHunter = aliveHunters.find(hunter => currentRound.hunterTargets?.[hunter.id] === undefined);
+    const selectedHunterTarget = selectedHunterChoice && selectedHunterChoice.hunterId === currentHunter?.id
+      ? selectedHunterChoice.targetId
+      : null;
+    const selectedPlayer = selectedHunterTarget
+      ? alivePlayers.find(player => player.id === selectedHunterTarget)
+      : null;
+
+    if (!currentHunter) {
+      return (
+        <Panel>
+          <Toast variant="info" message="Đang chờ đồng bộ lựa chọn của Thợ săn…" />
+        </Panel>
+      );
+    }
+
+    return (
+      <Panel>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img
+            src={ROLE_CARD_IMAGES.hunter}
+            alt="Thợ Săn"
+            style={{
+              width: '46px',
+              height: '69px',
+              borderRadius: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+              border: '1.5px solid var(--gold-500)',
+              objectFit: 'cover',
+            }}
+          />
+          <div>
+            <h3 style={{
+              color: 'var(--gold-100)',
+              fontFamily: 'var(--font-title)',
+              margin: '0 0 4px 0',
+              fontSize: '18px',
+            }}>
+              🏹 {currentHunter.name} muốn ai chết cùng?
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              Nếu Thợ săn bị loại trong vòng này, mục tiêu sẽ bị kéo theo
+            </span>
+          </div>
+        </div>
+
+        {aliveHunters.length > 1 && (
+          <Toast
+            variant="info"
+            message={`Đang chọn cho ${currentHunter.name}. Còn ${aliveHunters.filter(hunter => currentRound.hunterTargets?.[hunter.id] === undefined).length} Thợ săn chưa hoàn tất.`}
+            style={{ marginBottom: 'var(--s-3)' }}
+          />
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
+          {alivePlayers.filter(player => player.id !== currentHunter.id).map(player => {
+            const isSelected = selectedHunterTarget === player.id;
+            return (
+              <PlayerTile
+                key={player.id}
+                name={player.name}
+                avatarUrl={player.avatar}
+                role={showRoles ? getRoleLabel(player.role) : undefined}
+                badgeLabel={isSelected ? '🎯 Chết cùng' : undefined}
+                badgeVariant="red"
+                isSelected={isSelected}
+                onClick={() => setSelectedHunterChoice(previous => (
+                  previous?.hunterId === currentHunter.id && previous.targetId === player.id
+                    ? null
+                    : { hunterId: currentHunter.id, targetId: player.id }
+                ))}
+              />
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+          <Button
+            variant="danger"
+            pulse={!!selectedPlayer}
+            fullWidth
+            disabled={!selectedPlayer}
+            onClick={() => {
+              onHunterTarget(currentHunter.id, selectedPlayer?.id || null);
+              setSelectedHunterChoice(null);
+            }}
+          >
+            {selectedPlayer ? `✓ Chọn chết cùng: ${selectedPlayer.name}` : 'Hãy chọn 1 người chết cùng'}
+          </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => {
+              onHunterTarget(currentHunter.id, null);
+              setSelectedHunterChoice(null);
+            }}
+          >
+            Không bắn ai nếu chết (Bỏ qua)
+          </Button>
+        </div>
+      </Panel>
+    );
+  }
+
+  // 6. KẾT THÚC ĐÊM
   if (nightStep === 'done') {
     return (
       <Panel style={{ textAlign: 'center' }}>

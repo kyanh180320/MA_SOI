@@ -459,6 +459,18 @@ export function submitSeerAction(
   ]);
 }
 
+export function submitHunterAction(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  hunterId: string,
+  targetId: string,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "hunterTargets", hunterId], value: targetId },
+  ]);
+}
+
 export function submitWitchAction(
   roomId: string,
   gameId: string,

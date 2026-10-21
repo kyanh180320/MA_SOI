@@ -3,13 +3,14 @@ import type { GameRoom, AppUser, Role, Player } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
 import {
   submitGuardAction,
+  submitHunterAction,
   submitSeerAction,
   submitWitchAction,
   submitWolfAction,
   submitWolfVotes,
 } from '../services/roomService';
 import { isWolfTeam } from '../game/win';
-import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE } from '../constants/assets';
+import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { CardSelectionRitual } from './CardSelectionRitual';
 import { getActiveNightRoleSteps, getNightStep } from '../game/night';
@@ -74,8 +75,8 @@ export const ROLE_DETAILS: Record<Role, {
     team: "Phe Dân Làng",
     icon: "🏹",
     color: "var(--orange-400)",
-    description: "Khi bạn bị loại khỏi cuộc chơi (dù bị sói cắn hay bị dân làng bỏ phiếu treo cổ), bạn có quyền bắn 1 phát súng kéo theo 1 người bất kỳ chết cùng.",
-    actionHint: "🏹 Khi bị chết: Chọn 1 người bất kỳ để bắn hạ cùng bạn."
+    description: "Mỗi đêm chọn trước 1 người sẽ chết cùng bạn. Nếu bạn bị Sói cắn, trúng độc hoặc bị dân làng treo cổ trong vòng đó, phát súng cuối sẽ tự động hạ mục tiêu đã chọn.",
+    actionHint: "🌙 Ban đêm: Thức dậy chọn trước người sẽ chết cùng nếu bạn bị loại trong vòng."
   },
   villager: {
     name: "DÂN LÀNG",
@@ -86,14 +87,6 @@ export const ROLE_DETAILS: Record<Role, {
     actionHint: "☀️ Ban ngày: Lắng nghe, tranh luận, suy đoán và bỏ phiếu tìm Ma Sói."
   }
 };
-
-// 4 VAI TRÒ GỌI TRONG GIAI ĐOẠN ĐÊM THEO THỨ TỰ
-export const NIGHT_ROLE_STEPS = [
-  { id: 'guard', label: 'Bảo Vệ', icon: '🛡️', role: 'guard' },
-  { id: 'wolf', label: 'Ma Sói', icon: '🐺', role: 'wolf' },
-  { id: 'seer', label: 'Tiên Tri', icon: '🔮', role: 'seer' },
-  { id: 'witch', label: 'Phù Thủy', icon: '🧪', role: 'witch' }
-];
 
 export const PHASE_STEPS = [
   { id: 'night', label: 'Ban Đêm', icon: '🌙' },
@@ -118,6 +111,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
   const [witchSaveActive, setWitchSaveActive] = useState(false);
   const [selectedWitchPoison, setSelectedWitchPoison] = useState<string | null>(null);
+  const [selectedHunterTarget, setSelectedHunterTarget] = useState<string | null>(null);
   const wolfVoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
@@ -148,6 +142,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   // Xác định bước vai trò ban đêm hiện tại
   const activeNightRoleSteps = getActiveNightRoleSteps(game.players);
   const nightStep = getNightStep(currentRound, game.players);
+  const currentNightRoleItem = nightStep !== 'done' && nightStep !== 'wait'
+    ? NIGHT_ROLE_PROGRESS_ITEMS[nightStep]
+    : null;
 
   // Tìm người chơi ứng với tài khoản user hiện tại:
   const myPlayer: Player = (() => {
@@ -411,6 +408,34 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     }
   };
 
+  // -------------------------------------------------------------
+  // XỬ LÝ LOGIC CỦA THỢ SĂN
+  // -------------------------------------------------------------
+  const myHunterChoice = currentRound?.hunterTargets?.[myPlayer.id];
+
+  const handleConfirmHunterTarget = async (targetId: string | null) => {
+    setIsSubmitting(true);
+    try {
+      await submitHunterAction(
+        room.id,
+        game.id,
+        roundNumber,
+        myPlayer.id,
+        targetId || 'none',
+      );
+      setSelectedHunterTarget(null);
+    } catch (error) {
+      console.error('Lỗi lưu lựa chọn Thợ săn:', error);
+      await showAlert({
+        title: 'Chưa lưu được lựa chọn',
+        message: 'Mục tiêu của Thợ săn chưa được gửi. Hãy kiểm tra kết nối và thử lại.',
+        tone: 'danger',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       {(room.syncState === 'offline' || room.syncState === 'syncing' || isSubmitting) && (
@@ -483,10 +508,16 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             {currentPhase === 'night' && (
               <>
                 🌙 Đêm:{' '}
-                {nightStep === 'guard' && '🛡️ Bảo Vệ'}
-                {nightStep === 'wolf' && '🐺 Ma Sói'}
-                {nightStep === 'seer' && '🔮 Tiên Tri'}
-                {nightStep === 'witch' && '🧪 Phù Thủy'}
+                {currentNightRoleItem && (
+                  <span className={styles.phaseRoleName}>
+                    <img
+                      className={styles.phaseRoleIcon}
+                      src={currentNightRoleItem.iconUrl}
+                      alt=""
+                    />
+                    {currentNightRoleItem.label}
+                  </span>
+                )}
                 {nightStep === 'done' && '✨ Chờ Bình Minh'}
               </>
             )}
@@ -496,7 +527,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
           </div>
         </div>
 
-        {/* STEPPER TIẾN ĐỘ: NẾU BAN ĐÊM -> HIỆN 4 VAI TRÒ VỚI VỊ TRÍ ĐANG GỌI PHÁT SÁNG */}
+        {/* STEPPER TIẾN ĐỘ: chỉ hiện đúng các vai có hành động và còn sống */}
         {currentPhase === 'night' ? (
           <div className={styles.stepper}>
             <div className={styles.stepLine}>
@@ -506,13 +537,14 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               />
             </div>
 
-            {NIGHT_ROLE_STEPS.filter(step => activeNightRoleSteps.includes(step.id as (typeof activeNightRoleSteps)[number])).map((step, idx) => {
+            {activeNightRoleSteps.map((stepId, idx) => {
+              const step = NIGHT_ROLE_PROGRESS_ITEMS[stepId];
               const isPassed = idx < nightStepIndex || nightStep === 'done';
               const isActive = idx === nightStepIndex && nightStep !== 'done';
 
               return (
                 <div 
-                  key={step.id} 
+                  key={stepId}
                   className={`
                     ${styles.stepItem} 
                     ${isActive ? styles.stepItemRoleActive : ''} 
@@ -520,7 +552,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   `}
                 >
                   <div className={styles.stepCircle}>
-                    {isPassed ? '✓' : step.icon}
+                    {isPassed
+                      ? '✓'
+                      : <img className={styles.stepRoleIcon} src={step.iconUrl} alt={step.label} />}
                   </div>
                   <span className={styles.stepLabel}>
                     {step.label}
@@ -988,11 +1022,79 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </div>
           )}
 
-          {/* E. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
+          {/* E. THAO TÁC CỦA THỢ SĂN */}
+          {nightStep === 'hunter' && myPlayer.role === 'hunter' && (
+            <div className={styles.actionPanel}>
+              <div className={styles.actionHeader}>
+                <h3 className={styles.actionTitle} style={{ color: 'var(--orange-400)' }}>
+                  🏹 THỢ SĂN CHỌN NGƯỜI CHẾT CÙNG
+                </h3>
+                <Badge variant="gold">Thợ Săn</Badge>
+              </div>
+
+              {myHunterChoice !== undefined ? (
+                <div className={styles.wolfAlertConsensus}>
+                  ✓ Bạn đã chọn:{' '}
+                  <strong>
+                    {myHunterChoice === 'none'
+                      ? 'Không bắn ai'
+                      : game.players.find(player => player.id === myHunterChoice)?.name || 'Mục tiêu đã chọn'}
+                  </strong>. Đang chờ Thợ săn khác hoàn tất lượt.
+                </div>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text)' }}>
+                    Chọn trước 1 người. Nếu bạn chết trong vòng này, người đó sẽ bị kéo theo ngay lập tức.
+                  </p>
+
+                  <div className={styles.targetSelectionGrid}>
+                    {alivePlayers.filter(player => player.id !== myPlayer.id).map(player => {
+                      const isSelected = selectedHunterTarget === player.id;
+                      return (
+                        <PlayerTile
+                          key={player.id}
+                          name={player.name}
+                          avatarUrl={player.avatar}
+                          badgeLabel={isSelected ? '🎯 Chết cùng' : undefined}
+                          badgeVariant="red"
+                          isSelected={isSelected}
+                          onClick={() => setSelectedHunterTarget(previous => previous === player.id ? null : player.id)}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
+                    <Button
+                      variant="danger"
+                      pulse={!!selectedHunterTarget}
+                      disabled={!selectedHunterTarget || isSubmitting}
+                      onClick={() => handleConfirmHunterTarget(selectedHunterTarget)}
+                    >
+                      {selectedHunterTarget
+                        ? `✓ Chọn chết cùng: ${game.players.find(player => player.id === selectedHunterTarget)?.name}`
+                        : 'Hãy chọn 1 người chết cùng'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={isSubmitting}
+                      onClick={() => handleConfirmHunterTarget(null)}
+                      style={{ fontSize: '12px' }}
+                    >
+                      Không bắn ai nếu chết (Bỏ qua)
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* F. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
           {((nightStep === 'guard' && myPlayer.role !== 'guard') ||
             (nightStep === 'wolf' && !isWolfTeam(myPlayer.role)) ||
             (nightStep === 'seer' && myPlayer.role !== 'seer') ||
             (nightStep === 'witch' && myPlayer.role !== 'witch') ||
+            (nightStep === 'hunter' && myPlayer.role !== 'hunter') ||
             nightStep === 'done') && (
             <div className={styles.sleepingCard}>
               <div className={styles.sleepingMoon}>🌙 ✨ 💤</div>
@@ -1007,6 +1109,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   {nightStep === 'wolf' && '🐺 BẦY MA SÓI'}
                   {nightStep === 'seer' && '🔮 TIÊN TRI'}
                   {nightStep === 'witch' && '🧪 PHÙ THỦY'}
+                  {nightStep === 'hunter' && '🏹 THỢ SĂN'}
                   {nightStep === 'done' && '✨ CHỜ BÌNH MINH'}
                 </strong>
               </div>
