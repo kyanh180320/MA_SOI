@@ -29,7 +29,6 @@ import {
   Button,
   Panel,
   Badge,
-  PhaseBanner,
   PlayerTile,
   Toast
 } from '../components/ui';
@@ -928,13 +927,6 @@ export default function PlayPage() {
           </div>
         )}
       </div>
-
-      {/* PHASE BANNER THEO THỜI GIAN THỰC */}
-      <PhaseBanner
-        phase={game.phase === 'night' ? 'night' : (game.phase === 'day' ? 'day' : 'vote')}
-        title={game.phase === 'ended' ? 'KẾT THÚC VÁN ĐẤU' : (game.phase === 'night' ? `BAN ĐÊM - VÒNG ${currentRound?.number || 1}` : `BAN NGÀY - VÒNG ${currentRound?.number || 1}`)}
-        subtitle={game.phase === 'night' ? 'Dân làng ngủ say, các thế lực thức giấc...' : 'Dân làng thảo luận và tìm kiếm kẻ giả mạo'}
-      />
 
       {/* THỢ SĂN BẮN KHI BỊ CHẾT */}
       {hunterPendingDeath && (
