@@ -63,9 +63,27 @@
   min-width: 0;
 }
 
-/* Để nền đêm vẫn hiện qua panel điều khiển mà chữ giữ đủ tương phản. */
+/* Một bề mặt duy nhất như màn tham chiếu, không lồng thêm khung panel nặng. */
 .content > div {
-  background: linear-gradient(180deg, rgba(22, 25, 61, 0.86), rgba(8, 11, 31, 0.9)) !important;
+  padding: 12px 9px 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, rgba(13, 17, 54, 0.48), rgba(6, 9, 30, 0.7)) !important;
+  box-shadow: none !important;
+}
+
+/* Banner đã nhận diện role; ảnh lá bài nhỏ bên dưới chỉ làm nội dung bị lặp. */
+.content > div > div:first-child img {
+  display: none;
+}
+
+.content > div > div:first-child {
+  justify-content: center !important;
+  text-align: center;
+}
+
+.content > div > div:first-child > div {
+  width: 100%;
 }
 
 @media (max-width: 380px) {

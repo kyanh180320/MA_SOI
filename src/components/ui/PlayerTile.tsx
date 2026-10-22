@@ -56,6 +56,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
       tabIndex={isClickable ? 0 : -1}
       aria-label={`${name}${!isAlive ? ' (Đã chết)' : ''}${disabled ? ' (Không thể chọn)' : ''}`}
       aria-disabled={disabled}
+      aria-pressed={isClickable ? isSelected : undefined}
     >
       {/* Huy hiệu số vote hoặc góc trên khi ở dạng Grid */}
       {isGridLayout && votesCount > 0 && (
@@ -76,7 +77,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
           <span className={styles.name} title={name}>{name}</span>
           {!isAlive && <span className={styles.skullIcon}>☠</span>}
         </div>
-        {role && <span className={styles.roleTag}>{role}</span>}
+        {role && appearance !== 'night' && <span className={styles.roleTag}>{role}</span>}
       </div>
 
       {/* Trạng thái / Badge */}
@@ -95,7 +96,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
         </div>
       )}
 
-      {isGridLayout && badgeLabel && (
+      {isGridLayout && badgeLabel && appearance !== 'night' && (
         <div className={styles.bottomActionGrid}>
           <Badge variant={badgeVariant} style={{ fontSize: '10px', height: '18px', padding: '0 4px' }}>
             {badgeLabel}
