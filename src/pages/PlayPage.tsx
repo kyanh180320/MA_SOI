@@ -32,7 +32,7 @@ import {
   PlayerTile,
   Toast
 } from '../components/ui';
-import { DiscussionTimer, NightPhaseController } from '../components/game';
+import { DiscussionTimer, NightActionStage, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { useDialog } from '../components/dialog';
 import { createDetectiveCheck } from '../game/detective';
@@ -1020,24 +1020,26 @@ export default function PlayPage() {
         <>
           {/* BAN ĐÊM */}
           {game.phase === 'night' && !hunterPendingDeath && (
-            <NightPhaseController
-              game={game}
-              alivePlayers={alivePlayers}
-              currentRound={currentRound}
-              nightStep={nightStep}
-              showRoles={showRoles}
-              getRoleLabel={getRoleLabel}
-              onGuardProtect={handleGuardProtect}
-              onHalfWolfAcknowledge={handleHalfWolfAcknowledge}
-              onWolfTargets={handleWolfTargets}
-              onWolfSeerCheck={handleWolfSeerCheck}
-              onSeerCheck={handleSeerCheck}
-              onDetectiveCheck={handleDetectiveCheck}
-              onWitchAction={handleWitchAction}
-              onHunterTarget={handleHunterTarget}
-              onSkipDeadRole={handleSkipDeadRole}
-              onFinishNight={finishNight}
-            />
+            <NightActionStage step={nightStep}>
+              <NightPhaseController
+                game={game}
+                alivePlayers={alivePlayers}
+                currentRound={currentRound}
+                nightStep={nightStep}
+                showRoles={showRoles}
+                getRoleLabel={getRoleLabel}
+                onGuardProtect={handleGuardProtect}
+                onHalfWolfAcknowledge={handleHalfWolfAcknowledge}
+                onWolfTargets={handleWolfTargets}
+                onWolfSeerCheck={handleWolfSeerCheck}
+                onSeerCheck={handleSeerCheck}
+                onDetectiveCheck={handleDetectiveCheck}
+                onWitchAction={handleWitchAction}
+                onHunterTarget={handleHunterTarget}
+                onSkipDeadRole={handleSkipDeadRole}
+                onFinishNight={finishNight}
+              />
+            </NightActionStage>
           )}
 
           {/* BAN NGÀY */}

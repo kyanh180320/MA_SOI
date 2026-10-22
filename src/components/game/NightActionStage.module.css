@@ -1,0 +1,89 @@
+.stage {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  padding: 68px 10px 12px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 199, 102, 0.55);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(6, 9, 31, 0.08), rgba(5, 7, 22, 0.72)),
+    url('/assets/ui/setup-background.webp') 50% 12% / cover no-repeat;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.46),
+    inset 0 0 0 3px rgba(4, 6, 20, 0.55),
+    inset 0 0 28px rgba(71, 52, 183, 0.28);
+}
+
+.ambientGlow {
+  position: absolute;
+  z-index: -1;
+  top: 40px;
+  left: 50%;
+  width: min(82vw, 420px);
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(65, 174, 255, 0.2), rgba(87, 49, 188, 0.08) 48%, transparent 72%);
+  opacity: 0.9;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.banner {
+  position: absolute;
+  z-index: 2;
+  top: 5px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: min(96%, 520px);
+  min-height: 68px;
+  padding: 8px 70px 14px;
+  background: url('/assets/ui/ribbon-gold.webp') center / 100% 100% no-repeat;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.banner h2 {
+  margin: 0;
+  color: var(--gold-100);
+  font-family: var(--font-title);
+  font-size: clamp(15px, 4.5vw, 21px);
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1.05;
+  text-align: center;
+  text-shadow: 0 2px 3px #000, 0 0 10px rgba(232, 199, 102, 0.28);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+/* Để nền đêm vẫn hiện qua panel điều khiển mà chữ giữ đủ tương phản. */
+.content > div {
+  background: linear-gradient(180deg, rgba(22, 25, 61, 0.86), rgba(8, 11, 31, 0.9)) !important;
+}
+
+@media (max-width: 380px) {
+  .stage {
+    padding-inline: 7px;
+  }
+
+  .banner {
+    padding-inline: 52px;
+  }
+
+  .banner h2 {
+    letter-spacing: 0.025em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambientGlow {
+    opacity: 0.65;
+  }
+}

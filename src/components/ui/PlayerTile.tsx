@@ -13,6 +13,7 @@ export interface PlayerTileProps {
   badgeLabel?: string;
   badgeVariant?: 'red' | 'gold' | 'green' | 'ash';
   layout?: 'row' | 'grid';
+  appearance?: 'default' | 'night';
   onClick?: () => void;
   className?: string;
 }
@@ -28,6 +29,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
   badgeLabel,
   badgeVariant = 'red',
   layout = 'grid',
+  appearance = 'default',
   onClick,
   className = ''
 }) => {
@@ -37,6 +39,7 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
   const isGridLayout = layout === 'grid';
   const classNames = [
     isGridLayout ? styles.tileGrid : styles.tileRow,
+    appearance === 'night' ? styles.night : '',
     isSelected ? styles.selected : '',
     !isAlive ? styles.dead : '',
     disabled ? styles.disabled : '',
@@ -62,8 +65,10 @@ export const PlayerTile: React.FC<PlayerTileProps> = ({
       )}
 
       {/* Avatar art slot */}
-      <div className={styles.avatarWrapper} style={avatarStyle}>
-        {!avatarUrl && initials}
+      <div className={styles.avatarFrameShell}>
+        <div className={styles.avatarWrapper} style={avatarStyle}>
+          {!avatarUrl && initials}
+        </div>
       </div>
 
       <div className={styles.info}>

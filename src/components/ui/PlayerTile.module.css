@@ -77,6 +77,11 @@
 }
 
 /* AVATAR KHUNG VÀNG & ART SLOT */
+.avatarFrameShell {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .avatarWrapper {
   position: relative;
   width: 38px;
@@ -92,6 +97,123 @@
   font-size: 13px;
   color: var(--gold-300);
   margin-bottom: 4px;
+}
+
+/* HUY HIỆU CHỌN MỤC TIÊU TRONG CÁC LƯỢT BAN ĐÊM */
+.night.tileGrid {
+  min-height: 132px;
+  padding: 3px 2px 6px;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.night.tileGrid:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.night .avatarFrameShell {
+  width: clamp(70px, 23vw, 92px);
+  height: clamp(70px, 23vw, 92px);
+  margin-bottom: 1px;
+  transition: transform 0.14s ease, filter 0.18s ease;
+}
+
+.night .avatarFrameShell::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: url('/assets/ui/avatar-frame-night.webp') center / contain no-repeat;
+  pointer-events: none;
+}
+
+.night .avatarWrapper {
+  position: absolute;
+  z-index: 1;
+  top: 23%;
+  left: 24%;
+  width: 52%;
+  height: 58%;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 42% 42% 48% 48%;
+  background-position: center;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+  clip-path: polygon(8% 0, 92% 0, 100% 67%, 50% 100%, 0 67%);
+  color: var(--gold-100);
+}
+
+.night .info {
+  width: calc(100% - 4px);
+  min-height: 24px;
+  padding: 3px 5px 4px;
+  border: 1px solid rgba(90, 59, 25, 0.82);
+  border-radius: 2px;
+  background:
+    linear-gradient(rgba(255, 248, 218, 0.08), rgba(87, 49, 17, 0.08)),
+    url('/assets/ui/panel-parchment.webp') center / cover no-repeat;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 235, 174, 0.18);
+}
+
+.night .name {
+  color: #2c190e;
+  font-family: var(--font-title);
+  font-size: clamp(11px, 3.4vw, 14px);
+  text-shadow: 0 1px rgba(255, 244, 202, 0.42);
+}
+
+.night .roleTag {
+  color: #633916;
+  font-size: 9px;
+}
+
+.night.selected {
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.night.selected .avatarFrameShell {
+  filter:
+    drop-shadow(0 0 5px #52d7ff)
+    drop-shadow(0 0 11px rgba(43, 151, 255, 0.92));
+  transform: translateY(-2px) scale(1.035);
+}
+
+.night.selected .info {
+  border-color: #5ad9ff;
+  box-shadow: 0 0 10px rgba(54, 183, 255, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.night.dead {
+  opacity: 0.72;
+  filter: grayscale(0.92) brightness(0.6);
+}
+
+.night.dead .avatarFrameShell::before {
+  content: '☠';
+  position: absolute;
+  z-index: 4;
+  top: 34%;
+  left: 50%;
+  color: #ef8a8a;
+  font-size: 24px;
+  line-height: 1;
+  text-shadow: 0 2px 4px #000;
+  transform: translate(-50%, -50%);
+}
+
+.night.disabled:not(.dead) {
+  opacity: 0.58;
+  filter: grayscale(0.38);
+}
+
+.night .bottomActionGrid {
+  min-height: 18px;
+  margin-top: 3px;
 }
 
 .info {
@@ -189,4 +311,16 @@
 .skullIcon {
   font-size: 14px;
   color: var(--red-300);
+}
+
+@media (max-width: 360px) {
+  .night.tileGrid {
+    min-height: 120px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night .avatarFrameShell {
+    transition: none;
+  }
 }

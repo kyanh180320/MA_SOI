@@ -31,6 +31,7 @@ import {
 import { createWolfSeerCheck } from '../game/wolfSeer';
 import { getWolfLeaderId } from '../game/wolfLeadership';
 import { toggleWolfTargetSelection } from '../game/wolfSelection';
+import { NightActionStage } from './game/NightActionStage';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -783,7 +784,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
       {/* 3. KHU VỰC THAO TÁC TRONG ĐÊM KHI ĐẾN LƯỢT VAI TRÒ CỦA BẢN THÂN */}
       {currentPhase === 'night' && myPlayer && myPlayer.alive && (
-        <div className={styles.nightActionSection}>
+        <NightActionStage step={nightStep} className={styles.nightActionSection}>
           {/* BÁN SÓI KIỂM TRA TRẠNG THÁI TRƯỚC KHI GỌI BẦY SÓI */}
           {nightStep === 'half_wolf'
             && myPlayer.role === 'half_wolf'
@@ -884,6 +885,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   return (
                     <PlayerTile
                       key={p.id}
+                      appearance="night"
                       name={p.name}
                       avatarUrl={p.avatar}
                       badgeLabel={isSelected
@@ -952,6 +954,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   return (
                     <PlayerTile
                       key={player.id}
+                      appearance="night"
                       name={player.name}
                       avatarUrl={player.avatar}
                       badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
@@ -1001,6 +1004,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   return (
                     <PlayerTile
                       key={p.id}
+                      appearance="night"
                       name={p.name}
                       avatarUrl={p.avatar}
                       badgeLabel={isSelected ? '🛡️ Bảo vệ' : (isPrevProtected ? '🔒 Đêm trước' : undefined)}
@@ -1068,6 +1072,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   return (
                     <PlayerTile
                       key={p.id}
+                      appearance="night"
                       name={p.name}
                       avatarUrl={p.avatar}
                       badgeLabel={isSelected ? '🔮 Sẽ soi' : undefined}
@@ -1128,6 +1133,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       return (
                         <PlayerTile
                           key={player.id}
+                          appearance="night"
                           name={player.name}
                           avatarUrl={player.avatar}
                           badgeLabel={isSelected ? `🔎 #${selectedDetectiveTargets.indexOf(player.id) + 1}` : undefined}
@@ -1222,6 +1228,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       return (
                         <PlayerTile
                           key={p.id}
+                          appearance="night"
                           name={p.name}
                           avatarUrl={p.avatar}
                           badgeLabel={isPoisonSelected ? '☠️ Độc' : (isSelf ? '🧪 Bản thân' : undefined)}
@@ -1303,6 +1310,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                       return (
                         <PlayerTile
                           key={player.id}
+                          appearance="night"
                           name={player.name}
                           avatarUrl={player.avatar}
                           badgeLabel={isSelected ? '🎯 Chết cùng' : undefined}
@@ -1371,7 +1379,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               </div>
             </div>
           )}
-        </div>
+        </NightActionStage>
       )}
 
       {/* 4. THẺ BÀI VAI TRÒ CỦA NGƯỜI CHƠI */}

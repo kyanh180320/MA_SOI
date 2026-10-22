@@ -223,6 +223,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             return (
               <PlayerTile
                 key={p.id}
+                appearance="night"
                 name={p.name}
                 avatarUrl={p.avatar}
                 role={showRoles ? getRoleLabel(p.role) : undefined}
@@ -441,6 +442,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             return (
               <PlayerTile
                 key={p.id}
+                appearance="night"
                 name={p.name}
                 avatarUrl={p.avatar}
                 role={showRoles ? getRoleLabel(p.role) : undefined}
@@ -554,6 +556,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             return (
               <PlayerTile
                 key={player.id}
+                appearance="night"
                 name={player.name}
                 avatarUrl={player.avatar}
                 role={showRoles ? getRoleLabel(player.role) : undefined}
@@ -669,6 +672,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             return (
               <PlayerTile
                 key={p.id}
+                appearance="night"
                 name={p.name}
                 avatarUrl={p.avatar}
                 role={showRoles ? getRoleLabel(p.role) : undefined}
@@ -855,6 +859,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 return (
                   <PlayerTile
                     key={player.id}
+                    appearance="night"
                     name={player.name}
                     avatarUrl={player.avatar}
                     role={showRoles ? getRoleLabel(player.role) : undefined}
@@ -1021,6 +1026,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 return (
                   <PlayerTile
                     key={p.id}
+                    appearance="night"
                     name={p.name}
                     avatarUrl={p.avatar}
                     role={showRoles ? getRoleLabel(p.role) : undefined}
@@ -1134,6 +1140,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             return (
               <PlayerTile
                 key={player.id}
+                appearance="night"
                 name={player.name}
                 avatarUrl={player.avatar}
                 role={showRoles ? getRoleLabel(player.role) : undefined}
