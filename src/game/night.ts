@@ -283,6 +283,21 @@ export function getSuccessfulWolfBiteTargets(
   });
 }
 
+/**
+ * Những người thực sự có nguy cơ chết vì cú cắn và được phép hiện cho Phù Thủy.
+ * Bán Sói chưa chuyển hóa sống sót để hóa Sói, nên không phải mục tiêu của bình cứu.
+ */
+export function getWitchRescueCandidates(
+  round: Partial<Pick<Round, 'wolfTarget' | 'wolfTargets' | 'guardProtectTarget'>>,
+  players: readonly Player[],
+): string[] {
+  return getWolfBiteTargets(round, players).filter(victimId => {
+    const victim = players.find(player => player.id === victimId);
+    if (!victim?.alive || round.guardProtectTarget === victimId) return false;
+    return victim.role !== 'half_wolf' || isWolfAligned(victim);
+  });
+}
+
 export function resolveNight(
   round: Partial<Pick<Round, 'wolfTarget' | 'wolfTargets' | 'witchSaved' | 'witchSavedTarget' | 'witchPoisonTarget' | 'guardProtectTarget'>>,
   players?: Player[]

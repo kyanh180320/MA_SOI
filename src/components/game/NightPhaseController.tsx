@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import type { Game, NightRoleStep, Player, Role, Round } from '../../game/types';
-import { getWolfTargetLimit, hasLivingNightRole, type NightStep } from '../../game/night';
+import {
+  getWitchRescueCandidates,
+  getWolfTargetLimit,
+  hasLivingNightRole,
+  type NightStep,
+} from '../../game/night';
 import { isWolfAligned } from '../../game/win';
 import { getWolfLeaderId } from '../../game/wolfLeadership';
 import {
@@ -17,6 +22,7 @@ import {
   isDetectiveLockedForRound,
 } from '../../game/detective';
 import { createWolfSeerCheck } from '../../game/wolfSeer';
+import { toggleWolfTargetSelection } from '../../game/wolfSelection';
 
 export interface NightPhaseControllerProps {
   game: Game;
@@ -340,22 +346,9 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
       const targetPlayer = game.players.find(p => p.id === id);
       if (!targetPlayer || isWolfAligned(targetPlayer)) return;
 
-      if (wolfTargetsToConfirm.includes(id)) {
-        setWolfSelectionDraft({
-          scope: wolfSelectionScope,
-          targetIds: wolfTargetsToConfirm.filter(targetId => targetId !== id),
-        });
-        return;
-      }
-
-      if (maxTargets === 1) {
-        setWolfSelectionDraft({ scope: wolfSelectionScope, targetIds: [id] });
-        return;
-      }
-      if (wolfTargetsToConfirm.length >= maxTargets) return;
       setWolfSelectionDraft({
         scope: wolfSelectionScope,
-        targetIds: [...wolfTargetsToConfirm, id],
+        targetIds: toggleWolfTargetSelection(wolfTargetsToConfirm, id, maxTargets),
       });
     };
 
@@ -444,7 +437,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             const targetIndex = wolfTargetsToConfirm.indexOf(p.id);
             const isTarget = targetIndex !== -1;
             const isWolf = isWolfAligned(p);
-            const isAtLimit = maxTargets > 1 && !isTarget && wolfTargetsToConfirm.length >= maxTargets;
 
             return (
               <PlayerTile
@@ -455,7 +447,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? '🐺 Phe Sói' : undefined)}
                 badgeVariant={isTarget ? 'red' : 'ash'}
                 isSelected={isTarget}
-                disabled={isWolf || isAtLimit}
+                disabled={isWolf}
                 onClick={() => toggleWolfTarget(p.id)}
               />
             );
@@ -927,12 +919,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
   // 6. LƯỢT PHÙ THỦY
   if (nightStep === 'witch') {
-    const wolfTargetsList = currentRound.wolfTargets 
-      ? currentRound.wolfTargets.filter(id => id && id !== 'none') 
-      : (currentRound.wolfTarget && currentRound.wolfTarget !== 'none' ? [currentRound.wolfTarget] : []);
-    
-    const isProtected = (id: string) => currentRound.guardProtectTarget === id;
-    const dyingVictimIds = wolfTargetsList.filter(id => !isProtected(id));
+    const dyingVictimIds = getWitchRescueCandidates(currentRound, game.players);
     const dyingVictims = dyingVictimIds.map(id => game.players.find(p => p.id === id)).filter(Boolean) as Player[];
 
     const canSave = game.witchItems.saveLeft > 0 && dyingVictims.length > 0;
@@ -994,7 +981,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
             💉 BÌNH CỨU (Cứu nạn nhân bị cắn đêm nay)
           </h4>
           {dyingVictims.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0 }}>Đêm nay bình yên, không ai sắp chết.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0 }}>Không có nạn nhân cần dùng bình cứu đêm nay.</p>
           ) : (
             <div>
               <p style={{ fontSize: '13px', margin: '0 0 var(--s-2) 0' }}>

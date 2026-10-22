@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getHalfWolfConversionIds, prependConvertedWolves } from './halfWolf';
-import { getNightStep, resolveNight } from './night';
+import { getNightStep, getWitchRescueCandidates, resolveNight } from './night';
 import type { Player, Round } from './types';
 import { checkWinner, isWolfAligned } from './win';
 import { getWolfLeaderId } from './wolfLeadership';
@@ -31,6 +31,24 @@ describe('half wolf', () => {
     expect(getHalfWolfConversionIds(round({ wolfTargets: ['h1'], witchSavedTarget: 'h1' }), players)).toEqual([]);
     expect(getHalfWolfConversionIds(round({ wolfTargets: ['h1'], witchPoisonTarget: 'h1' }), players)).toEqual([]);
     expect(resolveNight(round({ wolfTargets: ['h1'], witchPoisonTarget: 'h1' }), players)).toEqual(['h1']);
+  });
+
+  it('does not reveal an unconverted half wolf as a rescue target to the witch', () => {
+    const demonWolfPlayers = players.map(player => (
+      player.id === 'w2' ? { ...player, role: 'wolf_demon' as const } : player
+    ));
+    expect(getWitchRescueCandidates(round({ wolfTargets: ['h1'] }), players)).toEqual([]);
+    expect(getWitchRescueCandidates(
+      round({ wolfTargets: ['h1', 'v1'] }),
+      demonWolfPlayers,
+    )).toEqual(['v1']);
+  });
+
+  it('only reveals victims who can still die from the wolf bite', () => {
+    expect(getWitchRescueCandidates(
+      round({ wolfTargets: ['v1'], guardProtectTarget: 'v1' }),
+      players,
+    )).toEqual([]);
   });
 
   it('waits for every living half wolf to check the phone before the wolf step', () => {

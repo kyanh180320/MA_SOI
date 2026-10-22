@@ -16,7 +16,12 @@ import { isWolfAligned } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { LazyCardSelectionRitual } from './LazyCardSelectionRitual';
-import { getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
+import {
+  getConfiguredNightRoleSteps,
+  getNightStep,
+  getWitchRescueCandidates,
+  getWolfTargetLimit,
+} from '../game/night';
 import { useDialog } from './dialog';
 import {
   createDetectiveCheck,
@@ -25,6 +30,7 @@ import {
 } from '../game/detective';
 import { createWolfSeerCheck } from '../game/wolfSeer';
 import { getWolfLeaderId } from '../game/wolfLeadership';
+import { toggleWolfTargetSelection } from '../game/wolfSelection';
 
 interface PlayerLiveViewProps {
   room: GameRoom;
@@ -305,16 +311,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     if (!targetPlayer || isWolfAligned(targetPlayer)) return;
 
     const selectionLimit = isWolfLeader ? wolfTargetLimit : 1;
-    let nextTargets: string[];
-    if (myWolfTargets.includes(targetId)) {
-      nextTargets = myWolfTargets.filter(id => id !== targetId);
-    } else if (selectionLimit === 1) {
-      nextTargets = [targetId];
-    } else if (myWolfTargets.length < selectionLimit) {
-      nextTargets = [...myWolfTargets, targetId];
-    } else {
-      return;
-    }
+    const nextTargets = toggleWolfTargetSelection(myWolfTargets, targetId, selectionLimit);
 
     setWolfSelectionDraft({ scope: wolfSelectionScope, targetIds: nextTargets });
     queueWolfVote(nextTargets);
@@ -509,8 +506,9 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   // -------------------------------------------------------------
   // XỬ LÝ LOGIC CỦA PHÙ THỦY
   // -------------------------------------------------------------
-  const currentWolfVictims = currentRound?.wolfTargets?.filter(t => t !== 'none') || 
-    (currentRound?.wolfTarget && currentRound.wolfTarget !== 'none' ? [currentRound.wolfTarget] : []);
+  const currentWolfVictims = currentRound
+    ? getWitchRescueCandidates(currentRound, game.players)
+    : [];
 
   const victimPlayers = currentWolfVictims.map(id => game.players.find(p => p.id === id)).filter(Boolean) as Player[];
 
@@ -893,7 +891,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                         : (isWolf ? (p.id === wolfLeaderId ? '👑 Đầu đàn' : '🐺 Phe Sói') : undefined)}
                       badgeVariant={isSelected ? 'red' : 'ash'}
                       isSelected={isSelected}
-                      disabled={isWolf || (!isSelected && myWolfTargets.length >= (isWolfLeader ? wolfTargetLimit : 1))}
+                      disabled={isWolf}
                       onClick={() => handleSelectWolfTarget(p.id)}
                     />
                   );
@@ -1168,12 +1166,12 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 <Badge variant="gold">Phù Thủy</Badge>
               </div>
 
-              {/* Thông tin nạn nhân bị sói cắn đêm nay */}
+              {/* Chỉ hiện người thực sự có thể chết và được phép dùng bình cứu */}
               <div className={styles.wolfConsensusBox} style={{ borderColor: 'var(--teal-500)' }}>
                 {victimPlayers.length > 0 ? (
                   <div>
                     <span style={{ fontSize: '13px', color: '#ff9eaf', fontWeight: 700 }}>
-                      🐺 Nạn nhân bị Sói cắn đêm nay:{' '}
+                      🐺 Nạn nhân cần cứu đêm nay:{' '}
                     </span>
                     <strong style={{ color: '#fff' }}>
                       {victimPlayers.map(p => p.name).join(', ')}
@@ -1181,7 +1179,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                   </div>
                 ) : (
                   <div style={{ color: 'var(--green-400)', fontSize: '13px', fontWeight: 600 }}>
-                    ✨ Đêm nay bầy sói không cắn ai!
+                    ✨ Không có nạn nhân cần dùng bình cứu đêm nay.
                   </div>
                 )}
               </div>
