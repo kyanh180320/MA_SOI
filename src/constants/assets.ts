@@ -14,6 +14,7 @@ export const ROLE_CARD_IMAGES: Record<Role, string> = {
 };
 
 export const CARD_BACK_IMAGE = '/assets/cards/card_back.webp';
+export const WOLF_PACK_AVATAR = '/assets/ui/wolf-pack-avatar.webp';
 
 export const ROLE_MEDALLION_ICONS: Record<Role, string> = {
   wolf: '/assets/icons/icon_wolf_paw.webp',

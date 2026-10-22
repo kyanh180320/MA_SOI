@@ -24,6 +24,7 @@ import {
   sanitizeRoomAvatar,
 } from "../game/onlineSync";
 import { canUseRoleAssignmentCheat, isCleanupManager } from "../game/adminAccess";
+import { canEnterRoom, isRoomDeletionConfirmed } from "../game/roomAccess";
 
 /** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
 export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
@@ -116,7 +117,7 @@ export function subscribeRoom(roomId: string, callback: (room: GameRoom | null) 
             ? "syncing"
             : "synced",
       });
-    } else {
+    } else if (isRoomDeletionConfirmed(docSnap.exists(), docSnap.metadata.fromCache)) {
       callback(null);
     }
   }, (err) => {
@@ -145,6 +146,10 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
 
     if (isAlreadyMember) {
       return;
+    }
+
+    if (!canEnterRoom({ ...room, id: roomId }, playerUid)) {
+      throw new Error("Ván đã bắt đầu. Chỉ người chơi trong đội hình cũ mới có thể vào lại.");
     }
 
     if (getPlayerMembers(currentMembers).length >= room.maxPlayers) {

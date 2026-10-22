@@ -32,7 +32,7 @@ import {
   PlayerTile,
   Toast
 } from '../components/ui';
-import { DiscussionTimer, NightActionStage, NightPhaseController } from '../components/game';
+import { DiscussionTimer, ModeratorRoleRoster, NightActionStage, NightPhaseController } from '../components/game';
 import { NIGHT_ROLE_PROGRESS_ITEMS, PHASE_MEDALLION_ICONS } from '../constants/assets';
 import { useDialog } from '../components/dialog';
 import { createDetectiveCheck } from '../game/detective';
@@ -44,7 +44,7 @@ export default function PlayPage() {
   const { game, updateGame, updateGameLocally, applyRemoteGame, replaceRemoteGame, undo, canUndo, setGame } = useGame();
   const { user } = useAuth();
   const { showAlert, showConfirm } = useDialog();
-  const [showRoles, setShowRoles] = useState(true);
+  const [showRoleRoster, setShowRoleRoster] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isSavingGame, setIsSavingGame] = useState(false);
   const [isStartingRematch, setIsStartingRematch] = useState(false);
@@ -688,13 +688,18 @@ export default function PlayPage() {
           )}
           <Button
             variant="secondary"
-            onClick={() => setShowRoles(!showRoles)}
+            onClick={() => setShowRoleRoster(current => !current)}
+            aria-expanded={showRoleRoster}
             style={{ minHeight: '40px', padding: '0 var(--s-3)', fontSize: '13px' }}
           >
-            {showRoles ? 'Ẩn Role' : 'Hiện Role'}
+            {showRoleRoster ? 'Đóng Sổ Vai' : '📜 Sổ Vai'}
           </Button>
         </div>
       </div>
+
+      {showRoleRoster && (
+        <ModeratorRoleRoster players={game.players} getRoleLabel={getRoleLabel} />
+      )}
 
       {game.roomId && roomSyncState !== 'synced' && (
         <Toast
@@ -945,7 +950,6 @@ export default function PlayPage() {
                   key={p.id}
                   name={p.name}
                   avatarUrl={p.avatar}
-                  role={showRoles ? getRoleLabel(p.role) : undefined}
                   badgeLabel={isSelected ? '🎯 Mục tiêu bắn' : undefined}
                   badgeVariant="red"
                   isSelected={isSelected}
@@ -1026,8 +1030,6 @@ export default function PlayPage() {
                 alivePlayers={alivePlayers}
                 currentRound={currentRound}
                 nightStep={nightStep}
-                showRoles={showRoles}
-                getRoleLabel={getRoleLabel}
                 onGuardProtect={handleGuardProtect}
                 onHalfWolfAcknowledge={handleHalfWolfAcknowledge}
                 onWolfTargets={handleWolfTargets}
@@ -1083,7 +1085,6 @@ export default function PlayPage() {
                       key={p.id}
                       name={p.name}
                       avatarUrl={p.avatar}
-                      role={showRoles ? getRoleLabel(p.role) : undefined}
                       badgeLabel={isSelected ? '⚖️ Sẽ treo cổ' : undefined}
                       badgeVariant="red"
                       isSelected={isSelected}

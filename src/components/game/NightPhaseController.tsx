@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Game, NightRoleStep, Player, Role, Round } from '../../game/types';
+import type { Game, NightRoleStep, Player, Round } from '../../game/types';
 import {
   getWitchRescueCandidates,
   getWolfTargetLimit,
@@ -15,7 +15,7 @@ import {
   Modal,
   Toast
 } from '../ui';
-import { ROLE_CARD_IMAGES } from '../../constants/assets';
+import { ROLE_CARD_IMAGES, WOLF_PACK_AVATAR } from '../../constants/assets';
 import {
   createDetectiveCheck,
   getDetectiveTargetLimit,
@@ -29,8 +29,6 @@ export interface NightPhaseControllerProps {
   alivePlayers: Player[];
   currentRound: Round;
   nightStep: NightStep;
-  showRoles: boolean;
-  getRoleLabel: (role: Role) => string;
   onGuardProtect: (targetId: string | null) => void;
   onHalfWolfAcknowledge: (playerId: string) => void;
   onWolfTargets: (targetIds: string[]) => void;
@@ -95,8 +93,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   alivePlayers,
   currentRound,
   nightStep,
-  showRoles,
-  getRoleLabel,
   onGuardProtect,
   onHalfWolfAcknowledge,
   onWolfTargets,
@@ -226,7 +222,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 appearance="night"
                 name={p.name}
                 avatarUrl={p.avatar}
-                role={showRoles ? getRoleLabel(p.role) : undefined}
                 badgeLabel={isSelected ? '🛡 Sẽ bảo vệ' : (isLocked ? '🔒 Vòng trước' : undefined)}
                 badgeVariant={isSelected ? 'green' : 'ash'}
                 isSelected={isSelected}
@@ -444,9 +439,8 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 key={p.id}
                 appearance="night"
                 name={p.name}
-                avatarUrl={p.avatar}
-                role={showRoles ? getRoleLabel(p.role) : undefined}
-                badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : (isWolf ? '🐺 Phe Sói' : undefined)}
+                avatarUrl={isWolf ? WOLF_PACK_AVATAR : p.avatar}
+                badgeLabel={isTarget ? `🎯 Cắn ${maxTargets > 1 ? `#${targetIndex + 1}` : ''}` : undefined}
                 badgeVariant={isTarget ? 'red' : 'ash'}
                 isSelected={isTarget}
                 disabled={isWolf}
@@ -559,7 +553,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 appearance="night"
                 name={player.name}
                 avatarUrl={player.avatar}
-                role={showRoles ? getRoleLabel(player.role) : undefined}
                 badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
                 badgeVariant="red"
                 isSelected={isSelected}
@@ -675,7 +668,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 appearance="night"
                 name={p.name}
                 avatarUrl={p.avatar}
-                role={showRoles ? getRoleLabel(p.role) : undefined}
                 badgeLabel={isSelected ? '👁 Sẽ soi' : undefined}
                 badgeVariant="gold"
                 isSelected={isSelected}
@@ -862,7 +854,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                     appearance="night"
                     name={player.name}
                     avatarUrl={player.avatar}
-                    role={showRoles ? getRoleLabel(player.role) : undefined}
                     badgeLabel={isSelected ? `🔎 #${selectedDetectiveTargets.indexOf(player.id) + 1}` : undefined}
                     badgeVariant="gold"
                     isSelected={isSelected}
@@ -1029,7 +1020,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                     appearance="night"
                     name={p.name}
                     avatarUrl={p.avatar}
-                    role={showRoles ? getRoleLabel(p.role) : undefined}
                     badgeLabel={isPoisonTarget ? '☠️ Đầu độc' : (isWitch ? '🧪 Phù Thủy' : undefined)}
                     badgeVariant={isPoisonTarget ? 'red' : 'ash'}
                     isSelected={isPoisonTarget}
@@ -1143,7 +1133,6 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                 appearance="night"
                 name={player.name}
                 avatarUrl={player.avatar}
-                role={showRoles ? getRoleLabel(player.role) : undefined}
                 badgeLabel={isSelected ? '🎯 Chết cùng' : undefined}
                 badgeVariant="red"
                 isSelected={isSelected}
