@@ -493,6 +493,17 @@ export function submitGuardAction(
   ]);
 }
 
+export function submitHalfWolfAcknowledgement(
+  roomId: string,
+  gameId: string,
+  roundNumber: number,
+  playerId: string,
+): Promise<void> {
+  return updateLiveNightFields(roomId, gameId, roundNumber, [
+    { path: ["liveNightActions", "halfWolfAcknowledgements"], value: arrayUnion(playerId) },
+  ]);
+}
+
 export function submitWolfVotes(
   roomId: string,
   gameId: string,

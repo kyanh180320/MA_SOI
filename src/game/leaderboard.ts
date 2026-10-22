@@ -6,7 +6,7 @@ import type {
   Player,
   WinningTeam,
 } from "./types";
-import { isWolfTeam } from "./win";
+import { isWolfAligned } from "./win";
 
 const BOT_ID_PREFIX = "bot_";
 
@@ -25,7 +25,7 @@ function getPlayerKey(player: Player, isOnlineGame: boolean): string {
 }
 
 function getPlayerTeam(player: Player): WinningTeam {
-  return isWolfTeam(player.role) ? "wolf" : "villager";
+  return isWolfAligned(player) ? "wolf" : "villager";
 }
 
 function createSummaryPlayer(

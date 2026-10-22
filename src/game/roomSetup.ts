@@ -4,6 +4,7 @@ const ALL_ROLES: Role[] = [
   'wolf',
   'wolf_demon',
   'wolf_seer',
+  'half_wolf',
   'villager',
   'seer',
   'detective',
@@ -51,7 +52,7 @@ export function createRoleAssignmentsFromDistribution(
   distribution: RoleDistribution,
 ): RoleAssignments | null {
   if (!isValidRoleDistribution(distribution, playerIds.length)) return null;
-  const roles = ALL_ROLES.flatMap(role => Array<Role>(distribution[role]).fill(role));
+  const roles = ALL_ROLES.flatMap(role => Array<Role>(distribution[role] ?? 0).fill(role));
   return Object.fromEntries(playerIds.map((playerId, index) => [playerId, roles[index]]));
 }
 
@@ -89,6 +90,7 @@ export function getValidRoomSetupDistribution(
     wolf: config.distribution.wolf ?? 0,
     wolf_demon: config.distribution.wolf_demon ?? 0,
     wolf_seer: config.distribution.wolf_seer ?? 0,
+    half_wolf: config.distribution.half_wolf ?? 0,
     villager: config.distribution.villager ?? 0,
     seer: config.distribution.seer ?? 0,
     detective: config.distribution.detective ?? 0,

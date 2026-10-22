@@ -4,12 +4,18 @@ export const isWolfTeam = (role: Role): boolean => (
   role === "wolf" || role === "wolf_demon" || role === "wolf_seer"
 );
 
+/** Bán Sói chỉ thuộc phe Sói sau khi đã chuyển hóa. */
+export const isWolfAligned = (player: Pick<Player, 'role' | 'wolfConvertedAtRound'>): boolean => (
+  isWolfTeam(player.role)
+  || (player.role === 'half_wolf' && player.wolfConvertedAtRound !== undefined)
+);
+
 /**
  * Kiểm tra điều kiện thắng
  */
 export function checkWinner(players: Player[]): "wolf" | "villager" | undefined {
   const alivePlayers = players.filter(p => p.alive);
-  const aliveWolves = alivePlayers.filter(p => isWolfTeam(p.role)).length;
+  const aliveWolves = alivePlayers.filter(isWolfAligned).length;
   const aliveOthers = alivePlayers.length - aliveWolves;
 
   if (aliveWolves === 0) return "villager";

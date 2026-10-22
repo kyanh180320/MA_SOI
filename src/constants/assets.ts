@@ -4,6 +4,7 @@ export const ROLE_CARD_IMAGES: Record<Role, string> = {
   wolf: '/assets/cards/card_wolf.webp',
   wolf_demon: '/assets/cards/card_wolf_demon.webp',
   wolf_seer: '/assets/cards/card_wolf_seer.webp',
+  half_wolf: '/assets/cards/card_half_wolf.webp',
   seer: '/assets/cards/card_seer.webp',
   detective: '/assets/cards/card_detective.webp',
   witch: '/assets/cards/card_witch.webp',
@@ -18,6 +19,7 @@ export const ROLE_MEDALLION_ICONS: Record<Role, string> = {
   wolf: '/assets/icons/icon_wolf_paw.webp',
   wolf_demon: '/assets/icons/icon_wolf_paw_fire_balanced.webp',
   wolf_seer: '/assets/icons/icon_wolf_seer_balanced.webp',
+  half_wolf: '/assets/icons/icon_half_wolf.webp',
   seer: '/assets/icons/icon_eye_balanced.webp',
   detective: '/assets/icons/icon_detective_balanced.webp',
   witch: '/assets/icons/icon_potion_heal_balanced.webp',
@@ -40,6 +42,7 @@ export const NIGHT_ROLE_PROGRESS_ITEMS: Record<NightRoleStep, {
   iconUrl: string;
 }> = {
   guard: { label: 'Bảo Vệ', iconUrl: ROLE_MEDALLION_ICONS.guard },
+  half_wolf: { label: 'Bán Sói', iconUrl: ROLE_MEDALLION_ICONS.half_wolf },
   wolf: { label: 'Ma Sói', iconUrl: ROLE_MEDALLION_ICONS.wolf },
   wolf_seer: { label: 'Sói Tiên Tri', iconUrl: ROLE_MEDALLION_ICONS.wolf_seer },
   seer: { label: 'Tiên Tri', iconUrl: ROLE_MEDALLION_ICONS.seer },

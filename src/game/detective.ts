@@ -1,6 +1,6 @@
 import type { DetectiveCheck, Game, Player } from './types';
 import { normalizeGameRoleSettings } from './roleSettings';
-import { isWolfTeam } from './win';
+import { isWolfAligned } from './win';
 
 export const DETECTIVE_MAX_TARGETS = 3;
 
@@ -25,7 +25,7 @@ export function createDetectiveCheck(
     targets: validTargets,
     hasWolf: validTargets.some(targetId => {
       const target = players.find(player => player.id === targetId);
-      return target ? isWolfTeam(target.role) : false;
+      return target ? isWolfAligned(target) : false;
     }),
   };
 }

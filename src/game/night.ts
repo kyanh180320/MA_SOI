@@ -1,11 +1,11 @@
 import type { Game, NightRoleStep, Player, Round } from "./types";
-import { isWolfTeam } from "./win";
+import { isWolfAligned } from "./win";
 import { normalizeNightRoleOrder } from './nightRoleOrder';
 
 export type { NightRoleStep } from "./types";
 export type NightStep = NightRoleStep | 'done' | 'wait';
 
-export function getWolfTargetLimit(players: Player[]): 1 | 2 {
+export function getWolfTargetLimit(players: readonly Player[]): 1 | 2 {
   return players.some(player => player.alive && player.role === 'wolf_demon') ? 2 : 1;
 }
 
@@ -22,7 +22,7 @@ export function getActiveNightRoleSteps(
 
 export function hasLivingNightRole(players: Player[], step: NightRoleStep): boolean {
   if (step === 'wolf') {
-    return players.some(player => player.alive && isWolfTeam(player.role));
+    return players.some(player => player.alive && isWolfAligned(player));
   }
   return players.some(player => player.alive && player.role === step);
 }
@@ -37,7 +37,7 @@ export function getConfiguredNightRoleSteps(
 ): NightRoleStep[] {
   return normalizeNightRoleOrder(roleOrder).filter(step => {
     if (step === 'wolf') {
-      return players.some(player => isWolfTeam(player.role));
+      return players.some(player => isWolfAligned(player));
     }
     return players.some(player => player.role === step);
   });
@@ -60,6 +60,10 @@ export function getNightStep(
       continue;
     }
     if (step === 'guard' && currentRound.guardProtectTarget === undefined) return step;
+    if (step === 'half_wolf') {
+      const aliveHalfWolves = players.filter(player => player.alive && player.role === 'half_wolf');
+      if (aliveHalfWolves.some(player => !currentRound.halfWolfAcknowledgements?.includes(player.id))) return step;
+    }
     if (step === 'wolf' && currentRound.wolfTargets === undefined && currentRound.wolfTarget === undefined) return step;
     if (step === 'wolf_seer') {
       const aliveWolfSeers = players.filter(player => player.alive && player.role === 'wolf_seer');
@@ -98,6 +102,17 @@ export function mergeRemoteNightActions(local: Game, remote?: Game | null): Game
   if (lr.guardProtectTarget === undefined && rr.guardProtectTarget !== undefined) {
     next.guardProtectTarget = rr.guardProtectTarget;
     changed = true;
+  }
+
+  if (rr.halfWolfAcknowledgements) {
+    const halfWolfAcknowledgements = [...new Set([
+      ...(lr.halfWolfAcknowledgements ?? []),
+      ...rr.halfWolfAcknowledgements,
+    ])];
+    if (halfWolfAcknowledgements.length !== (lr.halfWolfAcknowledgements?.length ?? 0)) {
+      next.halfWolfAcknowledgements = halfWolfAcknowledgements;
+      changed = true;
+    }
   }
 
   const localWolfDone = lr.wolfTargets !== undefined || lr.wolfTarget !== undefined;
@@ -219,13 +234,10 @@ export function resolveHunterShots(
 /**
  * Xử lý kết quả trong đêm (ai chết)
  */
-export function resolveNight(
+function getWolfBiteTargets(
   round: Partial<Pick<Round, 'wolfTarget' | 'wolfTargets' | 'witchSaved' | 'witchSavedTarget' | 'witchPoisonTarget' | 'guardProtectTarget'>>,
-  players?: Player[]
+  players?: readonly Player[],
 ): string[] {
-  const deaths = new Set<string>();
-
-  // Thu thập danh sách người bị sói cắn
   const wolfBites: string[] = [];
   if (round.wolfTargets && round.wolfTargets.length > 0) {
     const maxTargets = players ? getWolfTargetLimit(players) : round.wolfTargets.length;
@@ -234,7 +246,7 @@ export function resolveNight(
       if (target && target !== 'none' && !wolfBites.includes(target)) {
         if (players) {
           const targetPlayer = players.find(p => p.id === target);
-          if (targetPlayer && isWolfTeam(targetPlayer.role)) {
+          if (targetPlayer && isWolfAligned(targetPlayer)) {
             continue;
           }
         }
@@ -245,7 +257,7 @@ export function resolveNight(
     let isValid = true;
     if (players) {
       const targetPlayer = players.find(p => p.id === round.wolfTarget);
-      if (targetPlayer && isWolfTeam(targetPlayer.role)) {
+      if (targetPlayer && isWolfAligned(targetPlayer)) {
         isValid = false;
       }
     }
@@ -254,13 +266,34 @@ export function resolveNight(
     }
   }
 
-  // Xét từng người bị cắn
-  for (const victimId of wolfBites) {
+  return wolfBites;
+}
+
+export function getSuccessfulWolfBiteTargets(
+  round: Partial<Pick<Round, 'wolfTarget' | 'wolfTargets' | 'witchSaved' | 'witchSavedTarget' | 'guardProtectTarget'>>,
+  players?: readonly Player[],
+): string[] {
+  const wolfBites = getWolfBiteTargets(round, players);
+  return wolfBites.filter(victimId => {
     const isProtected = round.guardProtectTarget === victimId;
-    const isSaved = round.witchSavedTarget ? round.witchSavedTarget === victimId : (round.witchSaved && wolfBites.length <= 1);
-    if (!isProtected && !isSaved) {
-      deaths.add(victimId);
-    }
+    const isSaved = round.witchSavedTarget
+      ? round.witchSavedTarget === victimId
+      : Boolean(round.witchSaved && wolfBites.length <= 1);
+    return !isProtected && !isSaved;
+  });
+}
+
+export function resolveNight(
+  round: Partial<Pick<Round, 'wolfTarget' | 'wolfTargets' | 'witchSaved' | 'witchSavedTarget' | 'witchPoisonTarget' | 'guardProtectTarget'>>,
+  players?: Player[]
+): string[] {
+  const deaths = new Set<string>();
+
+  // Bán Sói sống sót qua cú cắn thành công và sẽ chuyển hóa ở cuối đêm.
+  const successfulWolfBites = getSuccessfulWolfBiteTargets(round, players);
+  for (const victimId of successfulWolfBites) {
+    const victim = players?.find(player => player.id === victimId);
+    if (victim?.role !== 'half_wolf' || isWolfAligned(victim)) deaths.add(victimId);
   }
 
   // Phù thủy đầu độc

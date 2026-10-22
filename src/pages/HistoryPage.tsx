@@ -6,7 +6,7 @@ import type { Game, Player, Role } from '../game/types';
 import { canDeleteGameHistory } from '../game/historyAccess';
 import { Button } from '../components/ui';
 import { useDialog } from '../components/dialog';
-import { isWolfTeam } from '../game/win';
+import { isWolfAligned } from '../game/win';
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -70,6 +70,7 @@ export default function HistoryPage() {
       case 'wolf': return 'Sói thường';
       case 'wolf_demon': return 'Sói quỷ';
       case 'wolf_seer': return 'Sói tiên tri';
+      case 'half_wolf': return 'Bán sói';
       case 'seer': return 'Tiên tri';
       case 'detective': return 'Thám tử';
       case 'witch': return 'Phù thủy';
@@ -165,7 +166,7 @@ export default function HistoryPage() {
 
                 {/* 2. Bầy sói */}
                 {(() => {
-                  const wolves = selectedGame.players.filter(p => isWolfTeam(p.role));
+                  const wolves = selectedGame.players.filter(isWolfAligned);
                   const wolfNames = wolves.length > 0 
                     ? wolves.map(w => `${w.name} (${getRoleTitle(w.role)})`).join(', ')
                     : 'Bầy sói';

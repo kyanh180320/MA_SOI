@@ -1,5 +1,5 @@
 import type { Player } from './types';
-import { isWolfTeam } from './win';
+import { isWolfAligned, isWolfTeam } from './win';
 
 export function createWolfLeadershipOrder(players: readonly Player[]): string[] {
   return players.filter(player => isWolfTeam(player.role)).map(player => player.id);
@@ -13,7 +13,7 @@ export function normalizeWolfLeadershipOrder(
   players: readonly Player[],
   storedOrder?: readonly string[],
 ): string[] {
-  const wolfIds = new Set(createWolfLeadershipOrder(players));
+  const wolfIds = new Set(players.filter(isWolfAligned).map(player => player.id));
   const seen = new Set<string>();
   const normalized = (storedOrder ?? []).filter(id => {
     if (!wolfIds.has(id) || seen.has(id)) return false;
@@ -21,14 +21,19 @@ export function normalizeWolfLeadershipOrder(
     return true;
   });
 
+  // Dữ liệu cũ có Bán Sói đã chuyển hóa nhưng chưa cập nhật order: thêm họ
+  // vào đầu để không chiếm vị trí đầu đàn của Sói cũ.
+  const missingConverted = players
+    .filter(player => player.role === 'half_wolf' && isWolfAligned(player) && !seen.has(player.id))
+    .map(player => player.id);
   for (const player of players) {
-    if (wolfIds.has(player.id) && !seen.has(player.id)) {
+    if (player.role !== 'half_wolf' && wolfIds.has(player.id) && !seen.has(player.id)) {
       normalized.push(player.id);
       seen.add(player.id);
     }
   }
 
-  return normalized;
+  return [...missingConverted, ...normalized];
 }
 
 /** Không mutate/pop danh sách: chỉ suy ra Sói cuối cùng còn sống. */
@@ -37,7 +42,7 @@ export function getWolfLeaderId(
   storedOrder?: readonly string[],
 ): string | undefined {
   const aliveWolfIds = new Set(
-    players.filter(player => player.alive && isWolfTeam(player.role)).map(player => player.id),
+    players.filter(player => player.alive && isWolfAligned(player)).map(player => player.id),
   );
   const order = normalizeWolfLeadershipOrder(players, storedOrder);
 

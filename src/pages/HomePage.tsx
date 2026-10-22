@@ -424,7 +424,7 @@ export default function HomePage() {
             <div className={styles.roleOrderHeader}>
               <div>
                 <h3 id="night-role-order-title">THỨ TỰ GỌI VAI BAN ĐÊM</h3>
-                <p>Vai không có trong ván sẽ tự bỏ qua; vai đã chết vẫn dừng để Quản trò gọi giả.</p>
+                <p>Vai không có trong ván sẽ tự bỏ qua; vai đã chết vẫn dừng để Quản trò gọi giả. Bán Sói luôn được gọi trước Bầy Sói.</p>
               </div>
               <button
                 type="button"
@@ -450,7 +450,8 @@ export default function HomePage() {
                       <button
                         type="button"
                         onClick={() => handleMoveNightRole(step, -1)}
-                        disabled={index === 0}
+                        disabled={index === 0
+                          || (step === 'wolf' && nightRoleOrderDraft[index - 1] === 'half_wolf')}
                         aria-label={`Gọi ${item.label} sớm hơn`}
                         title="Gọi sớm hơn"
                       >
@@ -459,7 +460,8 @@ export default function HomePage() {
                       <button
                         type="button"
                         onClick={() => handleMoveNightRole(step, 1)}
-                        disabled={index === nightRoleOrderDraft.length - 1}
+                        disabled={index === nightRoleOrderDraft.length - 1
+                          || (step === 'half_wolf' && nightRoleOrderDraft[index + 1] === 'wolf')}
                         aria-label={`Gọi ${item.label} muộn hơn`}
                         title="Gọi muộn hơn"
                       >

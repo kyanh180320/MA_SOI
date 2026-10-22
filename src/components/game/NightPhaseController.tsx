@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Game, NightRoleStep, Player, Role, Round } from '../../game/types';
 import { getWolfTargetLimit, hasLivingNightRole, type NightStep } from '../../game/night';
-import { isWolfTeam } from '../../game/win';
+import { isWolfAligned } from '../../game/win';
 import { getWolfLeaderId } from '../../game/wolfLeadership';
 import {
   Button,
@@ -26,6 +26,7 @@ export interface NightPhaseControllerProps {
   showRoles: boolean;
   getRoleLabel: (role: Role) => string;
   onGuardProtect: (targetId: string | null) => void;
+  onHalfWolfAcknowledge: (playerId: string) => void;
   onWolfTargets: (targetIds: string[]) => void;
   onWolfSeerCheck: (wolfSeerId: string, targetId: string) => void;
   onSeerCheck: (targetId: string | null) => void;
@@ -45,6 +46,11 @@ const DEAD_ROLE_COPY: Record<NightRoleStep, {
     label: 'BẢO VỆ',
     callInstruction: '“Bảo Vệ thức dậy và chọn người muốn bảo vệ.”',
     accent: 'var(--green-400)',
+  },
+  half_wolf: {
+    label: 'BÁN SÓI',
+    callInstruction: '“Bán Sói thức dậy, kiểm tra điện thoại rồi đi ngủ.”',
+    accent: 'var(--gold-300)',
   },
   wolf: {
     label: 'BẦY SÓI',
@@ -86,6 +92,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   showRoles,
   getRoleLabel,
   onGuardProtect,
+  onHalfWolfAcknowledge,
   onWolfTargets,
   onWolfSeerCheck,
   onSeerCheck,
@@ -264,15 +271,61 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
   }
 
   // 2. LƯỢT SÓI
+  if (nightStep === 'half_wolf') {
+    const aliveHalfWolves = alivePlayers.filter(player => player.role === 'half_wolf');
+    return (
+      <Panel>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+          <img
+            src={ROLE_CARD_IMAGES.half_wolf}
+            alt="Bán Sói"
+            style={{ width: '46px', height: '69px', borderRadius: '6px', objectFit: 'cover', border: '1.5px solid var(--gold-300)' }}
+          />
+          <div>
+            <h3 style={{ color: 'var(--gold-300)', fontFamily: 'var(--font-title)', margin: '0 0 4px', fontSize: '18px' }}>
+              🌗 BÁN SÓI KIỂM TRA ĐIỆN THOẠI
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+              Đọc: “Bán Sói thức dậy, kiểm tra điện thoại rồi đi ngủ.”
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+          {aliveHalfWolves.map(player => {
+            const acknowledged = currentRound.halfWolfAcknowledgements?.includes(player.id) ?? false;
+            return (
+              <div key={player.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', padding: '10px 12px', border: '1px solid rgba(201, 162, 74, 0.35)', borderRadius: 'var(--radius-sm)' }}>
+                <div>
+                  <strong>{player.name}</strong>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '12px', marginTop: '2px' }}>
+                    {acknowledged ? '✓ Đã kiểm tra và đi ngủ' : 'Đang chờ xác nhận trên điện thoại'}
+                  </div>
+                </div>
+                <Button
+                  variant={acknowledged ? 'ghost' : 'secondary'}
+                  disabled={acknowledged}
+                  onClick={() => onHalfWolfAcknowledge(player.id)}
+                >
+                  {acknowledged ? 'ĐÃ XONG' : 'XÁC NHẬN HỘ'}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+    );
+  }
+
   if (nightStep === 'wolf') {
-    const aliveWolves = alivePlayers.filter(p => isWolfTeam(p.role));
+    const aliveWolves = alivePlayers.filter(isWolfAligned);
     const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
     const maxTargets = getWolfTargetLimit(game.players);
     const wolfVotesMap = currentRound?.wolfVotes || {};
     const wolfLeaderId = getWolfLeaderId(game.players, game.wolfLeadershipOrder);
     const wolfLeader = aliveWolves.find(wolf => wolf.id === wolfLeaderId);
     const validTargetIds = new Set(
-      alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => player.id),
+      alivePlayers.filter(player => !isWolfAligned(player)).map(player => player.id),
     );
     const rawLeaderTargets = wolfLeaderId ? (wolfVotesMap[wolfLeaderId] ?? []) : [];
     const leaderTargets = [...new Set(rawLeaderTargets.filter(targetId => validTargetIds.has(targetId)))];
@@ -285,7 +338,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
 
     const toggleWolfTarget = (id: string) => {
       const targetPlayer = game.players.find(p => p.id === id);
-      if (!targetPlayer || isWolfTeam(targetPlayer.role)) return;
+      if (!targetPlayer || isWolfAligned(targetPlayer)) return;
 
       if (wolfTargetsToConfirm.includes(id)) {
         setWolfSelectionDraft({
@@ -390,7 +443,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
           {alivePlayers.map(p => {
             const targetIndex = wolfTargetsToConfirm.indexOf(p.id);
             const isTarget = targetIndex !== -1;
-            const isWolf = isWolfTeam(p.role);
+            const isWolf = isWolfAligned(p);
             const isAtLimit = maxTargets > 1 && !isTarget && wolfTargetsToConfirm.length >= maxTargets;
 
             return (
@@ -504,7 +557,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s-2)' }}>
-          {alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => {
+          {alivePlayers.filter(player => !isWolfAligned(player)).map(player => {
             const isSelected = selectedWolfSeerTarget === player.id;
             return (
               <PlayerTile
@@ -647,7 +700,7 @@ export const NightPhaseController: React.FC<NightPhaseControllerProps> = ({
                   setSeerResultModal({
                     targetId: selectedPlayer.id,
                     name: selectedPlayer.name,
-                    isWolf: isWolfTeam(selectedPlayer.role)
+                    isWolf: isWolfAligned(selectedPlayer)
                   });
                 }
               }}

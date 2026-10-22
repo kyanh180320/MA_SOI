@@ -3,6 +3,7 @@ import type { GameRoom, AppUser, Role, Player } from '../game/types';
 import { Button, Panel, Badge, RoleCard, PlayerTile, Modal } from './ui';
 import {
   submitGuardAction,
+  submitHalfWolfAcknowledgement,
   submitDetectiveAction,
   submitHunterAction,
   submitSeerAction,
@@ -11,7 +12,7 @@ import {
   submitWolfSeerAction,
   submitWolfVotes,
 } from '../services/roomService';
-import { isWolfTeam } from '../game/win';
+import { isWolfAligned } from '../game/win';
 import { ROLE_CARD_IMAGES, CARD_BACK_IMAGE, NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
 import styles from './PlayerLiveView.module.css';
 import { LazyCardSelectionRitual } from './LazyCardSelectionRitual';
@@ -62,6 +63,14 @@ export const ROLE_DETAILS: Record<Role, {
     color: "var(--purple-400)",
     description: "Thức dậy cùng bầy Sói để chọn con mồi, sau đó có một lượt riêng soi 1 người ngoài phe Sói để biết người đó có chức năng đặc biệt hay chỉ là Dân Làng.",
     actionHint: "🌙 Ban đêm: Cùng bầy Sói chọn người cắn, rồi soi chức năng của 1 người phe Dân."
+  },
+  half_wolf: {
+    name: "BÁN SÓI",
+    team: "Phe Dân Làng",
+    icon: "🌗🐺",
+    color: "var(--gold-300)",
+    description: "Ban đầu bạn sống như Dân Làng và không có năng lực. Nếu sống sót qua một cú cắn của Ma Sói, bạn sẽ bí mật hóa Sói từ đêm kế tiếp.",
+    actionHint: "🌙 Khi được gọi: Kiểm tra điện thoại, xác nhận trạng thái rồi đi ngủ. Nếu đã hóa Sói, hãy thức dậy ở lượt Bầy Sói ngay sau đó."
   },
   seer: {
     name: "TIÊN TRI",
@@ -143,10 +152,22 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   const [witchSaveActive, setWitchSaveActive] = useState(false);
   const [selectedWitchPoison, setSelectedWitchPoison] = useState<string | null>(null);
   const [selectedHunterTarget, setSelectedHunterTarget] = useState<string | null>(null);
+  const [isRoleRevealed, setIsRoleRevealed] = useState(false);
+  const [dismissedWolfRecruitNoticeKey, setDismissedWolfRecruitNoticeKey] = useState<string | null>(null);
   const wolfVoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
     if (wolfVoteTimerRef.current) clearTimeout(wolfVoteTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const hideRole = () => setIsRoleRevealed(false);
+    window.addEventListener('blur', hideRole);
+    document.addEventListener('visibilitychange', hideRole);
+    return () => {
+      window.removeEventListener('blur', hideRole);
+      document.removeEventListener('visibilitychange', hideRole);
+    };
   }, []);
 
   // Khai báo hook trước nhánh loading để thứ tự hook luôn ổn định khi gameData được đồng bộ.
@@ -203,10 +224,30 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   })();
 
   const roleInfo = ROLE_DETAILS[myPlayer.role] || ROLE_DETAILS['villager'];
+  const displayedRoleInfo = myPlayer.role === 'half_wolf' && myPlayer.wolfConvertedAtRound !== undefined
+    ? {
+      ...roleInfo,
+      team: 'Phe Ma Sói',
+      color: 'var(--red-300)',
+      description: 'Bạn đã sống sót qua cú cắn và bí mật gia nhập Phe Ma Sói. Từ mỗi đêm tiếp theo, hãy thức dậy cùng bầy và đề xuất con mồi cho Sói Đầu Đàn.',
+      actionHint: '🌙 Ban đêm: Kiểm tra trạng thái ở lượt Bán Sói, đi ngủ, rồi thức dậy ngay khi Quản trò gọi Bầy Sói.',
+    }
+    : roleInfo;
+  const wolfRecruitNotice = (() => {
+    if (currentPhase !== 'night' || nightStep !== 'wolf' || !previousRound?.halfWolfConvertedIds?.length) return null;
+    if (!myPlayer.alive || !isWolfAligned(myPlayer) || previousRound.halfWolfConvertedIds.includes(myPlayer.id)) return null;
+    const key = `half_wolf_recruit_${game.id}_${previousRound.number}_${myPlayer.id}`;
+    if (dismissedWolfRecruitNoticeKey === key || sessionStorage.getItem(key)) return null;
+    const names = previousRound.halfWolfConvertedIds
+      .map(id => game.players.find(candidate => candidate.id === id)?.name)
+      .filter((name): name is string => Boolean(name));
+    return names.length > 0 ? { key, names } : null;
+  })();
 
   const handleRitualComplete = () => {
     sessionStorage.setItem(ritualKey, 'true');
     setShowRitual(false);
+    setIsRoleRevealed(false);
   };
   const alivePlayers = game.players.filter(p => p.alive);
 
@@ -235,7 +276,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   // -------------------------------------------------------------
   // XỬ LÝ LOGIC RIÊNG CỦA BẦY SÓI (Đầu đàn & Sói Quỷ)
   // -------------------------------------------------------------
-  const aliveWolves = game.players.filter(p => p.alive && isWolfTeam(p.role));
+  const aliveWolves = game.players.filter(p => p.alive && isWolfAligned(p));
   const hasDemonWolf = aliveWolves.some(p => p.role === 'wolf_demon');
   const wolfTargetLimit = getWolfTargetLimit(game.players);
   const wolfVotesMap = currentRound?.wolfVotes || {};
@@ -261,7 +302,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
   // Xử lý khi Sói bấm chọn mục tiêu
   const handleSelectWolfTarget = (targetId: string) => {
     const targetPlayer = game.players.find(p => p.id === targetId);
-    if (!targetPlayer || isWolfTeam(targetPlayer.role)) return;
+    if (!targetPlayer || isWolfAligned(targetPlayer)) return;
 
     const selectionLimit = isWolfLeader ? wolfTargetLimit : 1;
     let nextTargets: string[];
@@ -286,7 +327,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     try {
       const validTargets = [...new Set(myWolfTargets)].filter(id => {
         const p = game.players.find(player => player.id === id);
-        return p?.alive && !isWolfTeam(p.role);
+        return p?.alive && !isWolfAligned(p);
       });
       if (validTargets.length > wolfTargetLimit) {
         await showAlert({
@@ -385,6 +426,22 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     }
   };
 
+  const handleAcknowledgeHalfWolf = async () => {
+    setIsSubmitting(true);
+    try {
+      await submitHalfWolfAcknowledgement(room.id, game.id, roundNumber, myPlayer.id);
+    } catch (error) {
+      console.error('Lỗi xác nhận trạng thái Bán Sói:', error);
+      await showAlert({
+        title: 'Chưa xác nhận được',
+        message: 'Trạng thái Bán Sói chưa được gửi. Hãy kiểm tra kết nối và thử lại.',
+        tone: 'danger',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // -------------------------------------------------------------
   // XỬ LÝ LOGIC CỦA TIÊN TRI
   // -------------------------------------------------------------
@@ -393,7 +450,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
     const targetPlayer = game.players.find(p => p.id === selectedSeerTarget);
     if (!targetPlayer) return;
 
-    const isWolf = isWolfTeam(targetPlayer.role);
+    const isWolf = isWolfAligned(targetPlayer);
     setSeerResultModal({ target: targetPlayer, isWolf });
   };
 
@@ -556,10 +613,10 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       )}
 
       {/* HIỆU ỨNG RÚT BÀI ĐỊNH MỆNH KHI QUẢN TRÒ BẮT ĐẦU VÁN */}
-      {showRitual && myPlayer && roleInfo && (
+      {showRitual && myPlayer && displayedRoleInfo && (
         <LazyCardSelectionRitual
           myRole={myPlayer.role}
-          roleInfo={roleInfo}
+          roleInfo={displayedRoleInfo}
           onComplete={handleRitualComplete}
         />
       )}
@@ -729,8 +786,39 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       {/* 3. KHU VỰC THAO TÁC TRONG ĐÊM KHI ĐẾN LƯỢT VAI TRÒ CỦA BẢN THÂN */}
       {currentPhase === 'night' && myPlayer && myPlayer.alive && (
         <div className={styles.nightActionSection}>
+          {/* BÁN SÓI KIỂM TRA TRẠNG THÁI TRƯỚC KHI GỌI BẦY SÓI */}
+          {nightStep === 'half_wolf'
+            && myPlayer.role === 'half_wolf'
+            && !currentRound.halfWolfAcknowledgements?.includes(myPlayer.id) && (
+            <div className={`${styles.actionPanel} ${myPlayer.wolfConvertedAtRound !== undefined ? styles.actionPanelWolf : ''}`}>
+              <div className={styles.actionHeader}>
+                <h3 className={styles.actionTitle} style={{ color: myPlayer.wolfConvertedAtRound !== undefined ? 'var(--red-300)' : 'var(--gold-300)' }}>
+                  🌗 BÁN SÓI KIỂM TRA ĐIỆN THOẠI
+                </h3>
+                <Badge variant={myPlayer.wolfConvertedAtRound !== undefined ? 'red' : 'gold'}>
+                  {myPlayer.wolfConvertedAtRound !== undefined ? 'ĐÃ HÓA SÓI' : 'CHƯA BIẾN ĐỔI'}
+                </Badge>
+              </div>
+
+              <div className={myPlayer.wolfConvertedAtRound !== undefined ? styles.wolfAlertDisagreement : styles.wolfAlertConsensus}>
+                {myPlayer.wolfConvertedAtRound !== undefined
+                  ? '🐺 Bạn đã bị Ma Sói cắn và đã trở thành Sói. Hãy nhắm mắt lại; khi Quản trò gọi Bầy Sói ngay sau đây, bạn thức dậy cùng họ.'
+                  : '🌙 Bạn chưa bị Ma Sói cắn. Bạn chưa có năng lực ban đêm và hãy tiếp tục đi ngủ.'}
+              </div>
+
+              <Button
+                variant={myPlayer.wolfConvertedAtRound !== undefined ? 'danger' : 'secondary'}
+                fullWidth
+                disabled={isSubmitting}
+                onClick={handleAcknowledgeHalfWolf}
+              >
+                {isSubmitting ? 'ĐANG XÁC NHẬN…' : 'ĐÃ HIỂU — ĐI NGỦ'}
+              </Button>
+            </div>
+          )}
+
           {/* A. THAO TÁC CỦA BẦY MA SÓI */}
-          {nightStep === 'wolf' && isWolfTeam(myPlayer.role) && (
+          {nightStep === 'wolf' && isWolfAligned(myPlayer) && (
             <div className={`${styles.actionPanel} ${styles.actionPanelWolf}`}>
               <div className={styles.actionHeader}>
                 <h3 className={styles.actionTitle} style={{ color: 'var(--red-300)' }}>
@@ -792,7 +880,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               {/* LƯỚI CHỌN MỤC TIÊU CẮN (NGƯỜI CÒN SỐNG TRỪ PHE SÓI) */}
               <div className={styles.targetSelectionGrid}>
                 {alivePlayers.map(p => {
-                  const isWolf = isWolfTeam(p.role);
+                  const isWolf = isWolfAligned(p);
                   const isSelected = myWolfTargets.includes(p.id);
 
                   return (
@@ -861,7 +949,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
               </p>
 
               <div className={styles.targetSelectionGrid}>
-                {alivePlayers.filter(player => !isWolfTeam(player.role)).map(player => {
+                {alivePlayers.filter(player => !isWolfAligned(player)).map(player => {
                   const isSelected = selectedWolfSeerTarget === player.id;
                   return (
                     <PlayerTile
@@ -1255,7 +1343,8 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
 
           {/* H. DÀNH CHO CÁC VAI TRÒ KHÁC KHI ĐANG NGỦ TRONG ĐÊM */}
           {((nightStep === 'guard' && myPlayer.role !== 'guard') ||
-            (nightStep === 'wolf' && !isWolfTeam(myPlayer.role)) ||
+            (nightStep === 'half_wolf' && (myPlayer.role !== 'half_wolf' || currentRound.halfWolfAcknowledgements?.includes(myPlayer.id))) ||
+            (nightStep === 'wolf' && !isWolfAligned(myPlayer)) ||
             (nightStep === 'wolf_seer' && (myPlayer.role !== 'wolf_seer' || myWolfSeerCheck !== undefined)) ||
             (nightStep === 'seer' && myPlayer.role !== 'seer') ||
             (nightStep === 'detective' && (myPlayer.role !== 'detective' || myDetectiveCheck !== undefined)) ||
@@ -1272,6 +1361,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
                 <span>Quản trò đang bí mật gọi: </span>
                 <strong>
                   {nightStep === 'guard' && '🛡️ BẢO VỆ'}
+                  {nightStep === 'half_wolf' && '🌗🐺 BÁN SÓI'}
                   {nightStep === 'wolf' && '🐺 BẦY MA SÓI'}
                   {nightStep === 'wolf_seer' && '👁️🐺 SÓI TIÊN TRI'}
                   {nightStep === 'seer' && '🔮 TIÊN TRI'}
@@ -1287,7 +1377,7 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       )}
 
       {/* 4. THẺ BÀI VAI TRÒ CỦA NGƯỜI CHƠI */}
-      {myPlayer && roleInfo ? (
+      {myPlayer && displayedRoleInfo ? (
         <div className={styles.cardSection}>
           <div className={styles.cardHint}>
             <div className={styles.cardHintTitle}>
@@ -1311,38 +1401,57 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
             </button>
           </div>
 
-          {/* LÁ BÀI 3D VỚI NGHỆ THUẬT VAI TRÒ LUÔN MỞ SẴN */}
+          <Button
+            variant={isRoleRevealed ? 'secondary' : 'primary'}
+            fullWidth
+            onClick={() => setIsRoleRevealed(current => !current)}
+          >
+            {isRoleRevealed ? '🔒 CHE VAI TRÒ' : '👁️ LẬT XEM VAI TRÒ'}
+          </Button>
+
+          {/* Úp cả lá bài và nội dung chi tiết để người ngồi cạnh không nhìn lén. */}
           <div className={styles.cardWrapper}>
             <RoleCard
-              roleName={roleInfo.name}
-              teamName={roleInfo.team}
+              roleName={displayedRoleInfo.name}
+              teamName={displayedRoleInfo.team}
               artUrl={myPlayer?.role ? ROLE_CARD_IMAGES[myPlayer.role] : undefined}
               cardBackUrl={CARD_BACK_IMAGE}
-              icon={roleInfo.icon}
-              faceDown={false}
-              flipped={false}
+              icon={displayedRoleInfo.icon}
+              faceDown={true}
+              flipped={isRoleRevealed}
               spawnAnimation={false}
-              interactive={false}
+              interactive={true}
+              onFlip={setIsRoleRevealed}
             />
           </div>
 
           {/* BẢNG GIẢI THÍCH CHI TIẾT VAI TRÒ */}
-          <div className={styles.roleDetailCard}>
+          {isRoleRevealed ? <div className={styles.roleDetailCard}>
             <div className={styles.roleDetailHeader}>
               <span className={styles.roleDetailTitle}>
-                {roleInfo.icon} {roleInfo.name}
+                {displayedRoleInfo.icon} {displayedRoleInfo.name}
               </span>
-              <Badge variant={roleInfo.team === 'Phe Ma Sói' ? 'red' : 'gold'}>
-                {roleInfo.team}
+              <Badge variant={isWolfAligned(myPlayer) ? 'red' : 'gold'}>
+                {isWolfAligned(myPlayer) ? 'Phe Ma Sói • Đã biến đổi' : displayedRoleInfo.team}
               </Badge>
             </div>
 
-            <p className={styles.roleDesc}>{roleInfo.description}</p>
+            <p className={styles.roleDesc}>
+              {myPlayer.role === 'half_wolf' && myPlayer.wolfConvertedAtRound !== undefined
+                ? 'Bạn đã sống sót qua cú cắn và bí mật gia nhập Phe Ma Sói. Từ mỗi đêm tiếp theo, hãy thức dậy cùng bầy và đề xuất con mồi cho Sói Đầu Đàn.'
+                : displayedRoleInfo.description}
+            </p>
 
             <div className={styles.roleActionHint}>
-              {roleInfo.actionHint}
+              {myPlayer.role === 'half_wolf' && myPlayer.wolfConvertedAtRound !== undefined
+                ? '🌙 Ban đêm: Kiểm tra trạng thái ở lượt Bán Sói, đi ngủ, rồi thức dậy ngay khi Quản trò gọi Bầy Sói.'
+                : displayedRoleInfo.actionHint}
             </div>
-          </div>
+          </div> : (
+            <div className={styles.roleDetailCard} style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+              Vai trò và mô tả đang được che. Chạm “Lật xem vai trò” khi không có người nhìn vào màn hình.
+            </div>
+          )}
         </div>
       ) : (
         /* CHẾ ĐỘ KHÁN GIẢ (NẾU VÀO PHÒNG SAU KHI GAME BẮT ĐẦU) */
@@ -1356,6 +1465,33 @@ export const PlayerLiveView: React.FC<PlayerLiveViewProps> = ({ room, user, onLe
       )}
 
       {/* MODAL KẾT QUẢ TIÊN TRI SOI THÂN PHẬN */}
+      {wolfRecruitNotice && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            sessionStorage.setItem(wolfRecruitNotice.key, 'true');
+            setDismissedWolfRecruitNoticeKey(wolfRecruitNotice.key);
+          }}
+          title="🐺 BẦY SÓI CÓ THÀNH VIÊN MỚI"
+          footer={
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={() => {
+                sessionStorage.setItem(wolfRecruitNotice.key, 'true');
+                setDismissedWolfRecruitNoticeKey(wolfRecruitNotice.key);
+              }}
+            >
+              ĐÃ RÕ — TIẾP TỤC ĐI SĂN
+            </Button>
+          }
+        >
+          <p style={{ margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
+            Bầy đã cắn trúng Bán Sói. <strong>{wolfRecruitNotice.names.join(', ')}</strong> đã gia nhập bầy và được quyền đề xuất con mồi từ đêm nay.
+          </p>
+        </Modal>
+      )}
+
       {wolfSeerResultModal !== null && (
         <Modal
           isOpen={true}

@@ -1,9 +1,9 @@
 import type { Player, Role, WolfSeerCheck } from './types';
-import { isWolfTeam } from './win';
+import { isWolfAligned } from './win';
 
 /** Dân Làng là vai duy nhất không có chức năng đặc biệt. */
 export function hasSpecialAbility(role: Role): boolean {
-  return role !== 'villager';
+  return role !== 'villager' && role !== 'half_wolf';
 }
 
 /**
@@ -15,7 +15,7 @@ export function createWolfSeerCheck(
   targetId: string,
 ): WolfSeerCheck | null {
   const target = players.find(player => player.id === targetId && player.alive);
-  if (!target || isWolfTeam(target.role)) return null;
+  if (!target || isWolfAligned(target)) return null;
 
   return {
     target: target.id,

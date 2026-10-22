@@ -3,7 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { resolveHunterShots, resolveNight, mergeRemoteNightActions, getConfiguredNightRoleSteps, getNightStep, getWolfTargetLimit } from '../game/night';
-import { checkWinner, isWolfTeam } from '../game/win';
+import { checkWinner, isWolfAligned } from '../game/win';
+import { getHalfWolfConversionIds, prependConvertedWolves } from '../game/halfWolf';
+import { normalizeWolfLeadershipOrder } from '../game/wolfLeadership';
 import { createRematchGame } from '../game/rematch';
 import { isExpectedGameReady } from '../game/playEntry';
 import type { NightRoleStep, Role, Player } from '../game/types';
@@ -13,6 +15,7 @@ import {
   submitDeadRoleSkipAction,
   submitDetectiveAction,
   submitGuardAction,
+  submitHalfWolfAcknowledgement,
   submitHunterAction,
   submitSeerAction,
   submitWitchAction,
@@ -220,6 +223,7 @@ export default function PlayPage() {
       case 'wolf': return '🐺 Sói';
       case 'wolf_demon': return '😈 Sói quỷ';
       case 'wolf_seer': return '👁️🐺 Sói tiên tri';
+      case 'half_wolf': return '🌗🐺 Bán sói';
       case 'seer': return '👁 Tiên tri';
       case 'detective': return '🔎 Thám tử';
       case 'witch': return '🧪 Phù thủy';
@@ -269,11 +273,30 @@ export default function PlayPage() {
     }
   };
 
+  const handleHalfWolfAcknowledge = (playerId: string) => {
+    if (currentRound.halfWolfAcknowledgements?.includes(playerId)) return;
+    updateGameLocally(g => {
+      const rounds = [...g.rounds];
+      const round = rounds[rounds.length - 1];
+      rounds[rounds.length - 1] = {
+        ...round,
+        halfWolfAcknowledgements: [...(round.halfWolfAcknowledgements ?? []), playerId],
+      };
+      return { ...g, rounds };
+    });
+    if (game.roomId) {
+      syncModeratorNightAction(
+        'xác nhận của Bán Sói',
+        submitHalfWolfAcknowledgement(game.roomId, game.id, currentRound.number, playerId),
+      );
+    }
+  };
+
   const handleWolfTargets = (targetIds: string[]) => {
     const maxTargets = getWolfTargetLimit(game.players);
     const validTargetIds = [...new Set(targetIds)].filter(id => {
       const player = game.players.find(candidate => candidate.id === id);
-      return player?.alive && !isWolfTeam(player.role);
+      return player?.alive && !isWolfAligned(player);
     }).slice(0, maxTargets);
     const selectedTargets = validTargetIds.length > 0 ? validTargetIds : ['none'];
 
@@ -297,7 +320,7 @@ export default function PlayPage() {
   const handleSeerCheck = (targetId: string | null) => {
     const target = targetId ? game.players.find(player => player.id === targetId) : null;
     const seerCheck = targetId
-      ? { target: targetId, isWolf: target ? isWolfTeam(target.role) : false }
+      ? { target: targetId, isWolf: target ? isWolfAligned(target) : false }
       : { target: 'none', isWolf: false };
 
     updateGameLocally(g => {
@@ -495,15 +518,26 @@ export default function PlayPage() {
   const finishNight = () => {
     const lastRound = game.rounds[game.rounds.length - 1];
     const nightDeaths = resolveNight(lastRound, game.players);
+    const halfWolfConvertedIds = getHalfWolfConversionIds(lastRound, game.players)
+      .filter(playerId => !nightDeaths.includes(playerId));
     const hunterResolution = resolveHunterShots(nightDeaths, lastRound, game.players);
-    const newPlayers = game.players.map(p => 
-      hunterResolution.deaths.includes(p.id) ? { ...p, alive: false } : p
+    const newPlayers = game.players.map(player => {
+      if (hunterResolution.deaths.includes(player.id)) return { ...player, alive: false };
+      if (halfWolfConvertedIds.includes(player.id)) {
+        return { ...player, wolfConvertedAtRound: lastRound.number };
+      }
+      return player;
+    });
+    const wolfLeadershipOrder = prependConvertedWolves(
+      normalizeWolfLeadershipOrder(game.players, game.wolfLeadershipOrder),
+      halfWolfConvertedIds,
     );
 
     const shotTargets = Object.values(hunterResolution.shots);
     const resolvedRound = {
       ...lastRound,
       nightDeaths,
+      ...(halfWolfConvertedIds.length > 0 ? { halfWolfConvertedIds } : {}),
       ...(shotTargets.length > 0 ? {
         hunterShotTarget: shotTargets[0],
         hunterShotTargets: hunterResolution.shots,
@@ -520,6 +554,7 @@ export default function PlayPage() {
         return {
           ...g,
           players: newPlayers,
+          wolfLeadershipOrder,
           rounds
         };
       });
@@ -536,6 +571,7 @@ export default function PlayPage() {
       return {
         ...g,
         players: newPlayers,
+        wolfLeadershipOrder,
         rounds,
         phase: winner ? 'ended' : 'day',
         winner
@@ -1000,6 +1036,7 @@ export default function PlayPage() {
               showRoles={showRoles}
               getRoleLabel={getRoleLabel}
               onGuardProtect={handleGuardProtect}
+              onHalfWolfAcknowledge={handleHalfWolfAcknowledge}
               onWolfTargets={handleWolfTargets}
               onWolfSeerCheck={handleWolfSeerCheck}
               onSeerCheck={handleSeerCheck}

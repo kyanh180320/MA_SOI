@@ -35,6 +35,7 @@ function countRoles(game: Game): Record<Role, number> {
     wolf: 0,
     wolf_demon: 0,
     wolf_seer: 0,
+    half_wolf: 0,
     villager: 0,
     seer: 0,
     detective: 0,
@@ -51,7 +52,7 @@ describe('createRematchGame', () => {
     expect(rematch.id).toBe('game_200');
     expect(rematch.roomId).toBe(endedGame.roomId);
     expect(rematch.createdAt).toBe(200);
-    expect(rematch.nightRoleOrder).toEqual(endedGame.nightRoleOrder);
+    expect(rematch.nightRoleOrder).toEqual(['half_wolf', ...endedGame.nightRoleOrder!]);
     expect(rematch.roleSettings).toEqual(endedGame.roleSettings);
     expect(rematch.phase).toBe('night');
     expect(rematch.winner).toBeUndefined();

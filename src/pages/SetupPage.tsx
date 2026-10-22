@@ -82,6 +82,7 @@ function SvgAvatarSilhouette() {
 const ROLE_ITEMS: { id: Role; name: string; icon: string; desc: string }[] = [
   { id: 'wolf', name: 'MA SÓI', icon: '/assets/icons/icon_wolf_paw.webp', desc: 'Phe Sói cắn người mỗi đêm' },
   { id: 'wolf_seer', name: 'SÓI TIÊN TRI', icon: '/assets/icons/icon_wolf_seer_balanced.webp', desc: 'Soi chức năng 1 người phe Dân' },
+  { id: 'half_wolf', name: 'BÁN SÓI', icon: '/assets/icons/icon_half_wolf.webp', desc: 'Hóa Sói sau khi sống sót qua cú cắn' },
   { id: 'villager', name: 'DÂN LÀNG', icon: '/assets/icons/icon_sun.webp', desc: 'Phe Dân suy luận & biểu quyết' },
   { id: 'seer', name: 'TIÊN TRI', icon: '/assets/icons/icon_eye_balanced.webp', desc: 'Soi phe 1 người mỗi đêm' },
   { id: 'detective', name: 'THÁM TỬ', icon: '/assets/icons/icon_detective_balanced.webp', desc: 'Soi nhóm 3 người mỗi đêm' },
@@ -330,6 +331,7 @@ export default function SetupPage() {
       wolf: 0,
       wolf_demon: 0,
       wolf_seer: 0,
+      half_wolf: 0,
       seer: 0,
       detective: 0,
       witch: 0,

@@ -25,6 +25,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
       wolf: wolves,
       wolf_demon: 0,
       wolf_seer: 0,
+      half_wolf: 0,
       seer,
       detective,
       witch,
@@ -62,7 +63,7 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   specialCount = Math.min(specialCount, maxSpecialAllowed);
 
   // Xáo trộn danh sách vai đặc biệt để chọn ra subset (sẽ có role bị thiếu để game đa dạng)
-  const specialPool: Role[] = ["seer", "detective", "witch", "guard", "hunter"];
+  const specialPool: Role[] = ["seer", "detective", "witch", "guard", "hunter", "half_wolf"];
   // Shuffle pool
   for (let i = specialPool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -76,13 +77,15 @@ export function getRoleDistribution(n: number, options?: { randomize?: boolean }
   const witch = selectedSpecials.has("witch") ? 1 : 0;
   const guard = selectedSpecials.has("guard") ? 1 : 0;
   const hunter = selectedSpecials.has("hunter") ? 1 : 0;
+  const halfWolf = selectedSpecials.has("half_wolf") ? 1 : 0;
 
-  const villager = n - totalWolves - seer - detective - witch - guard - hunter;
+  const villager = n - totalWolves - seer - detective - witch - guard - hunter - halfWolf;
 
   return {
     wolf: normalWolfCount,
     wolf_demon: wolfDemonCount,
     wolf_seer: wolfSeerCount,
+    half_wolf: halfWolf,
     seer,
     detective,
     witch,

@@ -10,6 +10,7 @@ function getPreviousRoleDistribution(game: Game): Record<Role, number> {
     wolf: 0,
     wolf_demon: 0,
     wolf_seer: 0,
+    half_wolf: 0,
     villager: 0,
     seer: 0,
     detective: 0,

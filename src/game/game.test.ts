@@ -24,6 +24,7 @@ describe('online sync', () => {
       gameId: game.id,
       roundNumber: 2,
       guardProtectTarget: 'v1',
+      halfWolfAcknowledgements: ['hw1'],
       wolfVotes: { w1: ['v1'] },
       wolfSeerChecks: { ws1: { target: 'v1', hasAbility: false } },
       hunterTargets: { h1: 'v1' },
@@ -31,6 +32,7 @@ describe('online sync', () => {
     });
 
     expect(hydrated.rounds[0].guardProtectTarget).toBe('v1');
+    expect(hydrated.rounds[0].halfWolfAcknowledgements).toEqual(['hw1']);
     expect(hydrated.rounds[0].wolfVotes).toEqual({ w1: ['v1'] });
     expect(hydrated.rounds[0].wolfSeerChecks).toEqual({ ws1: { target: 'v1', hasAbility: false } });
     expect(hydrated.rounds[0].hunterTargets).toEqual({ h1: 'v1' });
@@ -133,6 +135,15 @@ describe('mergeRemoteNightActions', () => {
       'seer',
     ]);
   });
+
+  it('merges independent half-wolf acknowledgements without losing local ones', () => {
+    const local = withRound(base, { halfWolfAcknowledgements: ['hw1'] });
+    const remote = withRound(base, { halfWolfAcknowledgements: ['hw2'] });
+    expect(mergeRemoteNightActions(local, remote)?.rounds[0].halfWolfAcknowledgements).toEqual([
+      'hw1',
+      'hw2',
+    ]);
+  });
 });
 
 describe('roles', () => {
@@ -143,31 +154,31 @@ describe('roles', () => {
     });
 
     it('should correctly distribute roles for 4 players with a single wolf', () => {
-      expect(getRoleDistribution(4)).toEqual({ wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 });
+      expect(getRoleDistribution(4)).toEqual({ wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 });
     });
 
     it('should correctly distribute roles for 5 players with a single wolf', () => {
-      expect(getRoleDistribution(5)).toEqual({ wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 3 });
+      expect(getRoleDistribution(5)).toEqual({ wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 6 players', () => {
-      expect(getRoleDistribution(6)).toEqual({ wolf: 2, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 3 });
+      expect(getRoleDistribution(6)).toEqual({ wolf: 2, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 7 players', () => {
-      expect(getRoleDistribution(7)).toEqual({ wolf: 2, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 1, guard: 0, hunter: 0, villager: 3 });
+      expect(getRoleDistribution(7)).toEqual({ wolf: 2, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 1, guard: 0, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 9 players', () => {
-      expect(getRoleDistribution(9)).toEqual({ wolf: 3, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 3 });
+      expect(getRoleDistribution(9)).toEqual({ wolf: 3, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 3 });
     });
 
     it('should correctly distribute roles for 12 players', () => {
-      expect(getRoleDistribution(12)).toEqual({ wolf: 4, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 5 });
+      expect(getRoleDistribution(12)).toEqual({ wolf: 4, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 5 });
     });
 
     it('should correctly distribute roles for 15 players', () => {
-      expect(getRoleDistribution(15)).toEqual({ wolf: 5, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 7 });
+      expect(getRoleDistribution(15)).toEqual({ wolf: 5, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 1, guard: 1, hunter: 0, villager: 7 });
     });
 
     it('should provide dynamic balanced distribution that totals to n and may omit some roles', () => {
@@ -184,7 +195,7 @@ describe('roles', () => {
   describe('assignRoles', () => {
     it('should assign roles according to distribution', () => {
       const players = Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, name: `Player ${i}` }));
-      const distribution = { wolf: 2, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 1, guard: 0, hunter: 0, villager: 3 };
+      const distribution = { wolf: 2, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 1, guard: 0, hunter: 0, villager: 3 };
       
       const assigned = assignRoles(players, distribution);
       
@@ -198,13 +209,13 @@ describe('roles', () => {
 
     it('should throw error if distribution total does not match player count', () => {
       const players = [{ id: '1', name: 'A' }];
-      const distribution = { wolf: 2, wolf_demon: 0, wolf_seer: 0, seer: 0, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 0 };
+      const distribution = { wolf: 2, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 0, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 0 };
       expect(() => assignRoles(players, distribution)).toThrowError();
     });
 
     it('uses exact test-role assignments when every player and role count matches', () => {
       const players = ['a', 'b', 'c', 'd'].map(id => ({ id, name: id }));
-      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
 
       const assigned = assignRoles(players, distribution, {
         fixedRoleAssignments: { a: 'seer', b: 'villager', c: 'wolf', d: 'villager' },
@@ -221,7 +232,7 @@ describe('roles', () => {
 
     it('rejects stale or count-mismatched test-role assignments', () => {
       const players = ['a', 'b', 'c', 'd'].map(id => ({ id, name: id }));
-      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
 
       expect(() => assignRoles(players, distribution, {
         fixedRoleAssignments: { a: 'seer', b: 'villager', c: 'wolf', stale: 'villager' },
@@ -239,7 +250,7 @@ describe('roles', () => {
         { id: 'p4', name: 'D', role: 'villager', alive: true },
       ];
       const players = previousPlayers.map(({ id, name }) => ({ id, name }));
-      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
 
       const assigned = assignRoles(players, distribution, { previousPlayers, random: () => 0 });
 
@@ -255,7 +266,7 @@ describe('roles', () => {
         { id: 'p5', name: 'E', role: 'villager', alive: true },
       ];
       const players = previousPlayers.map(({ id, name }) => ({ id, name }));
-      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 0, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 4 };
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, half_wolf: 0, seer: 0, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 4 };
 
       const assigned = assignRoles(players, distribution, { previousPlayers, random: () => 0.5 });
       const repeatCount = assigned.filter((player, index) => player.role === previousPlayers[index].role).length;
@@ -468,10 +479,11 @@ describe('night', () => {
         player('h1', 'hunter'),
         player('v1', 'villager'),
       ];
-      const customOrder = ['wolf', 'wolf_seer', 'seer', 'detective', 'hunter', 'guard', 'witch'] as const;
+      const customOrder = ['half_wolf', 'wolf', 'wolf_seer', 'seer', 'detective', 'hunter', 'guard', 'witch'] as const;
+      const configuredOrder = customOrder.filter(step => step !== 'half_wolf');
       const round = { number: 1, nightDeaths: [] };
 
-      expect(getConfiguredNightRoleSteps(players, customOrder)).toEqual(customOrder);
+      expect(getConfiguredNightRoleSteps(players, customOrder)).toEqual(configuredOrder);
       expect(getNightStep(round, players, customOrder)).toBe('wolf');
       expect(getNightStep({ ...round, wolfTargets: ['v1'] }, players, customOrder)).toBe('wolf_seer');
     });

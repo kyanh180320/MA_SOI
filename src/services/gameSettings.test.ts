@@ -20,7 +20,7 @@ function createStorage(initialValue: string | null = null) {
 describe('game settings', () => {
   it('saves and reloads the moderator night role order', () => {
     const storage = createStorage();
-    const customOrder = ['wolf', 'wolf_seer', 'seer', 'detective', 'hunter', 'guard', 'witch'] as const;
+    const customOrder = ['guard', 'half_wolf', 'wolf', 'wolf_seer', 'seer', 'detective', 'hunter', 'witch'] as const;
 
     saveNightRoleOrder(customOrder, storage);
 
@@ -29,7 +29,7 @@ describe('game settings', () => {
 
   it('uses the default order when stored JSON is invalid', () => {
     expect(loadNightRoleOrder(createStorage('{broken'))).toEqual([
-      'guard', 'wolf', 'wolf_seer', 'seer', 'detective', 'witch', 'hunter',
+      'guard', 'half_wolf', 'wolf', 'wolf_seer', 'seer', 'detective', 'witch', 'hunter',
     ]);
   });
 

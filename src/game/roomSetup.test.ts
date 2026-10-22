@@ -14,6 +14,7 @@ const customFourPlayerRoles: RoleDistribution = {
   wolf: 1,
   wolf_demon: 0,
   wolf_seer: 0,
+  half_wolf: 0,
   villager: 1,
   seer: 0,
   detective: 0,
@@ -50,6 +51,7 @@ describe('room setup configuration', () => {
       wolf: 0,
       wolf_demon: 0,
       wolf_seer: 0,
+      half_wolf: 0,
       villager: 0,
       seer: 0,
       detective: 0,
@@ -87,6 +89,7 @@ describe('room setup configuration', () => {
     expect(getValidRoomSetupDistribution(createConfig({ distribution: oldDistribution }), 4)).toEqual({
       ...oldDistribution,
       wolf_seer: 0,
+      half_wolf: 0,
       detective: 0,
     });
   });
@@ -128,6 +131,7 @@ describe('room setup configuration', () => {
       wolf: 1,
       wolf_demon: 0,
       wolf_seer: 0,
+      half_wolf: 0,
       villager: playerCount - 1,
       seer: 0,
       detective: 0,

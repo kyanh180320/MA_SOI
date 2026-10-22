@@ -48,6 +48,12 @@ export function applyLiveNightActions(game: Game, live?: LiveNightActions): Game
   const mergedRound = {
     ...currentRound,
     ...(live.guardProtectTarget !== undefined ? { guardProtectTarget: live.guardProtectTarget } : {}),
+    ...(live.halfWolfAcknowledgements !== undefined
+      ? { halfWolfAcknowledgements: [...new Set([
+        ...(currentRound.halfWolfAcknowledgements || []),
+        ...live.halfWolfAcknowledgements,
+      ])] }
+      : {}),
     ...(live.wolfTarget !== undefined ? { wolfTarget: live.wolfTarget } : {}),
     ...(live.wolfTargets !== undefined ? { wolfTargets: live.wolfTargets } : {}),
     ...(live.wolfVotes !== undefined
