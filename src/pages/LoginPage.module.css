@@ -155,7 +155,7 @@
 .avatarHero p { margin: 4px 0 0; color: #999aa7; font-size: 11px; line-height: 1.4; }
 
 .avatarSection { margin-top: 13px; }
-.avatarGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+.avatarGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 
 .avatarOption {
   min-width: 0;

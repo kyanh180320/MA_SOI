@@ -4,16 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { validateUsername } from '../game/username';
 import { lookupUsername, type UsernameLookup } from '../services/authService';
 import { prepareAvatarImage } from '../services/avatarImage';
+import { PLAYER_AVATAR_PRESETS } from '../constants/assets';
 import styles from './LoginPage.module.css';
-
-const PRESET_AVATARS = [
-  { label: 'Ma Sói', url: '/assets/icons/icon_wolf_paw_fire_balanced.webp' },
-  { label: 'Dân Làng', url: '/assets/icons/icon_sun.webp' },
-  { label: 'Tiên Tri', url: '/assets/icons/icon_eye_balanced.webp' },
-  { label: 'Phù Thủy', url: '/assets/icons/icon_potion_heal_balanced.webp' },
-  { label: 'Bảo Vệ', url: '/assets/icons/icon_shield_balanced.webp' },
-  { label: 'Thợ Săn', url: '/assets/icons/icon_swords_alt_balanced.webp' },
-];
 
 type LookupState =
   | { kind: 'idle' }
@@ -26,7 +18,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { user, loginUsername } = useAuth();
   const [username, setUsername] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState(PRESET_AVATARS[0].url);
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(PLAYER_AVATAR_PRESETS[0].url);
   const [avatarBlob, setAvatarBlob] = useState<Blob | undefined>();
   const [avatarPreview, setAvatarPreview] = useState('');
   const [lookupState, setLookupState] = useState<LookupState>({ kind: 'idle' });
@@ -190,7 +182,7 @@ export default function LoginPage() {
           {!isExisting && (
             <div className={styles.avatarSection}>
               <div className={styles.avatarGrid}>
-                {PRESET_AVATARS.map(avatar => (
+                {PLAYER_AVATAR_PRESETS.map((avatar, index) => (
                   <button
                     key={avatar.url}
                     type="button"
@@ -203,7 +195,13 @@ export default function LoginPage() {
                     aria-label={`Chọn avatar ${avatar.label}`}
                     aria-pressed={!avatarBlob && selectedAvatar === avatar.url}
                   >
-                    <img src={avatar.url} alt="" />
+                    <img
+                      src={avatar.url}
+                      alt=""
+                      width="64"
+                      height="64"
+                      loading={index < 5 ? 'eager' : 'lazy'}
+                    />
                   </button>
                 ))}
                 <button

@@ -25,6 +25,8 @@ import {
 } from "../game/onlineSync";
 import { canUseRoleAssignmentCheat, isCleanupManager } from "../game/adminAccess";
 import { canEnterRoom, isRoomDeletionConfirmed } from "../game/roomAccess";
+import { normalizeBotMemberAvatars, pickAvailableAvatar } from "../game/avatarPool";
+import { PLAYER_AVATAR_URLS } from "../constants/assets";
 
 /** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
 export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
@@ -104,12 +106,26 @@ export function subscribeRoom(roomId: string, callback: (room: GameRoom | null) 
   return onSnapshot(roomRef, { includeMetadataChanges: true }, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data() as GameRoom;
-      const gameData = data.gameData
+      const members = normalizeBotMemberAvatars(data.members || [], PLAYER_AVATAR_URLS);
+      const botAvatarById = new Map(
+        members.filter(member => member.isBot).map(member => [member.uid, member.avatar]),
+      );
+      const mergedGameData = data.gameData
         ? applyLiveNightActions(data.gameData, data.liveNightActions)
+        : undefined;
+      const gameData = mergedGameData
+        ? {
+            ...mergedGameData,
+            players: mergedGameData.players.map(player => ({
+              ...player,
+              avatar: botAvatarById.get(player.id) || player.avatar,
+            })),
+          }
         : undefined;
       callback({
         ...data,
         id: docSnap.id,
+        members,
         gameData,
         syncState: docSnap.metadata.fromCache
           ? "offline"
@@ -141,7 +157,7 @@ export async function joinRoom(roomId: string, user?: AppUser | null): Promise<v
     }
 
     const room = snap.data() as GameRoom;
-    const currentMembers = room.members || [];
+    const currentMembers = normalizeBotMemberAvatars(room.members || [], PLAYER_AVATAR_URLS);
     const isAlreadyMember = currentMembers.some(m => m.uid === playerUid);
 
     if (isAlreadyMember) {
@@ -233,7 +249,7 @@ export async function addBotToRoom(roomId: string): Promise<void> {
     if (!snap.exists()) throw new Error("Phòng không tồn tại.");
 
     const room = snap.data() as GameRoom;
-    const currentMembers = room.members || [];
+    const currentMembers = normalizeBotMemberAvatars(room.members || [], PLAYER_AVATAR_URLS);
 
     if (getPlayerMembers(currentMembers).length >= room.maxPlayers) {
       throw new Error(`Phòng đã đầy (${room.maxPlayers}/${room.maxPlayers} người).`);
@@ -241,11 +257,12 @@ export async function addBotToRoom(roomId: string): Promise<void> {
 
     const usedNames = new Set(currentMembers.map(m => m.displayName));
     const availableName = BOT_NAMES.find(n => !usedNames.has(n)) || `Bot #${currentMembers.length + 1} 🤖`;
+    const usedAvatars = new Set(currentMembers.map(member => member.avatar).filter((avatar): avatar is string => Boolean(avatar)));
 
     const botMember: RoomMember = {
       uid: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       displayName: availableName,
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(availableName)}`,
+      avatar: pickAvailableAvatar(PLAYER_AVATAR_URLS, usedAvatars, getPlayerMembers(currentMembers).length),
       isHost: false,
       isBot: true,
       joinedAt: Date.now()
@@ -265,7 +282,7 @@ export async function addBotsUntil(roomId: string, targetTotal: number = 6): Pro
     if (!snap.exists()) throw new Error("Phòng không tồn tại.");
 
     const room = snap.data() as GameRoom;
-    const currentMembers = [...(room.members || [])];
+    const currentMembers = normalizeBotMemberAvatars(room.members || [], PLAYER_AVATAR_URLS);
     const maxLimit = Math.min(room.maxPlayers, targetTotal);
 
     if (getPlayerMembers(currentMembers).length >= maxLimit) {
@@ -273,6 +290,7 @@ export async function addBotsUntil(roomId: string, targetTotal: number = 6): Pro
     }
 
     const usedNames = new Set(currentMembers.map(m => m.displayName));
+    const usedAvatars = new Set(currentMembers.map(member => member.avatar).filter((avatar): avatar is string => Boolean(avatar)));
     let availableIndex = 0;
 
     while (getPlayerMembers(currentMembers).length < maxLimit) {
@@ -287,12 +305,13 @@ export async function addBotsUntil(roomId: string, targetTotal: number = 6): Pro
       const botMember: RoomMember = {
         uid: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         displayName: botName,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(botName)}`,
+        avatar: pickAvailableAvatar(PLAYER_AVATAR_URLS, usedAvatars, getPlayerMembers(currentMembers).length),
         isHost: false,
         isBot: true,
         joinedAt: Date.now()
       };
       currentMembers.push(botMember);
+      if (botMember.avatar) usedAvatars.add(botMember.avatar);
     }
 
     transaction.update(roomRef, {

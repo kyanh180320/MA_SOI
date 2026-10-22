@@ -15,19 +15,8 @@ import {
   saveGameRoleSettings,
   saveNightRoleOrder,
 } from '../services/gameSettings';
-import { NIGHT_ROLE_PROGRESS_ITEMS } from '../constants/assets';
+import { NIGHT_ROLE_PROGRESS_ITEMS, PLAYER_AVATAR_PRESETS } from '../constants/assets';
 import styles from './HomePage.module.css';
-
-const PRESET_AVATARS = [
-  { label: 'Sói', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=WolfLeader' },
-  { label: 'Sói Quỷ', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=DemonWolf' },
-  { label: 'Tiên Tri', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=MysticSeer' },
-  { label: 'Phù Thủy', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=ArcaneWitch' },
-  { label: 'Bảo Vệ', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=IronGuard' },
-  { label: 'Thợ Săn', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=WildHunter' },
-  { label: 'Dân Làng', url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=GoodVillager' },
-  { label: 'Bóng Đêm', url: 'https://api.dicebear.com/7.x/micah/svg?seed=DarkShadow' }
-];
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -758,9 +747,9 @@ export default function HomePage() {
               Hoặc chọn Avatar có sẵn:
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-              {PRESET_AVATARS.map((p, idx) => (
+              {PLAYER_AVATAR_PRESETS.map((p, idx) => (
                 <div
-                  key={idx}
+                  key={p.url}
                   onClick={() => {
                     clearUploadedAvatarPreview();
                     setEditAvatarBlob(undefined);
@@ -778,7 +767,14 @@ export default function HomePage() {
                     gap: '4px'
                   }}
                 >
-                  <img src={p.url} alt={p.label} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                  <img
+                    src={p.url}
+                    alt={p.label}
+                    width="40"
+                    height="40"
+                    loading={idx < 4 ? 'eager' : 'lazy'}
+                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
                   <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{p.label}</span>
                 </div>
               ))}

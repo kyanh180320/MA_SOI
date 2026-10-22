@@ -16,6 +16,21 @@ export const ROLE_CARD_IMAGES: Record<Role, string> = {
 export const CARD_BACK_IMAGE = '/assets/cards/card_back.webp';
 export const WOLF_PACK_AVATAR = '/assets/ui/wolf-pack-avatar.webp';
 
+export const PLAYER_AVATAR_PRESETS = [
+  { label: 'Aria', url: '/assets/avatars/avatar-aria.webp' },
+  { label: 'Yvaine', url: '/assets/avatars/avatar-yvaine.webp' },
+  { label: 'Garrick', url: '/assets/avatars/avatar-garrick.webp' },
+  { label: 'Freya', url: '/assets/avatars/avatar-freya.webp' },
+  { label: 'Val', url: '/assets/avatars/avatar-val.webp' },
+  { label: 'Tora', url: '/assets/avatars/avatar-tora.webp' },
+  { label: 'Rowan', url: '/assets/avatars/avatar-rowan.webp' },
+  { label: 'Lyra', url: '/assets/avatars/avatar-lyra.webp' },
+  { label: 'Kael', url: '/assets/avatars/avatar-kael.webp' },
+  { label: 'Selene', url: '/assets/avatars/avatar-selene.webp' },
+] as const;
+
+export const PLAYER_AVATAR_URLS = PLAYER_AVATAR_PRESETS.map(avatar => avatar.url);
+
 export const ROLE_MEDALLION_ICONS: Record<Role, string> = {
   wolf: '/assets/icons/icon_wolf_paw.webp',
   wolf_demon: '/assets/icons/icon_wolf_paw_fire_balanced.webp',
