@@ -1,8 +1,9 @@
-import type { Role, Player } from "./types";
+import type { Role, Player, RoleAssignments } from "./types";
 import { RULES } from "./config";
 
 export interface AssignRolesOptions {
   previousPlayers?: ReadonlyArray<Pick<Player, "id" | "role">>;
+  fixedRoleAssignments?: Readonly<RoleAssignments>;
   random?: () => number;
 }
 
@@ -173,6 +174,34 @@ export function assignRoles(
 
   if (rolesArray.length !== players.length) {
     throw new Error("Số lượng vai không khớp với số lượng người chơi");
+  }
+
+  if (options?.fixedRoleAssignments) {
+    const playerIds = new Set(players.map(player => player.id));
+    const assignedIds = Object.keys(options.fixedRoleAssignments);
+    if (assignedIds.length !== players.length || assignedIds.some(id => !playerIds.has(id))) {
+      throw new Error("Danh sách gán vai test không khớp với người chơi hiện tại");
+    }
+
+    const remainingRoles = new Map<Role, number>();
+    for (const role of rolesArray) {
+      remainingRoles.set(role, (remainingRoles.get(role) ?? 0) + 1);
+    }
+
+    const fixedRoles = players.map(player => {
+      const role = options.fixedRoleAssignments?.[player.id];
+      if (!role || (remainingRoles.get(role) ?? 0) <= 0) {
+        throw new Error("Vai test đã chọn không khớp với cấu hình số lượng vai");
+      }
+      remainingRoles.set(role, (remainingRoles.get(role) ?? 0) - 1);
+      return role;
+    });
+
+    return players.map((player, index) => ({
+      ...player,
+      role: fixedRoles[index],
+      alive: true,
+    }));
   }
 
   const random = options?.random ?? Math.random;

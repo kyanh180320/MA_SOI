@@ -15,8 +15,9 @@ import {
 } from '../services/roomService';
 import type { GameRoom, Game } from '../game/types';
 import { getRoleDistribution, assignRoles } from '../game/roles';
-import { getValidRoomSetupDistribution } from '../game/roomSetup';
+import { getValidRoomSetupDistribution, getValidRoomTestRoleAssignments } from '../game/roomSetup';
 import { createWolfLeadershipOrder } from '../game/wolfLeadership';
+import { canUseRoleAssignmentCheat } from '../game/adminAccess';
 import { RULES } from '../game/config';
 import { Button, Panel, Badge, PlayerTile } from '../components/ui';
 import { PlayerLiveView } from '../components/PlayerLiveView';
@@ -91,6 +92,13 @@ export default function RoomPage() {
   const members = room.members || [];
   // Chủ phòng là Quản trò nên không tham gia chơi
   const playerMembers = getPlayerMembers(members);
+  const canUseTestRoleAssignment = isHost && canUseRoleAssignmentCheat(user);
+  const savedTestRoleAssignments = canUseTestRoleAssignment
+    ? getValidRoomTestRoleAssignments(
+        room.setupConfig,
+        playerMembers.map(player => player.uid),
+      )
+    : null;
 
   const handleLeave = async () => {
     if (!roomId) return;
@@ -195,7 +203,7 @@ export default function RoomPage() {
 
   // Khởi động nhanh bằng cấu hình đã lưu; phòng cũ chưa có cấu hình mới tự cân bằng.
   const handleQuickStart = async () => {
-    if (!roomId || isStartingGame) return;
+    if (!roomId || !user || !isHost || isStartingGame) return;
     if (playerMembers.length < RULES.minPlayers) {
       await showAlert({
         title: 'Chưa đủ người chơi',
@@ -219,6 +227,15 @@ export default function RoomPage() {
       });
       return;
     }
+    if (canUseTestRoleAssignment && room.setupConfig?.testRoleAssignments && !savedTestRoleAssignments) {
+      await showAlert({
+        title: 'Gán vai test không còn khớp',
+        message: 'Danh sách người chơi đã thay đổi hoặc số lượng vai test không còn hợp lệ. Hãy mở “Tuỳ chỉnh vai trò” và gán lại trước khi bắt đầu.',
+        tone: 'warning',
+        confirmLabel: 'Đã hiểu',
+      });
+      return;
+    }
 
     setIsStartingGame(true);
     try {
@@ -232,6 +249,7 @@ export default function RoomPage() {
 
       const assignedPlayers = assignRoles(players, distribution, {
         previousPlayers: room.gameData?.players,
+        fixedRoleAssignments: savedTestRoleAssignments ?? undefined,
       });
       const newGame: Game = {
         id: `game_${Date.now()}`,
@@ -246,7 +264,11 @@ export default function RoomPage() {
         roomId: room.id
       };
 
-      await syncRoomGame(room.id, newGame);
+      await syncRoomGame(room.id, newGame, {
+        hostUid: user.uid,
+        expectedPlayerIds: players.map(player => player.id),
+        expectedCurrentGameId: room.gameData?.id ?? null,
+      });
       flushSync(() => replaceRemoteGame(newGame));
       // Quản trò vào thẳng bàn điều khiển; nghi thức xòe bài chỉ dành cho người chơi.
       navigate('/play', { state: { expectedGameId: newGame.id } });
@@ -506,6 +528,16 @@ export default function RoomPage() {
               </>
             ) : (
               <>
+                {savedTestRoleAssignments && (
+                  <Panel compact style={{ textAlign: 'center' }}>
+                    <strong style={{ color: 'var(--red-300)', fontSize: '13px' }}>
+                      🧪 GÁN VAI TEST ĐANG BẬT
+                    </strong>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '3px' }}>
+                      Bắt đầu nhanh sẽ dùng đúng vai đã chọn cho từng người.
+                    </div>
+                  </Panel>
+                )}
                 {/* NÚT BẮT ĐẦU VÁN NGAY TRỰC TIẾP */}
                 <Button
                   variant="primary"

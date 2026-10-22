@@ -15,7 +15,7 @@ import {
 import { db, auth } from "./firebase";
 import type { DetectiveCheck, GameRoom, RoomMember, AppUser, Game, LiveNightActions, NightRoleStep, RoomSetupConfig, WolfSeerCheck } from "../game/types";
 import { mergeRemoteNightActions } from "../game/night";
-import { isValidRoleDistribution } from "../game/roomSetup";
+import { getValidRoomTestRoleAssignments, hasSamePlayerRoster, isValidRoleDistribution } from "../game/roomSetup";
 import {
   applyLiveNightActions,
   createLiveNightActionsBaseline,
@@ -23,7 +23,7 @@ import {
   sanitizeMembersForSync,
   sanitizeRoomAvatar,
 } from "../game/onlineSync";
-import { isCleanupManager } from "../game/adminAccess";
+import { canUseRoleAssignmentCheat, isCleanupManager } from "../game/adminAccess";
 
 /** Danh sách người chơi thật sự trong phòng (chủ phòng là Quản trò nên KHÔNG tính) */
 export const getPlayerMembers = (members?: RoomMember[]): RoomMember[] =>
@@ -329,7 +329,7 @@ export async function removeBotFromRoom(roomId: string, botUid?: string): Promis
  */
 export async function saveRoomSetupConfig(
   roomId: string,
-  hostUid: string,
+  actor: AppUser,
   config: RoomSetupConfig,
 ): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
@@ -339,7 +339,7 @@ export async function saveRoomSetupConfig(
     if (!snap.exists()) throw new Error("Phòng đã bị giải tán.");
 
     const room = snap.data() as GameRoom;
-    if (room.hostUid !== hostUid) {
+    if (room.hostUid !== actor.uid) {
       throw new Error("Chỉ Quản trò mới có thể lưu cấu hình vai trò.");
     }
 
@@ -351,23 +351,58 @@ export async function saveRoomSetupConfig(
       throw new Error("Số lượng vai trò chưa khớp với số người trong phòng.");
     }
 
+    const playerIds = getPlayerMembers(room.members).map(member => member.uid);
+    const testRoleAssignments = config.testRoleAssignments
+      ? getValidRoomTestRoleAssignments(config, playerIds)
+      : null;
+    if (config.testRoleAssignments && !canUseRoleAssignmentCheat(actor)) {
+      throw new Error('Chỉ tài khoản kyanh mới có thể lưu cấu hình gán vai test.');
+    }
+    if (config.testRoleAssignments && !testRoleAssignments) {
+      throw new Error('Danh sách người chơi hoặc vai test vừa thay đổi. Hãy gán lại vai.');
+    }
+
     transaction.update(roomRef, {
       setupConfig: {
         playerCount: actualPlayerCount,
         distribution: { ...config.distribution },
+        ...(testRoleAssignments ? { testRoleAssignments } : {}),
         updatedAt: config.updatedAt,
       },
     });
   });
 }
 
-export async function syncRoomGame(roomId: string, game: Game): Promise<void> {
+export async function syncRoomGame(
+  roomId: string,
+  game: Game,
+  startGuard?: {
+    hostUid: string;
+    expectedPlayerIds: readonly string[];
+    expectedCurrentGameId: string | null;
+  },
+): Promise<void> {
   const roomRef = doc(db, "rooms", roomId);
   // Chỉ cập nhật nếu phòng còn tồn tại, tuyệt đối không tạo lại phòng đã bị chủ phòng xoá
   await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(roomRef);
-    if (!snap.exists()) return;
+    if (!snap.exists()) {
+      if (startGuard) throw new Error('Phòng đã bị giải tán.');
+      return;
+    }
     const room = snap.data() as GameRoom;
+    if (startGuard) {
+      if (room.hostUid !== startGuard.hostUid) {
+        throw new Error('Chỉ Quản trò mới có thể bắt đầu ván.');
+      }
+      const actualPlayerIds = getPlayerMembers(room.members).map(member => member.uid);
+      if (!hasSamePlayerRoster(startGuard.expectedPlayerIds, actualPlayerIds)) {
+        throw new Error('Danh sách người chơi vừa thay đổi. Hãy kiểm tra và bắt đầu lại.');
+      }
+      if ((room.gameData?.id ?? null) !== startGuard.expectedCurrentGameId) {
+        throw new Error('Một ván khác vừa được bắt đầu. Hãy tải lại phòng.');
+      }
+    }
     const remote = room.gameData
       ? applyLiveNightActions(room.gameData, room.liveNightActions)
       : undefined;

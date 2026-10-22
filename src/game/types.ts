@@ -1,5 +1,6 @@
 export type Role = "wolf" | "wolf_demon" | "wolf_seer" | "villager" | "seer" | "detective" | "witch" | "guard" | "hunter";
 export type RoleDistribution = Record<Role, number>;
+export type RoleAssignments = Record<string, Role>;
 export type NightRoleStep = Exclude<Role, "villager" | "wolf_demon">;
 export type Phase = "setup" | "night" | "day" | "vote" | "ended";
 export type WinningTeam = "wolf" | "villager";
@@ -150,6 +151,8 @@ export interface RoomMember {
 export interface RoomSetupConfig {
   playerCount: number;
   distribution: RoleDistribution;
+  /** Chỉ dành cho chế độ test nội bộ; thiếu field này thì vẫn chia vai ngẫu nhiên. */
+  testRoleAssignments?: RoleAssignments;
   updatedAt: number;
 }
 

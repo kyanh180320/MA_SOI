@@ -9,3 +9,8 @@ export function isCleanupManager(user?: AppUser | null): boolean {
   const usernameKey = user.usernameKey || normalizeUsername(user.displayName);
   return usernameKey === CLEANUP_MANAGER_USERNAME;
 }
+
+/** Quyền gán vai thủ công để test game; chỉ là feature gate cho nhóm nội bộ. */
+export function canUseRoleAssignmentCheat(user?: AppUser | null): boolean {
+  return isCleanupManager(user);
+}

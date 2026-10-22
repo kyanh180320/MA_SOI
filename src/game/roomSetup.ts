@@ -1,4 +1,4 @@
-import type { Role, RoleDistribution, RoomSetupConfig } from './types';
+import type { Role, RoleAssignments, RoleDistribution, RoomSetupConfig } from './types';
 
 const ALL_ROLES: Role[] = [
   'wolf',
@@ -11,6 +11,53 @@ const ALL_ROLES: Role[] = [
   'guard',
   'hunter',
 ];
+
+function emptyRoleDistribution(): RoleDistribution {
+  return Object.fromEntries(ALL_ROLES.map(role => [role, 0])) as RoleDistribution;
+}
+
+export function hasSamePlayerRoster(
+  expectedPlayerIds: readonly string[],
+  actualPlayerIds: readonly string[],
+): boolean {
+  if (expectedPlayerIds.length !== actualPlayerIds.length) return false;
+  const expectedIds = new Set(expectedPlayerIds);
+  const actualIds = new Set(actualPlayerIds);
+  return expectedIds.size === expectedPlayerIds.length
+    && actualIds.size === actualPlayerIds.length
+    && actualPlayerIds.every(playerId => expectedIds.has(playerId));
+}
+
+export function getRoleAssignmentDistribution(
+  assignments: Readonly<RoleAssignments>,
+  playerIds: readonly string[],
+): RoleDistribution | null {
+  const expectedIds = new Set(playerIds);
+  const assignedIds = Object.keys(assignments);
+  if (expectedIds.size !== playerIds.length || assignedIds.length !== playerIds.length) return null;
+  if (assignedIds.some(id => !expectedIds.has(id))) return null;
+
+  const distribution = emptyRoleDistribution();
+  for (const playerId of playerIds) {
+    const role = assignments[playerId];
+    if (!ALL_ROLES.includes(role)) return null;
+    distribution[role] += 1;
+  }
+  return distribution;
+}
+
+export function createRoleAssignmentsFromDistribution(
+  playerIds: readonly string[],
+  distribution: RoleDistribution,
+): RoleAssignments | null {
+  if (!isValidRoleDistribution(distribution, playerIds.length)) return null;
+  const roles = ALL_ROLES.flatMap(role => Array<Role>(distribution[role]).fill(role));
+  return Object.fromEntries(playerIds.map((playerId, index) => [playerId, roles[index]]));
+}
+
+function hasSameDistribution(left: RoleDistribution, right: RoleDistribution): boolean {
+  return ALL_ROLES.every(role => left[role] === right[role]);
+}
 
 export function isValidRoleDistribution(
   distribution: RoleDistribution,
@@ -51,4 +98,24 @@ export function getValidRoomSetupDistribution(
   };
   if (!isValidRoleDistribution(normalizedDistribution, actualPlayerCount)) return null;
   return normalizedDistribution;
+}
+
+/**
+ * Chỉ nhận gán vai test khi đủ đúng UID hiện tại và số lượng từng vai vẫn khớp
+ * distribution đã lưu. Trả về bản sao để caller không mutate snapshot.
+ */
+export function getValidRoomTestRoleAssignments(
+  config: RoomSetupConfig | undefined,
+  actualPlayerIds: readonly string[],
+): RoleAssignments | null {
+  if (!config?.testRoleAssignments || config.playerCount !== actualPlayerIds.length) return null;
+  const distribution = getValidRoomSetupDistribution(config, actualPlayerIds.length);
+  const assignmentDistribution = getRoleAssignmentDistribution(
+    config.testRoleAssignments,
+    actualPlayerIds,
+  );
+  if (!distribution || !assignmentDistribution || !hasSameDistribution(distribution, assignmentDistribution)) {
+    return null;
+  }
+  return { ...config.testRoleAssignments };
 }

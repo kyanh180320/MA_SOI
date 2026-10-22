@@ -202,6 +202,35 @@ describe('roles', () => {
       expect(() => assignRoles(players, distribution)).toThrowError();
     });
 
+    it('uses exact test-role assignments when every player and role count matches', () => {
+      const players = ['a', 'b', 'c', 'd'].map(id => ({ id, name: id }));
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
+
+      const assigned = assignRoles(players, distribution, {
+        fixedRoleAssignments: { a: 'seer', b: 'villager', c: 'wolf', d: 'villager' },
+      });
+
+      expect(assigned.map(player => [player.id, player.role])).toEqual([
+        ['a', 'seer'],
+        ['b', 'villager'],
+        ['c', 'wolf'],
+        ['d', 'villager'],
+      ]);
+      expect(assigned.every(player => player.alive)).toBe(true);
+    });
+
+    it('rejects stale or count-mismatched test-role assignments', () => {
+      const players = ['a', 'b', 'c', 'd'].map(id => ({ id, name: id }));
+      const distribution = { wolf: 1, wolf_demon: 0, wolf_seer: 0, seer: 1, detective: 0, witch: 0, guard: 0, hunter: 0, villager: 2 };
+
+      expect(() => assignRoles(players, distribution, {
+        fixedRoleAssignments: { a: 'seer', b: 'villager', c: 'wolf', stale: 'villager' },
+      })).toThrowError('Danh sách gán vai test không khớp');
+      expect(() => assignRoles(players, distribution, {
+        fixedRoleAssignments: { a: 'seer', b: 'seer', c: 'wolf', d: 'villager' },
+      })).toThrowError('Vai test đã chọn không khớp');
+    });
+
     it('minimizes repeated roles from the previous game', () => {
       const previousPlayers: Player[] = [
         { id: 'p1', name: 'A', role: 'wolf', alive: true },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCleanupManager } from './adminAccess';
+import { canUseRoleAssignmentCheat, isCleanupManager } from './adminAccess';
 import type { AppUser } from './types';
 
 function player(displayName: string, usernameKey?: string): AppUser {
@@ -17,5 +17,11 @@ describe('isCleanupManager', () => {
   it('does not accept similar usernames', () => {
     expect(isCleanupManager(player('kyanh 2'))).toBe(false);
     expect(isCleanupManager(player('ky-anh'))).toBe(false);
+  });
+
+  it('uses the same exact username gate for manual test-role assignment', () => {
+    expect(canUseRoleAssignmentCheat(player('Kỳ Anh', 'kyanh'))).toBe(true);
+    expect(canUseRoleAssignmentCheat(player('kyanh 2'))).toBe(false);
+    expect(canUseRoleAssignmentCheat(null)).toBe(false);
   });
 });

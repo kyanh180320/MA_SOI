@@ -4,14 +4,20 @@ import { flushSync } from 'react-dom';
 import { useGame } from '../context/GameContext';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDistribution, assignRoles } from '../game/roles';
-import { getValidRoomSetupDistribution } from '../game/roomSetup';
+import {
+  createRoleAssignmentsFromDistribution,
+  getRoleAssignmentDistribution,
+  getValidRoomSetupDistribution,
+  getValidRoomTestRoleAssignments,
+} from '../game/roomSetup';
 import { createWolfLeadershipOrder } from '../game/wolfLeadership';
 import { RULES } from '../game/config';
 import { canManageGameSetup } from '../game/setup';
+import { canUseRoleAssignmentCheat } from '../game/adminAccess';
 import { loadGameRoleSettings, loadNightRoleOrder } from '../services/gameSettings';
 import { getCloudPresets, addCloudPreset, deleteCloudPreset } from '../services/presetNameService';
 import { syncRoomGame, getPlayerMembers, subscribeRoom, saveRoomSetupConfig } from '../services/roomService';
-import type { Role, PresetName, GameRoom, Game } from '../game/types';
+import type { Role, RoleAssignments, PresetName, GameRoom, Game } from '../game/types';
 import { Button, Modal } from '../components/ui';
 import { useDialog } from '../components/dialog';
 import styles from './SetupPage.module.css';
@@ -101,6 +107,10 @@ export default function SetupPage() {
   const { showAlert } = useDialog();
   const roomDeletedRef = useRef(false);
   const canManageSetup = canManageGameSetup(fromRoom?.hostUid, user?.uid, authLoading);
+  const canUseTestRoleAssignment = canManageSetup
+    && isOnlineSetup
+    && canUseRoleAssignmentCheat(user);
+  const roomPlayerIds = roomPlayers.map(player => player.uid);
 
   useEffect(() => {
     if (!fromRoom?.id) return;
@@ -148,6 +158,9 @@ export default function SetupPage() {
   const [distribution, setDistribution] = useState<Record<Role, number>>(() => (
     getValidRoomSetupDistribution(fromRoom?.setupConfig, initialPlayerCount)
       ?? getRoleDistribution(initialPlayerCount, { randomize: true })
+  ));
+  const [testRoleAssignments, setTestRoleAssignments] = useState<RoleAssignments | null>(() => (
+    getValidRoomTestRoleAssignments(fromRoom?.setupConfig, roomPlayerIds)
   ));
 
   // State quản lý danh sách tên mẫu (Presets)
@@ -213,9 +226,22 @@ export default function SetupPage() {
     }
   };
 
+  const testAssignmentDistribution = testRoleAssignments
+    ? getRoleAssignmentDistribution(testRoleAssignments, roomPlayerIds)
+    : null;
+  const isTestRoleAssignmentEnabled = canUseTestRoleAssignment && testRoleAssignments !== null;
+  const testAssignmentsMatchDistribution = !isTestRoleAssignmentEnabled || Boolean(
+    testAssignmentDistribution
+    && ROLE_ITEMS.every(role => testAssignmentDistribution[role.id] === distribution[role.id]),
+  );
+  const hasMatchingOnlineRoster = !isOnlineSetup || roomPlayers.length === playerCount;
   const totalRoles = Object.values(distribution).reduce((a, b) => a + b, 0);
   const totalWolves = (distribution.wolf || 0) + (distribution.wolf_demon || 0) + (distribution.wolf_seer || 0);
-  const isValid = totalRoles === playerCount && totalWolves > 0 && totalWolves < playerCount;
+  const isValid = totalRoles === playerCount
+    && totalWolves > 0
+    && totalWolves < playerCount
+    && testAssignmentsMatchDistribution
+    && hasMatchingOnlineRoster;
 
   const handleStart = async () => {
     if (!isValid || isStartingGame) return;
@@ -229,7 +255,9 @@ export default function SetupPage() {
 
     try {
       const players = names.map((name, i) => {
-        const matchedMember = roomPlayers.find(m => m.displayName.trim() === name.trim()) || roomPlayers[i];
+        const matchedMember = isOnlineSetup
+          ? roomPlayers[i]
+          : roomPlayers.find(m => m.displayName.trim() === name.trim()) || roomPlayers[i];
         return {
           id: matchedMember?.uid || `p_${Date.now()}_${i}`,
           name: name.trim() || `Người chơi ${i + 1}`,
@@ -239,6 +267,9 @@ export default function SetupPage() {
 
       const assignedPlayers = assignRoles(players, distribution, {
         previousPlayers: fromRoom?.gameData?.players,
+        fixedRoleAssignments: isTestRoleAssignmentEnabled
+          ? testRoleAssignments ?? undefined
+          : undefined,
       });
 
       const newGame: Game = {
@@ -255,7 +286,12 @@ export default function SetupPage() {
       };
 
       if (fromRoom?.id) {
-        await syncRoomGame(fromRoom.id, newGame);
+        if (!user) throw new Error('Không xác định được Quản trò của phòng.');
+        await syncRoomGame(fromRoom.id, newGame, {
+          hostUid: user.uid,
+          expectedPlayerIds: players.map(player => player.id),
+          expectedCurrentGameId: fromRoom.gameData?.id ?? null,
+        });
         flushSync(() => replaceRemoteGame(newGame));
       } else {
         flushSync(() => setGame(newGame));
@@ -274,6 +310,7 @@ export default function SetupPage() {
   };
 
   const handleRoleChange = (role: Role, delta: number) => {
+    if (isTestRoleAssignmentEnabled) return;
     setDistribution(prev => ({
       ...prev,
       [role]: Math.max(0, prev[role] + delta)
@@ -281,12 +318,14 @@ export default function SetupPage() {
   };
 
   const handleAutoBalance = () => {
+    if (isTestRoleAssignmentEnabled) return;
     if (playerCount >= RULES.minPlayers && playerCount <= RULES.maxPlayers) {
       setDistribution(getRoleDistribution(playerCount, { randomize: true }));
     }
   };
 
   const handleResetRoles = () => {
+    if (isTestRoleAssignmentEnabled) return;
     setDistribution({
       wolf: 0,
       wolf_demon: 0,
@@ -300,6 +339,26 @@ export default function SetupPage() {
     });
   };
 
+  const handleToggleTestRoleAssignment = () => {
+    if (!canUseTestRoleAssignment) return;
+    if (testRoleAssignments) {
+      setTestRoleAssignments(null);
+      return;
+    }
+
+    const assignments = createRoleAssignmentsFromDistribution(roomPlayerIds, distribution);
+    if (assignments) setTestRoleAssignments(assignments);
+  };
+
+  const handleTestRoleChange = (playerId: string, role: Role) => {
+    if (!isTestRoleAssignmentEnabled || !testRoleAssignments) return;
+    const nextAssignments = { ...testRoleAssignments, [playerId]: role };
+    const nextDistribution = getRoleAssignmentDistribution(nextAssignments, roomPlayerIds);
+    if (!nextDistribution) return;
+    setTestRoleAssignments(nextAssignments);
+    setDistribution(nextDistribution);
+  };
+
   const changePlayerCount = (delta: number) => {
     if (isOnlineSetup) return;
     const nextCount = Math.max(RULES.minPlayers, Math.min(RULES.maxPlayers, playerCount + delta));
@@ -311,11 +370,17 @@ export default function SetupPage() {
       navigate('/');
       return;
     }
+    if (!hasMatchingOnlineRoster) {
+      navigate(`/room/${fromRoom.id}`);
+      return;
+    }
     if (!isValid || !user?.uid || isSavingConfig) {
       if (!isValid) {
         await showAlert({
           title: 'Cấu hình vai trò chưa hợp lệ',
-          message: `Hãy phân đủ ${playerCount} vai và giữ ít nhất một người ở mỗi phe trước khi quay lại phòng chờ.`,
+          message: !hasMatchingOnlineRoster
+            ? `Phòng hiện có ${roomPlayers.length} người chơi. Hãy quay lại phòng chờ và đợi đủ ít nhất ${RULES.minPlayers} người trước khi cấu hình.`
+            : `Hãy phân đủ ${playerCount} vai và giữ ít nhất một người ở mỗi phe trước khi quay lại phòng chờ.`,
           tone: 'warning',
           confirmLabel: 'Đã hiểu',
         });
@@ -325,9 +390,12 @@ export default function SetupPage() {
 
     setIsSavingConfig(true);
     try {
-      await saveRoomSetupConfig(fromRoom.id, user.uid, {
+      await saveRoomSetupConfig(fromRoom.id, user, {
         playerCount,
         distribution,
+        ...(isTestRoleAssignmentEnabled && testRoleAssignments
+          ? { testRoleAssignments: { ...testRoleAssignments } }
+          : {}),
         updatedAt: Date.now(),
       });
       navigate(`/room/${fromRoom.id}`);
@@ -502,6 +570,7 @@ export default function SetupPage() {
                   type="button"
                   className={styles.presetActionBtn}
                   onClick={handleAutoBalance}
+                  disabled={isTestRoleAssignmentEnabled}
                   title="Tự động cân bằng tỉ lệ vai trò"
                 >
                   🎲 Cân bằng
@@ -510,6 +579,7 @@ export default function SetupPage() {
                   type="button"
                   className={styles.presetActionBtn}
                   onClick={handleResetRoles}
+                  disabled={isTestRoleAssignmentEnabled}
                   title="Đặt lại toàn bộ vai về 0"
                 >
                   ↺ Về 0
@@ -521,6 +591,8 @@ export default function SetupPage() {
             <div className={`${styles.rolesStatusBanner} ${isValid ? styles.statusValid : styles.statusInvalid}`}>
               {isValid
                 ? `✓ ĐÃ CHIA ĐỦ ${totalRoles}/${playerCount} VAI • HỢP LỆ`
+                : !hasMatchingOnlineRoster
+                ? `⚠️ PHÒNG HIỆN CÓ ${roomPlayers.length}/${playerCount} NGƯỜI CHƠI`
                 : totalWolves === 0
                 ? '⚠️ CẦN ÍT NHẤT 1 MA SÓI TRONG VÁN'
                 : `⚠️ CHƯA KHỚP SỐ LƯỢNG (${totalRoles}/${playerCount} VAI)`}
@@ -552,7 +624,7 @@ export default function SetupPage() {
                       type="button"
                       className={styles.roleMiniBtn}
                       onClick={() => handleRoleChange(role.id, -1)}
-                      disabled={!distribution[role.id]}
+                      disabled={isTestRoleAssignmentEnabled || !distribution[role.id]}
                       aria-label={`Giảm ${role.name}`}
                     >
                       −
@@ -564,6 +636,7 @@ export default function SetupPage() {
                       type="button"
                       className={styles.roleMiniBtn}
                       onClick={() => handleRoleChange(role.id, 1)}
+                      disabled={isTestRoleAssignmentEnabled}
                       aria-label={`Tăng ${role.name}`}
                     >
                       +
@@ -573,6 +646,67 @@ export default function SetupPage() {
               ))}
             </div>
           </div>
+
+          {canUseTestRoleAssignment && (
+            <>
+              <div className={styles.tabPlateWrapper}>
+                <div className={styles.tabPlate}>
+                  <span className={styles.tabPlateTitle}>🧪 GÁN VAI TEST</span>
+                </div>
+              </div>
+
+              <div className={`${styles.parchmentPanel} ${styles.testRolePanel}`}>
+                <div className={styles.testRoleHeader}>
+                  <div>
+                    <strong>CHEAT DÀNH RIÊNG CHO KYANH</strong>
+                    <p>Gán chính xác vai cho từng người. Khi tắt, game quay lại chia vai ngẫu nhiên.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.testRoleToggle} ${isTestRoleAssignmentEnabled ? styles.testRoleToggleActive : ''}`}
+                    onClick={handleToggleTestRoleAssignment}
+                    disabled={!isValid && !isTestRoleAssignmentEnabled}
+                    aria-pressed={isTestRoleAssignmentEnabled}
+                  >
+                    {isTestRoleAssignmentEnabled ? 'ĐANG BẬT' : 'BẬT CHEAT'}
+                  </button>
+                </div>
+
+                {isTestRoleAssignmentEnabled && testRoleAssignments && (
+                  <div className={styles.testRoleList}>
+                    {roomPlayers.map(player => {
+                      const assignedRole = testRoleAssignments[player.uid];
+                      const roleItem = ROLE_ITEMS.find(role => role.id === assignedRole);
+                      return (
+                        <label key={player.uid} className={styles.testRoleRow}>
+                          <span className={styles.testRolePlayer}>
+                            <span className={styles.testRoleAvatar}>
+                              {player.avatar
+                                ? <img src={player.avatar} alt="" />
+                                : <SvgAvatarSilhouette />}
+                            </span>
+                            <span>{player.displayName}</span>
+                          </span>
+                          <span className={styles.testRolePicker}>
+                            {roleItem && <img src={roleItem.icon} alt="" aria-hidden="true" />}
+                            <select
+                              value={assignedRole}
+                              onChange={event => handleTestRoleChange(player.uid, event.target.value as Role)}
+                              aria-label={`Chọn vai cho ${player.displayName}`}
+                            >
+                              {ROLE_ITEMS.map(role => (
+                                <option key={role.id} value={role.id}>{role.name}</option>
+                              ))}
+                            </select>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* 5. HAI NÚT ĐÁY CỐ ĐỊNH (QUAY LẠI / CHIA BÀI) - CSS THUẦN THEO RULE-UI & TOKENS */}
