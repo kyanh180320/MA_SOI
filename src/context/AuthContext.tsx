@@ -68,7 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           // Không chặn người chơi vào game nếu Storage tạm lỗi; avatar preset đã
           // được lưu trong transaction và có thể đổi lại sau.
-          console.warn('Không thể tải avatar tùy chọn, giữ avatar mặc định:', error);
+          const message = error instanceof Error ? error.message : 'Không thể tải avatar tùy chọn.';
+          console.warn('Không thể tải avatar tùy chọn, giữ avatar mặc định:', message);
+          if (typeof sessionStorage !== 'undefined') {
+            try {
+              sessionStorage.setItem('avatar_upload_warning', message);
+            } catch {
+              // Bỏ qua lỗi sessionStorage nếu bị chặn
+            }
+          }
         }
       }
       setUser(profile);

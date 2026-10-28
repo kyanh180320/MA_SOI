@@ -217,6 +217,8 @@ export async function loginWithUsername(
   return profile;
 }
 
+const AVATAR_UPLOAD_TIMEOUT_MS = 6_000;
+
 export async function uploadUserAvatar(blob: Blob): Promise<string> {
   const firebaseUser = auth.currentUser;
   if (!firebaseUser) throw new Error('Chưa có phiên người chơi.');
@@ -225,13 +227,50 @@ export async function uploadUserAvatar(blob: Blob): Promise<string> {
 
   // Storage chỉ cần khi người dùng thực sự upload ảnh; không đưa SDK này vào
   // bundle mở màn hình chính.
-  const { getDownloadURL, getStorage, ref, uploadBytes } = await import('firebase/storage');
-  const avatarRef = ref(getStorage(app), `avatars/${profile.uid}/profile.webp`);
-  await uploadBytes(avatarRef, blob, {
+  const { getDownloadURL, getStorage, ref, uploadBytesResumable } = await import('firebase/storage');
+  const storage = getStorage(app);
+  // Giới hạn thời gian retry tránh treo giao diện khi bucket chưa kích hoạt hoặc mạng lỗi
+  storage.maxUploadRetryTime = 3_000;
+  storage.maxOperationRetryTime = 3_000;
+
+  const avatarRef = ref(storage, `avatars/${profile.uid}/profile.webp`);
+  const uploadTask = uploadBytesResumable(avatarRef, blob, {
     contentType: blob.type || 'image/webp',
     cacheControl: 'public,max-age=3600',
   });
-  return getDownloadURL(avatarRef);
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      try {
+        uploadTask.cancel();
+      } catch {
+        // Bỏ qua lỗi huỷ task nếu đã hoàn tất
+      }
+      reject(new Error('Quá thời gian tải ảnh lên máy chủ lưu trữ (timeout).'));
+    }, AVATAR_UPLOAD_TIMEOUT_MS);
+  });
+
+  try {
+    await Promise.race([uploadTask, timeoutPromise]);
+    return await getDownloadURL(avatarRef);
+  } catch (error: unknown) {
+    const err = error as { code?: string; status_?: number; message?: string };
+    if (err.status_ === 404 || err.code === 'storage/unknown' || err.code === 'storage/bucket-not-found') {
+      throw new Error('Dịch vụ lưu trữ (Firebase Storage) chưa được kích hoạt cho dự án hoặc chưa mở quyền.');
+    }
+    if (err.code === 'storage/unauthorized') {
+      throw new Error('Bạn không có quyền tải ảnh lên dịch vụ lưu trữ.');
+    }
+    if (err.code === 'storage/canceled') {
+      throw new Error('Đã hủy tải ảnh đại diện do quá thời gian chờ.');
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export async function updateUserProfile(displayName: string, avatarUrl: string): Promise<AppUser> {

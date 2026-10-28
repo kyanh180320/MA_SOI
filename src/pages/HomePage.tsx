@@ -126,6 +126,24 @@ export default function HomePage() {
     return () => unsubscribe();
   }, [user]);
 
+  // Thông báo nếu ảnh tải lên chưa thể lưu vào Storage
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return;
+    try {
+      const warning = sessionStorage.getItem('avatar_upload_warning');
+      if (warning) {
+        sessionStorage.removeItem('avatar_upload_warning');
+        void showAlert({
+          title: 'Thông báo ảnh đại diện',
+          message: `${warning} Hệ thống đã chọn avatar mặc định cho bạn để bạn có thể vào chơi ngay!`,
+          tone: 'info',
+        });
+      }
+    } catch {
+      // Bỏ qua nếu sessionStorage bị chặn
+    }
+  }, [showAlert]);
+
   useEffect(() => () => {
     if (uploadedAvatarPreviewRef.current) URL.revokeObjectURL(uploadedAvatarPreviewRef.current);
   }, []);
